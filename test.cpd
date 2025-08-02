@@ -1,0 +1,12 @@
+x = 5
+y = sin(x)
+z = cos(x + y
+#if x > 5
+    result = "greater"
+
+#for i = 1 to 10
+    value = i * 2
+#loop
+
+a = max(1,2,3)
+badvar = 3sin + 5
