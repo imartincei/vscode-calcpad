@@ -3,33 +3,82 @@ import * as vscode from 'vscode';
 export class CalcpadLinter {
     private diagnosticCollection: vscode.DiagnosticCollection;
 
-    // Built-in functions from the Calcpad language
+    // Built-in functions from the Calcpad language (from HighLighter.cs)
     private readonly builtInFunctions = new Set([
+        // Basic math
+        'abs', 'mod', 'gcd', 'lcm', 'sign', 'random',
+        // Trigonometric
         'sin', 'cos', 'tan', 'csc', 'sec', 'cot',
+        'asin', 'acos', 'atan', 'atan2', 'acsc', 'asec', 'acot',
+        // Hyperbolic
         'sinh', 'cosh', 'tanh', 'csch', 'sech', 'coth',
-        'asin', 'acos', 'atan', 'acsc', 'asec', 'acot',
         'asinh', 'acosh', 'atanh', 'acsch', 'asech', 'acoth',
+        // Logarithmic and exponential
         'log', 'ln', 'log_2', 'exp', 'sqr', 'sqrt', 'cbrt', 'root',
+        // Rounding
         'round', 'floor', 'ceiling', 'trunc',
-        'mod', 'gcd', 'lcm', 'abs', 're', 'im', 'phase',
-        'min', 'max', 'sum', 'sumsq', 'srss', 'average', 'product', 'mean',
+        // Complex numbers
+        're', 'im', 'phase',
+        // Aggregate functions
+        'min', 'max', 'sum', 'sumsq', 'srss', 'product', 'average', 'mean',
+        // Conditional and logical
         'if', 'switch', 'not', 'and', 'or', 'xor',
-        'vector', 'len', 'size', 'resize', 'fill', 'range', 'join',
-        'matrix', 'identity', 'diagonal', 'column', 'det', 'inverse',
-        'take', 'line', 'spline', 'random', 'sign', 'atan2'
+        // Interpolation
+        'take', 'line', 'spline',
+        // Units and high-performance
+        'timer', 'hp', 'ishp', 'getunits', 'setunits', 'clrunits',
+        // Vector functions
+        'vector', 'vector_hp', 'len', 'size', 'fill', 'range', 'range_hp', 'join', 'resize',
+        'first', 'last', 'slice', 'sort', 'rsort', 'order', 'revorder', 'reverse', 'extract',
+        'search', 'count', 'find', 'find_eq', 'find_ne', 'find_lt', 'find_gt', 'find_le', 'find_ge',
+        'lookup', 'lookup_eq', 'lookup_ne', 'lookup_lt', 'lookup_gt', 'lookup_le', 'lookup_ge',
+        'norm', 'norm_1', 'norm_2', 'norm_e', 'norm_i', 'norm_p', 'unit', 'dot', 'cross',
+        // Matrix functions
+        'matrix', 'identity', 'diagonal', 'column', 'utriang', 'ltriang', 'symmetric',
+        'vec2diag', 'diag2vec', 'vec2col', 'vec2row',
+        'matrix_hp', 'identity_hp', 'diagonal_hp', 'column_hp', 'utriang_hp', 'ltriang_hp', 'symmetric_hp',
+        'join_cols', 'join_rows', 'augment', 'stack', 'mfill', 'fill_row', 'fill_col', 'mresize',
+        'copy', 'add', 'n_rows', 'n_cols', 'row', 'col', 'extract_rows', 'extract_cols', 'submatrix',
+        'mnorm', 'mnorm_2', 'mnorm_e', 'mnorm_1', 'mnorm_i',
+        'cond', 'cond_1', 'cond_2', 'cond_e', 'cond_i',
+        'det', 'rank', 'transp', 'trace', 'inverse', 'adj', 'cofactor',
+        'eigenvals', 'eigenvecs', 'eigen', 'lu', 'qr', 'svd', 'cholesky',
+        'lsolve', 'clsolve', 'slsolve', 'msolve', 'cmsolve', 'smsolve',
+        'hprod', 'fprod', 'kprod',
+        'sort_cols', 'rsort_cols', 'sort_rows', 'rsort_rows',
+        'order_cols', 'revorder_cols', 'order_rows', 'revorder_rows',
+        'mcount', 'mfind', 'mfind_eq', 'mfind_ne', 'mfind_lt', 'mfind_le', 'mfind_gt', 'mfind_ge', 'msearch',
+        'hlookup', 'hlookup_eq', 'hlookup_ne', 'hlookup_lt', 'hlookup_le', 'hlookup_gt', 'hlookup_ge',
+        'vlookup', 'vlookup_eq', 'vlookup_ne', 'vlookup_lt', 'vlookup_le', 'vlookup_gt', 'vlookup_ge'
     ]);
 
-    // Control keywords
+    // Control keywords from HighLighter.cs
     private readonly controlKeywords = new Set([
-        'if', 'else', 'end', 'for', 'while', 'repeat', 'loop',
-        'break', 'continue', 'include', 'def', 'local', 'global',
-        'hide', 'show', 'pre', 'post', 'val', 'equ', 'noc',
-        'nosub', 'novar', 'varsub', 'split', 'wrap', 'round',
-        'format', 'deg', 'rad', 'gra', 'pause', 'input'
+        // Conditional and flow control
+        'if', 'else', 'else if', 'end if', 'for', 'while', 'repeat', 'loop', 'break', 'continue',
+        // Angle units
+        'rad', 'deg', 'gra',
+        // Display control
+        'val', 'equ', 'noc', 'round', 'format', 'show', 'hide',
+        'varsub', 'nosub', 'novar', 'split', 'wrap', 'pre', 'post',
+        // Modules and macros
+        'include', 'local', 'global', 'def', 'end def',
+        // Interactive
+        'pause', 'input',
+        // Markdown
+        'md',
+        // Data exchange
+        'read', 'write', 'append'
     ]);
 
-    // Mathematical operators
-    private readonly operators = /[+\-*/^÷\\⦼=≡≠<>≤≥∧∨⊕]/;
+    // Mathematical operators from CalcPad documentation  
+    private readonly operators = /[!^\/÷\\⦼*\-+<>≤≥≡≠=∧∨⊕]/;
+    
+    // Commands from HighLighter.cs
+    private readonly commands = new Set([
+        '$find', '$root', '$sup', '$inf', '$area', '$integral', '$slope',
+        '$repeat', '$sum', '$product', '$plot', '$map'
+    ]);
 
     constructor() {
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('calcpad');
@@ -57,6 +106,7 @@ export class CalcpadLinter {
             this.checkBracketBalance(line, lineNumber, diagnostics);
             this.checkVariableNaming(line, lineNumber, diagnostics);
             this.checkFunctionUsage(line, lineNumber, diagnostics);
+            this.checkCommandUsage(line, lineNumber, diagnostics);
             this.checkOperatorSyntax(line, lineNumber, diagnostics);
             this.checkControlStructures(line, lineNumber, diagnostics);
             this.checkAssignments(line, lineNumber, diagnostics);
@@ -231,7 +281,7 @@ export class CalcpadLinter {
                 diagnostics.push(new vscode.Diagnostic(
                     range,
                     `Variable name '${varName}' conflicts with built-in function`,
-                    vscode.DiagnosticSeverity.Warning
+                    vscode.DiagnosticSeverity.Error
                 ));
             }
         }
@@ -251,7 +301,7 @@ export class CalcpadLinter {
                 diagnostics.push(new vscode.Diagnostic(
                     range,
                     `Unknown function '${funcName}'`,
-                    vscode.DiagnosticSeverity.Information
+                    vscode.DiagnosticSeverity.Error
                 ));
             }
         }
@@ -268,9 +318,28 @@ export class CalcpadLinter {
                     diagnostics.push(new vscode.Diagnostic(
                         range,
                         `Function '${func}' parameters should be separated by semicolons, not commas`,
-                        vscode.DiagnosticSeverity.Warning
+                        vscode.DiagnosticSeverity.Error
                     ));
                 }
+            }
+        }
+    }
+
+    private checkCommandUsage(line: string, lineNumber: number, diagnostics: vscode.Diagnostic[]): void {
+        // Check for command usage (e.g., $Plot, $Root, etc.)
+        const commandPattern = /\$([a-zA-Z_][a-zA-Z0-9_]*)/g;
+        let match;
+
+        while ((match = commandPattern.exec(line)) !== null) {
+            const cmdName = '$' + match[1].toLowerCase();
+            
+            if (!this.commands.has(cmdName)) {
+                const range = new vscode.Range(lineNumber, match.index, lineNumber, match.index + match[0].length);
+                diagnostics.push(new vscode.Diagnostic(
+                    range,
+                    `Unknown command '${match[0]}'. Valid commands are: ${Array.from(this.commands).join(', ')}`,
+                    vscode.DiagnosticSeverity.Error
+                ));
             }
         }
     }
@@ -299,7 +368,7 @@ export class CalcpadLinter {
                 diagnostics.push(new vscode.Diagnostic(
                     range,
                     'Incomplete expression: operator at end of line',
-                    vscode.DiagnosticSeverity.Warning
+                    vscode.DiagnosticSeverity.Error
                 ));
             }
         }
@@ -324,7 +393,7 @@ export class CalcpadLinter {
             diagnostics.push(new vscode.Diagnostic(
                 range,
                 'Incomplete if condition',
-                vscode.DiagnosticSeverity.Warning
+                vscode.DiagnosticSeverity.Error
             ));
         }
     }
@@ -342,8 +411,8 @@ export class CalcpadLinter {
                     const range = new vscode.Range(lineNumber, pos, lineNumber, pos + 1);
                     diagnostics.push(new vscode.Diagnostic(
                         range,
-                        'Multiple assignments in one line are not recommended',
-                        vscode.DiagnosticSeverity.Information
+                        'Multiple assignments in one line are not allowed',
+                        vscode.DiagnosticSeverity.Error
                     ));
                 }
                 pos++;
@@ -367,13 +436,104 @@ export class CalcpadLinter {
         let match;
 
         const validUnits = new Set([
-            'm', 'cm', 'mm', 'km', 'ft', 'in', 'yd',
-            'kg', 'g', 'lb', 't',
-            's', 'min', 'h', 'd',
-            'N', 'kN', 'MN', 'lbf',
-            'Pa', 'kPa', 'MPa', 'psi',
-            '°', 'deg', 'rad',
-            'J', 'kJ', 'MJ', 'cal', 'kcal'
+            // Dimensionless
+            '%', '‰', '‱', 'pcm', 'ppm', 'ppb', 'ppt', 'ppq',
+            // Angle units
+            '°', '′', '″', 'deg', 'rad', 'grad', 'rev',
+            // Metric units (SI and compatible)
+            // Mass
+            'g', 'hg', 'kg', 't', 'kt', 'Mt', 'Gt', 'dg', 'cg', 'mg', 'μg', 'Da', 'u',
+            // Length
+            'm', 'km', 'dm', 'cm', 'mm', 'μm', 'nm', 'pm', 'AU', 'ly',
+            // Time
+            's', 'ms', 'μs', 'ns', 'ps', 'min', 'h', 'd', 'w', 'y',
+            // Frequency
+            'Hz', 'kHz', 'MHz', 'GHz', 'THz', 'mHz', 'μHz', 'nHz', 'pHz', 'rpm',
+            // Speed
+            'kmh',
+            // Electric current
+            'A', 'kA', 'MA', 'GA', 'TA', 'mA', 'μA', 'nA', 'pA',
+            // Temperature
+            '°C', 'Δ°C', 'K',
+            // Amount of substance
+            'mol',
+            // Luminous intensity
+            'cd',
+            // Area
+            'a', 'daa', 'ha',
+            // Volume
+            'L', 'daL', 'hL', 'dL', 'cL', 'mL', 'μL', 'nL', 'pL',
+            // Force
+            'dyn', 'N', 'daN', 'hN', 'kN', 'MN', 'GN', 'TN', 'gf', 'kgf', 'tf',
+            // Moment
+            'Nm', 'kNm',
+            // Pressure
+            'Pa', 'daPa', 'hPa', 'kPa', 'MPa', 'GPa', 'TPa', 'dPa', 'cPa', 'mPa', 'μPa', 'nPa', 'pPa',
+            'bar', 'mbar', 'μbar', 'atm', 'at', 'Torr', 'mmHg',
+            // Viscosity
+            'P', 'cP', 'St', 'cSt',
+            // Energy work
+            'J', 'kJ', 'MJ', 'GJ', 'TJ', 'mJ', 'μJ', 'nJ', 'pJ',
+            'Wh', 'kWh', 'MWh', 'GWh', 'TWh', 'mWh', 'μWh', 'nWh', 'pWh',
+            'eV', 'keV', 'MeV', 'GeV', 'TeV', 'PeV', 'EeV', 'cal', 'kcal', 'erg',
+            // Power
+            'W', 'kW', 'MW', 'GW', 'TW', 'mW', 'μW', 'nW', 'pW', 'hpM', 'ks',
+            'VA', 'kVA', 'MVA', 'GVA', 'TVA', 'mVA', 'μVA', 'nVA', 'pVA',
+            'VAR', 'kVAR', 'MVAR', 'GVAR', 'TVAR', 'mVAR', 'μVAR', 'nVAR', 'pVAR',
+            // Electric charge
+            'C', 'kC', 'MC', 'GC', 'TC', 'mC', 'μC', 'nC', 'pC', 'Ah', 'mAh',
+            // Potential
+            'V', 'kV', 'MV', 'GV', 'TV', 'mV', 'μV', 'nV', 'pV',
+            // Capacitance
+            'F', 'kF', 'MF', 'GF', 'TF', 'mF', 'μF', 'nF', 'pF',
+            // Resistance
+            'Ω', 'kΩ', 'MΩ', 'GΩ', 'TΩ', 'mΩ', 'μΩ', 'nΩ', 'pΩ',
+            // Conductance
+            'S', 'kS', 'MS', 'GS', 'TS', 'mS', 'μS', 'nS', 'pS', '℧', 'k℧', 'M℧', 'G℧', 'T℧', 'm℧', 'μ℧', 'n℧', 'p℧',
+            // Magnetic flux
+            'Wb', 'kWb', 'MWb', 'GWb', 'TWb', 'mWb', 'μWb', 'nWb', 'pWb',
+            // Magnetic flux density
+            'T', 'kT', 'MT', 'GT', 'TT', 'mT', 'μT', 'nT', 'pT',
+            // Inductance
+            'H', 'kH', 'MH', 'GH', 'TH', 'mH', 'μH', 'nH', 'pH',
+            // Luminous flux
+            'lm',
+            // Illuminance
+            'lx',
+            // Radioactivity
+            'Bq', 'kBq', 'MBq', 'GBq', 'TBq', 'mBq', 'μBq', 'nBq', 'pBq', 'Ci', 'Rd',
+            // Absorbed dose
+            'Gy', 'kGy', 'MGy', 'GGy', 'TGy', 'mGy', 'μGy', 'nGy', 'pGy',
+            // Equivalent dose
+            'Sv', 'kSv', 'MSv', 'GSv', 'TSv', 'mSv', 'μSv', 'nSv', 'pSv',
+            // Catalytic activity
+            'kat',
+            // Imperial/US units
+            // Mass
+            'gr', 'dr', 'oz', 'lb', 'lbm', 'lb_m', 'klb', 'kipm', 'kip_m', 'st', 'qr',
+            'cwt', 'cwt_UK', 'cwt_US', 'ton', 'ton_UK', 'ton_US', 'slug',
+            // Length
+            'th', 'in', 'ft', 'yd', 'ch', 'fur', 'mi', 'ftm', 'ftm_UK', 'ftm_US',
+            'cable', 'cable_UK', 'cable_US', 'nmi', 'li', 'rod', 'pole', 'perch', 'lea',
+            // Speed
+            'mph', 'knot',
+            // Temperature
+            '°F', 'Δ°F', '°R',
+            // Area
+            'rood', 'ac',
+            // Volume
+            'fl_oz', 'gi', 'pt', 'qt', 'gal', 'bbl',
+            'fl_oz_UK', 'gi_UK', 'pt_UK', 'qt_UK', 'gal_UK', 'bbl_UK',
+            'fl_oz_US', 'gi_US', 'pt_US', 'qt_US', 'gal_US', 'bbl_US',
+            'pt_dry', 'qt_dry', 'gal_dry', 'bbl_dry', 'pk', 'pk_UK', 'pk_US', 'bu', 'bu_UK', 'bu_US',
+            // Force
+            'ozf', 'oz_f', 'lbf', 'lb_f', 'kip', 'kipf', 'kip_f', 'tonf', 'ton_f', 'pdl',
+            // Pressure
+            'osi', 'osf', 'psi', 'psf', 'ksi', 'ksf', 'tsi', 'tsf', 'inHg',
+            // Energy
+            'BTU', 'therm', 'therm_UK', 'therm_US', 'quad',
+            // Power
+            'hp', 'hpE', 'hpS'
         ]);
 
         while ((match = unitPattern.exec(line)) !== null) {
@@ -385,7 +545,7 @@ export class CalcpadLinter {
                 diagnostics.push(new vscode.Diagnostic(
                     range,
                     `Unknown unit '${unit}'. Check spelling or use custom unit definition`,
-                    vscode.DiagnosticSeverity.Information
+                    vscode.DiagnosticSeverity.Error
                 ));
             }
         }
@@ -397,7 +557,7 @@ export class CalcpadLinter {
             diagnostics.push(new vscode.Diagnostic(
                 range,
                 'Degree symbol should follow a number',
-                vscode.DiagnosticSeverity.Warning
+                vscode.DiagnosticSeverity.Error
             ));
         }
     }
