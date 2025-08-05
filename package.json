@@ -32,12 +32,42 @@
         "command": "vscode-calcpad.previewHtml",
         "title": "CalcPad Preview",
         "icon": "$(preview)"
+      },
+      {
+        "command": "vscode-calcpad.showInsert",
+        "title": "Show CalcPad Insert Panel",
+        "icon": "$(add)"
+      },
+      {
+        "command": "vscode-calcpad.refreshPreview",
+        "title": "Refresh CalcPad Preview",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "vscode-calcpad.exportToPdf",
+        "title": "Export CalcPad to PDF",
+        "icon": "$(file-pdf)"
       }
     ],
     "menus": {
       "editor/title": [
         {
           "command": "vscode-calcpad.previewHtml",
+          "when": "resourceLangId == plaintext || resourceLangId == calcpad",
+          "group": "navigation"
+        },
+        {
+          "command": "vscode-calcpad.showInsert",
+          "when": "resourceLangId == plaintext || resourceLangId == calcpad",
+          "group": "navigation"
+        },
+        {
+          "command": "vscode-calcpad.refreshPreview",
+          "when": "resourceLangId == plaintext || resourceLangId == calcpad && activeWebviewPanelId == 'htmlPreview'",
+          "group": "navigation"
+        },
+        {
+          "command": "vscode-calcpad.exportToPdf",
           "when": "resourceLangId == plaintext || resourceLangId == calcpad",
           "group": "navigation"
         }
@@ -50,8 +80,95 @@
           "type": "string",
           "default": "http://localhost:9420",
           "description": "Base URL for the CalcPad API server"
+        },
+        "calcpad.settings": {
+          "type": "object",
+          "description": "CalcPad calculation and rendering settings",
+          "default": {},
+          "properties": {
+            "math": {
+              "type": "object",
+              "properties": {
+                "decimals": {
+                  "type": "integer",
+                  "default": 6,
+                  "minimum": 0,
+                  "maximum": 15
+                },
+                "degrees": {
+                  "type": "integer",
+                  "default": 0,
+                  "enum": [0, 1, 2]
+                },
+                "isComplex": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "substitute": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "formatEquations": {
+                  "type": "boolean",
+                  "default": true
+                }
+              }
+            },
+            "plot": {
+              "type": "object",
+              "properties": {
+                "colorScale": {
+                  "type": "string",
+                  "default": "Rainbow",
+                  "enum": ["Rainbow", "Grayscale", "Hot", "Cool", "Jet", "Parula"]
+                },
+                "shadows": {
+                  "type": "boolean",
+                  "default": true
+                }
+              }
+            },
+            "units": {
+              "type": "string",
+              "default": "m",
+              "enum": ["m", "i", "u"]
+            },
+            "output": {
+              "type": "object",
+              "properties": {
+                "format": {
+                  "type": "string",
+                  "default": "html",
+                  "enum": ["html", "pdf", "docx"]
+                },
+                "silent": {
+                  "type": "boolean",
+                  "default": true
+                }
+              }
+            }
+          }
         }
       }
+    },
+    "views": {
+      "calcpad-ui": [
+        {
+          "id": "calcpadUI",
+          "name": "CalcPad",
+          "type": "webview",
+          "when": "resourceLangId == calcpad || resourceLangId == plaintext || activeWebviewPanelId == 'htmlPreview'"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "calcpad-ui",
+          "title": "CalcPad",
+          "icon": "./calcpad-icon.svg"
+        }
+      ]
     }
   },
   "scripts": {

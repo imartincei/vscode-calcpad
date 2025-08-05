@@ -1,0 +1,3543 @@
+{
+  "Constants Header": [
+    {
+      "tag": "π",
+      "description": "Pi Number",
+      "label": "  π"
+    },
+    {
+      "tag": "e",
+      "description": "Euler Number",
+      "label": "  e"
+    },
+    {
+      "tag": "φ = 1.618033988749894",
+      "description": "Golden Ratio",
+      "label": "  φ"
+    },
+    {
+      "tag": "γ = 0.5772156649015328",
+      "description": "Euler Constant",
+      "label": "  γ"
+    },
+    {
+      "tag": "g = 9.80665m/s^2",
+      "description": "Gravitational Acceleration",
+      "label": "  g"
+    },
+    {
+      "tag": "G = 6.67430*10^-11*(m^3/(kg*s^2))",
+      "description": "Gravitational Constant",
+      "label": "  G"
+    },
+    {
+      "tag": "M_E = 5.9722*10^24*kg",
+      "description": "Earth Mass",
+      "label": "ME"
+    },
+    {
+      "tag": "M_S = 1.98847*10^30*kg",
+      "description": "Solar Mass",
+      "label": "MS"
+    },
+    {
+      "tag": "c = 299792458m/s",
+      "description": "Speed Of Light",
+      "label": "  c"
+    },
+    {
+      "tag": "h = 6.62607015*10^-34*J/Hz",
+      "description": "Planck Constant",
+      "label": "  h"
+    },
+    {
+      "tag": "μ_0 = 1.25663706212*10^-6*N/A^2",
+      "description": "Vacuum Permeability",
+      "label": " μ0"
+    },
+    {
+      "tag": "ε_0 = 8.8541878128*10^-12*F/m",
+      "description": "Vacuum Permitivity",
+      "label": " ε0"
+    },
+    {
+      "tag": "k_e = 8.9875517923*10^9*N*m^2/C^2",
+      "description": "Coulomb Constant",
+      "label": " ke"
+    },
+    {
+      "tag": "e = 1.602176634*10^-19*C",
+      "description": "Elementary Charge",
+      "label": "  e"
+    },
+    {
+      "tag": "m_e = 9.1093837015*10^-31*kg",
+      "description": "Electron Mass",
+      "label": "me"
+    },
+    {
+      "tag": "m_p = 1.67262192369*10^-27*kg",
+      "description": "Proton Mass",
+      "label": "mp"
+    },
+    {
+      "tag": "m_n = 1.67492749804*10^-27*kg",
+      "description": "Neutron Mass",
+      "label": "mn"
+    },
+    {
+      "tag": "N_A = 6.02214076*10^23*mol^-1",
+      "description": "Avogadro Constant",
+      "label": "NA"
+    },
+    {
+      "tag": "σ = 5.670374419*10^-8*W*m^-2*K^-4",
+      "description": "Stefan Boltzmann Constant",
+      "label": "  σ"
+    },
+    {
+      "tag": "k_B = 1.380649*10^-23*J/K",
+      "description": "Boltzmann Constant",
+      "label": " kB"
+    },
+    {
+      "tag": "R = 8.31446261815324*(J/(mol*K))",
+      "description": "Molar Gas Constant",
+      "label": "  R"
+    },
+    {
+      "tag": "F = 96485.33212331C/mol",
+      "description": "Faraday Constant",
+      "label": "  F"
+    },
+    {
+      "tag": "γ_c = 25kN/m^3",
+      "description": "Unit Weight Of Concrete",
+      "label": " γc"
+    },
+    {
+      "tag": "γ_s = 78.5kN/m^3",
+      "description": "Unit Weight Of Steel",
+      "label": " γs"
+    },
+    {
+      "tag": "γ_a = 27kN/m^3",
+      "description": "Unit Weight Of Aluminium",
+      "label": " γa"
+    },
+    {
+      "tag": "γ_g = 25kN/m^3",
+      "description": "Unit Weight Of Glass",
+      "label": " γg"
+    },
+    {
+      "tag": "γ_w = 10kN/m^3",
+      "description": "Unit Weight Of Water",
+      "label": "γw"
+    }
+  ],
+  "Operators": [
+    {
+      "tag": "!",
+      "description": "Factorial",
+      "label": "  !"
+    },
+    {
+      "tag": "^",
+      "description": "Exponentiation",
+      "label": "  ^"
+    },
+    {
+      "tag": "/",
+      "description": "Division",
+      "label": "  /"
+    },
+    {
+      "tag": "÷",
+      "description": "Division Bar",
+      "label": "  ÷"
+    },
+    {
+      "tag": "\\",
+      "description": "Integer Division",
+      "label": "  \\"
+    },
+    {
+      "tag": "⦼",
+      "description": "Modulo",
+      "label": " ⦼"
+    },
+    {
+      "tag": "*",
+      "description": "Multiplication",
+      "label": "  *"
+    },
+    {
+      "tag": "-",
+      "description": "Subtraction",
+      "label": "  -"
+    },
+    {
+      "tag": "+",
+      "description": "Addition",
+      "label": "  +"
+    },
+    {
+      "tag": "≡",
+      "description": "Equal To",
+      "label": "  ≡"
+    },
+    {
+      "tag": "≠",
+      "description": "Not Equal To",
+      "label": "  ≠"
+    },
+    {
+      "tag": "<",
+      "description": "Less Than",
+      "label": "  <"
+    },
+    {
+      "tag": ">",
+      "description": "Greater Than",
+      "label": "  >"
+    },
+    {
+      "tag": "≤",
+      "description": "Less Than Or Equal",
+      "label": "  ≤"
+    },
+    {
+      "tag": "≥",
+      "description": "Greater Than Or Equal",
+      "label": "  ≥"
+    },
+    {
+      "tag": "∧",
+      "description": "Logical And",
+      "label": "  ∧"
+    },
+    {
+      "tag": "∨",
+      "description": "Logical Or",
+      "label": "  ∨"
+    },
+    {
+      "tag": "⊕",
+      "description": "Logical Xor",
+      "label": "  ⊕"
+    },
+    {
+      "tag": "=",
+      "description": "Assignment",
+      "label": "  ="
+    }
+  ],
+  "Functions": {
+    "Trigonometric": [
+      {
+        "tag": "sin(x)",
+        "description": "sin(x)"
+      },
+      {
+        "tag": "cos(x)",
+        "description": "cos(x)"
+      },
+      {
+        "tag": "tan(x)",
+        "description": "tan(x)"
+      },
+      {
+        "tag": "csc(x)",
+        "description": "csc(x)"
+      },
+      {
+        "tag": "sec(x)",
+        "description": "sec(x)"
+      },
+      {
+        "tag": "cot(x)",
+        "description": "cot(x)"
+      }
+    ],
+    "Hyperbolic": [
+      {
+        "tag": "sinh(x)",
+        "description": "sinh(x)"
+      },
+      {
+        "tag": "cosh(x)",
+        "description": "cosh(x)"
+      },
+      {
+        "tag": "tanh(x)",
+        "description": "tanh(x)"
+      },
+      {
+        "tag": "csch(x)",
+        "description": "csch(x)"
+      },
+      {
+        "tag": "sech(x)",
+        "description": "sech(x)"
+      },
+      {
+        "tag": "coth(x)",
+        "description": "coth(x)"
+      }
+    ],
+    "Inverse Trigonometric": [
+      {
+        "tag": "asin(x)",
+        "description": "asin(x)"
+      },
+      {
+        "tag": "acos(x)",
+        "description": "acos(x)"
+      },
+      {
+        "tag": "atan(x)",
+        "description": "atan(x)"
+      },
+      {
+        "tag": "atan2(x; y)",
+        "description": "atan2(x; y)"
+      },
+      {
+        "tag": "acsc(x)",
+        "description": "acsc(x)"
+      },
+      {
+        "tag": "asec(x)",
+        "description": "asec(x)"
+      },
+      {
+        "tag": "acot(x)",
+        "description": "acot(x)"
+      }
+    ],
+    "Inverse Hyperbolic": [
+      {
+        "tag": "asinh(x)",
+        "description": "asinh(x)"
+      },
+      {
+        "tag": "acosh(x)",
+        "description": "acosh(x)"
+      },
+      {
+        "tag": "atanh(x)",
+        "description": "atanh(x)"
+      },
+      {
+        "tag": "acsch(x)",
+        "description": "acsch(x)"
+      },
+      {
+        "tag": "asech(x)",
+        "description": "asech(x)"
+      },
+      {
+        "tag": "acoth(x)",
+        "description": "acoth(x)"
+      }
+    ],
+    "Logarithmic Exponential And Roots": [
+      {
+        "tag": "log(x)",
+        "description": "log(x)"
+      },
+      {
+        "tag": "ln(x)",
+        "description": "ln(x)"
+      },
+      {
+        "tag": "log_2(x)",
+        "description": "log2(x)"
+      },
+      {
+        "tag": "exp(x)",
+        "description": "exp(x)"
+      },
+      {
+        "tag": "sqrt(x)",
+        "description": "sqrt(x)"
+      },
+      {
+        "tag": "cbrt(x)",
+        "description": "cbrt(x)"
+      },
+      {
+        "tag": "root(x; n)",
+        "description": "root(x; n)"
+      }
+    ],
+    "Rounding": [
+      {
+        "tag": "round(x)",
+        "description": "round(x)"
+      },
+      {
+        "tag": "floor(x)",
+        "description": "floor(x)"
+      },
+      {
+        "tag": "ceiling(x)",
+        "description": "ceiling(x)"
+      },
+      {
+        "tag": "trunc(x)",
+        "description": "trunc(x)"
+      }
+    ],
+    "Integer": [
+      {
+        "tag": "mod(x; y)",
+        "description": "mod(x; y)"
+      },
+      {
+        "tag": "gcd(x; y; z…)",
+        "description": "gcd(x; y; z…)"
+      },
+      {
+        "tag": "lcm(x; y; z…) ",
+        "description": "lcm(x; y; z…) "
+      }
+    ],
+    "Complex": [
+      {
+        "tag": "re(x)",
+        "description": "re(x)"
+      },
+      {
+        "tag": "im(x)",
+        "description": "im(x)"
+      },
+      {
+        "tag": "phase(x)",
+        "description": "phase(x)"
+      },
+      {
+        "tag": "abs(x)",
+        "description": "abs(x)"
+      }
+    ],
+    "Aggregate And Interpolation": [
+      {
+        "tag": "min(M; v; x…)",
+        "description": "min(M; v; x…)"
+      },
+      {
+        "tag": "max(M; v; x…)",
+        "description": "max(M; v; x…)"
+      },
+      {
+        "tag": "sum(M; v; x…)",
+        "description": "sum(M; v; x…)"
+      },
+      {
+        "tag": "sumsq(M; v; x…)",
+        "description": "sumsq(M; v; x…)"
+      },
+      {
+        "tag": "srss(M; v; x…)",
+        "description": "srss(M; v; x…)"
+      },
+      {
+        "tag": "average(M; v; x…)",
+        "description": "average(M; v; x…)"
+      },
+      {
+        "tag": "product(M; v; x…)",
+        "description": "product(M; v; x…)"
+      },
+      {
+        "tag": "mean(M; v; x…)",
+        "description": "mean(x; y; z...)"
+      },
+      {
+        "tag": "take(n; M; v; x…)",
+        "description": "take(n; M; v; x…)"
+      },
+      {
+        "tag": "line(x; M; v; y…)",
+        "description": "line(x; M; v; y…)"
+      },
+      {
+        "tag": "spline(x; M; v; y…)",
+        "description": "spline(x; M; v; y…)"
+      }
+    ],
+    "Conditional And Logical": [
+      {
+        "tag": "if(cond, vt, vf)",
+        "description": "if(cond, vt, vf)"
+      },
+      {
+        "tag": "switch(c₁; v₁; c₂; v₂; …; def)",
+        "description": "switch(c₁; v₁; c₂; v₂; …; def)"
+      },
+      {
+        "tag": "not(x)",
+        "description": "not(x)"
+      },
+      {
+        "tag": "and(M; v; x…)",
+        "description": "and(M; v; x…)"
+      },
+      {
+        "tag": "or(M; v; x…)",
+        "description": "or(M; v; x…)"
+      },
+      {
+        "tag": "xor(M; v; x…)",
+        "description": "xor(M; v; x…)"
+      }
+    ],
+    "Other": [
+      {
+        "tag": "sign(x)",
+        "description": "sign(x)"
+      },
+      {
+        "tag": "random(x)",
+        "description": "random(x)"
+      },
+      {
+        "tag": "getUnits(x)",
+        "description": "getUnits(x)"
+      },
+      {
+        "tag": "setUnits(x; u)",
+        "description": "setUnits(x; u)"
+      },
+      {
+        "tag": "clrUnits(x)",
+        "description": "clrUnits(x)"
+      },
+      {
+        "tag": "hp(x)",
+        "description": "hp(x)"
+      },
+      {
+        "tag": "ishp(x)",
+        "description": "ishp(x)"
+      }
+    ],
+    "Vector": {
+      "Creational": [
+        {
+          "tag": "vector(n)",
+          "description": "vector(n)"
+        },
+        {
+          "tag": "vector_hp(n)",
+          "description": "vector__hp(n)"
+        },
+        {
+          "tag": "fill(v; x)",
+          "description": "fill(v; x)"
+        },
+        {
+          "tag": "range(x₁; xₙ; step)",
+          "description": "range(x₁; xₙ; step)"
+        },
+        {
+          "tag": "range_hp(x₁; xₙ; step)",
+          "description": "range__hp(x₁; xₙ; step)"
+        }
+      ],
+      "Structural": [
+        {
+          "tag": "len(v)",
+          "description": "len(v)"
+        },
+        {
+          "tag": "size(v)",
+          "description": "size(v)"
+        },
+        {
+          "tag": "join(M; v; x…) ",
+          "description": "join(M; v; x…) "
+        },
+        {
+          "tag": "slice(v; i₁; i₂)",
+          "description": "slice(v; i₁; i₂)"
+        },
+        {
+          "tag": "resize(v; n)",
+          "description": "resize(v; n)"
+        },
+        {
+          "tag": "first(v; n)",
+          "description": "first(v; n)"
+        },
+        {
+          "tag": "last(v; n)",
+          "description": "last(v; n)"
+        },
+        {
+          "tag": "extract(v; vi)",
+          "description": "extract(v; vi)"
+        }
+      ],
+      "Data": {
+        "direct": [
+          {
+            "tag": "sort(v)",
+            "description": "sort(v)"
+          },
+          {
+            "tag": "rsort(v)",
+            "description": "rsort(v)"
+          },
+          {
+            "tag": "order(v)",
+            "description": "order(v)"
+          },
+          {
+            "tag": "revorder(v)",
+            "description": "revorder(v)"
+          },
+          {
+            "tag": "reverse(v)",
+            "description": "reverse(v)"
+          },
+          {
+            "tag": "count(v; x; i)",
+            "description": "count(v; x; i)"
+          },
+          {
+            "tag": "search(v; x; i)",
+            "description": "search(v; x; i)"
+          }
+        ],
+        "Find": [
+          {
+            "tag": "find(v; x; i)",
+            "description": "find(v; x; i)"
+          },
+          {
+            "tag": "find_eq(v; x; i)",
+            "description": "find__eq(v; x; i)"
+          },
+          {
+            "tag": "find_ne(v; x; i)",
+            "description": "find__ne(v; x; i)"
+          },
+          {
+            "tag": "find_lt(v; x; i)",
+            "description": "find__lt(v; x; i)"
+          },
+          {
+            "tag": "find_le(v; x; i)",
+            "description": "find__le(v; x; i)"
+          },
+          {
+            "tag": "find_gt(v; x; i)",
+            "description": "find__gt(v; x; i)"
+          },
+          {
+            "tag": "find_ge(v; x; i)",
+            "description": "find__ge(v; x; i)"
+          }
+        ],
+        "Lookup": [
+          {
+            "tag": "lookup(a; b; x)",
+            "description": "lookup(a; b; x)"
+          },
+          {
+            "tag": "lookup_eq(a; b; x)",
+            "description": "lookup__eq(a; b; x)"
+          },
+          {
+            "tag": "lookup_ne(a; b; x)",
+            "description": "lookup__ne(a; b; x)"
+          },
+          {
+            "tag": "lookup_lt(a; b; x)",
+            "description": "lookup__lt(a; b; x)"
+          },
+          {
+            "tag": "lookup_le(a; b; x)",
+            "description": "lookup__le(a; b; x)"
+          },
+          {
+            "tag": "lookup_gt(a; b; x)",
+            "description": "lookup__gt(a; b; x)"
+          },
+          {
+            "tag": "lookup_ge(a; b; x)",
+            "description": "lookup__ge(a; b; x)"
+          }
+        ]
+      },
+      "Math": [
+        {
+          "tag": "norm(v)",
+          "description": "norm(v)"
+        },
+        {
+          "tag": "norm_1(v)",
+          "description": "norm__1(v)"
+        },
+        {
+          "tag": "norm_2(v)",
+          "description": "norm__2(v)"
+        },
+        {
+          "tag": "norm_e(v)",
+          "description": "norm__e(v)"
+        },
+        {
+          "tag": "norm_p(v; p)",
+          "description": "norm__p(v; p)"
+        },
+        {
+          "tag": "norm_i(v)",
+          "description": "norm__i(v)"
+        },
+        {
+          "tag": "unit(v)",
+          "description": "unit(v)"
+        },
+        {
+          "tag": "dot(a; b)",
+          "description": "dot(a; b)"
+        },
+        {
+          "tag": "cross(a; b)",
+          "description": "cross(a; b)"
+        }
+      ]
+    },
+    "Matrix": {
+      "Creational": {
+        "direct": [
+          {
+            "tag": "matrix(m; n)",
+            "description": "matrix(m; n)"
+          },
+          {
+            "tag": "identity(n)",
+            "description": "identity(n)"
+          },
+          {
+            "tag": "diagonal(n; d)",
+            "description": "diagonal(n; d)"
+          },
+          {
+            "tag": "column(m; c)",
+            "description": "column(m; c)"
+          },
+          {
+            "tag": "utriang(n)",
+            "description": "utriang(n)"
+          },
+          {
+            "tag": "ltriang(n)",
+            "description": "ltriang(n)"
+          },
+          {
+            "tag": "symmetric(n)",
+            "description": "symmetric(n)"
+          },
+          {
+            "tag": "join_cols(c₁; c₂; c₃…)",
+            "description": "join__cols(c₁; c₂; c₃…)"
+          },
+          {
+            "tag": "join_rows(r₁; r₂; r₃…)",
+            "description": "join__rows(r₁; r₂; r₃…)"
+          },
+          {
+            "tag": "augment(A; B; C…)",
+            "description": "augment(A; B; C…)"
+          },
+          {
+            "tag": "stack(A; B; C…)",
+            "description": "stack(A; B; C…)"
+          }
+        ],
+        "High Performance": [
+          {
+            "tag": "matrix_hp(m; n)",
+            "description": "matrix__hp(m; n)"
+          },
+          {
+            "tag": "identity_hp(n)",
+            "description": "identity__hp(n)"
+          },
+          {
+            "tag": "diagonal_hp(n; d)",
+            "description": "diagonal__hp(n; d)"
+          },
+          {
+            "tag": "column_hp(m; c)",
+            "description": "column__hp(m; c)"
+          },
+          {
+            "tag": "utriang_hp(n)",
+            "description": "utriang__hp(n)"
+          },
+          {
+            "tag": "ltriang_hp(n)",
+            "description": "ltriang__hp(n)"
+          },
+          {
+            "tag": "symmetric_hp(n)",
+            "description": "symmetric__hp(n)"
+          }
+        ]
+      },
+      "Structural": [
+        {
+          "tag": "n_rows(M)",
+          "description": "n__rows(M)"
+        },
+        {
+          "tag": "n_cols(M)",
+          "description": "n__cols(M)"
+        },
+        {
+          "tag": "mresize(M; m; n)",
+          "description": "mresize(M; m; n)"
+        },
+        {
+          "tag": "mfill(M; x)",
+          "description": "mfill(M; x)"
+        },
+        {
+          "tag": "fill_row(M; i; x)",
+          "description": "fill__row(M; i; x)"
+        },
+        {
+          "tag": "fill_col(M; j; x)",
+          "description": "fill__col(M; j; x)"
+        },
+        {
+          "tag": "copy(A; B; i; j)",
+          "description": "copy(A; B; i; j)"
+        },
+        {
+          "tag": "add(A; B; i; j)",
+          "description": "add(A; B; i; j)"
+        },
+        {
+          "tag": "row(M; i)",
+          "description": "row(M; i)"
+        },
+        {
+          "tag": "col(M; j)",
+          "description": "col(M; j)"
+        },
+        {
+          "tag": "extract_rows(M; vi)",
+          "description": "extract__rows(M; vi)"
+        },
+        {
+          "tag": "extract_cols(M; vj)",
+          "description": "extract__cols(M; vj)"
+        },
+        {
+          "tag": "diag2vec(M)",
+          "description": "diag2vec(M)"
+        },
+        {
+          "tag": "submatrix(M; i₁; i₂; j₁; j₂)",
+          "description": "submatrix(M; i₁; i₂; j₁; j₂)"
+        }
+      ],
+      "Data": {
+        "direct": [
+          {
+            "tag": "sort_cols(M; i)",
+            "description": "sort__cols(M; i)"
+          },
+          {
+            "tag": "rsort_cols(M; i)",
+            "description": "rsort__cols(M; i)"
+          },
+          {
+            "tag": "sort_rows(M; j)",
+            "description": "sort__rows(M; j)"
+          },
+          {
+            "tag": "rsort_rows(M; j)",
+            "description": "rsort__rows(M; j)"
+          },
+          {
+            "tag": "order_cols(M; i)",
+            "description": "order__cols(M; i)"
+          },
+          {
+            "tag": "revorder_cols(M; i)",
+            "description": "revorder_cols(M; i)"
+          },
+          {
+            "tag": "order_rows(M; j)",
+            "description": "order__rows(M; j)"
+          },
+          {
+            "tag": "revorder_rows(M; j)",
+            "description": "revorder__rows(M; j)"
+          },
+          {
+            "tag": "mcount(M; x)",
+            "description": "mcount(M; x)"
+          },
+          {
+            "tag": "msearch(M; x; i; j)",
+            "description": "msearch(M; x; i; j)"
+          }
+        ],
+        "Find": [
+          {
+            "tag": "mfind(M; x)",
+            "description": "mfind(M; x)"
+          },
+          {
+            "tag": "mfind_eq(M; x)",
+            "description": "mfind__eq(M; x)"
+          },
+          {
+            "tag": "mfind_ne(M; x)",
+            "description": "mfind__ne(M; x)"
+          },
+          {
+            "tag": "mfind_lt(M; x)",
+            "description": "mfind__lt(M; x)"
+          },
+          {
+            "tag": "mfind_le(M; x)",
+            "description": "mfind__le(M; x)"
+          },
+          {
+            "tag": "mfind_gt(M; x)",
+            "description": "mfind__gt(M; x)"
+          },
+          {
+            "tag": "mfind_ge(M; x)",
+            "description": "mfind__ge(M; x)"
+          }
+        ],
+        "Lookup": [
+          {
+            "tag": "hlookup(M; x; i₁; i₂)",
+            "description": "hlookup(M; x; i₁; i₂)"
+          },
+          {
+            "tag": "hlookup_eq(M; x; i₁; i₂)",
+            "description": "hlookup__eq(M; x; i₁; i₂)"
+          },
+          {
+            "tag": "hlookup_ne(M; x; i₁; i₂)",
+            "description": "hlookup__ne(M; x; i₁; i₂)"
+          },
+          {
+            "tag": "hlookup_lt(M; x; i₁; i₂)",
+            "description": "hlookup__lt(M; x; i₁; i₂)"
+          },
+          {
+            "tag": "hlookup_le(M; x; i₁; i₂)",
+            "description": "hlookup__le(M; x; i₁; i₂)"
+          },
+          {
+            "tag": "hlookup_gt(M; x; i₁; i₂)",
+            "description": "hlookup__gt(M; x; i₁; i₂)"
+          },
+          {
+            "tag": "hlookup_ge(M; x; i₁; i₂)",
+            "description": "hlookup__ge(M; x; i₁; i₂)"
+          },
+          {
+            "tag": "vlookup(M; x; j₁; j₂)",
+            "description": "vlookup(M; x; j₁; j₂)"
+          },
+          {
+            "tag": "vlookup_eq(M; x; j₁; j₂)",
+            "description": "vlookup__eq(M; x; j₁; j₂)"
+          },
+          {
+            "tag": "vlookup_ne(M; x; j₁; j₂)",
+            "description": "vlookup__ne(M; x; j₁; j₂)"
+          },
+          {
+            "tag": "vlookup_lt(M; x; j₁; j₂)",
+            "description": "vlookup__lt(M; x; j₁; j₂)"
+          },
+          {
+            "tag": "vlookup_le(M; x; j₁; j₂)",
+            "description": "vlookup__le(M; x; j₁; j₂)"
+          },
+          {
+            "tag": "vlookup_gt(M; x; j₁; j₂)",
+            "description": "vlookup__gt(M; x; j₁; j₂)"
+          },
+          {
+            "tag": "vlookup_ge(M; x; j₁; j₂)",
+            "description": "vlookup__ge(M; x; j₁; j₂)"
+          }
+        ]
+      },
+      "Math": {
+        "direct": [
+          {
+            "tag": "hprod(A; B)",
+            "description": "hprod(A; B)"
+          },
+          {
+            "tag": "fprod(A; B)",
+            "description": "fprod(A; B)"
+          },
+          {
+            "tag": "kprod(A; B)",
+            "description": "kprod(A; B)"
+          },
+          {
+            "tag": "det(M)",
+            "description": "det(M)"
+          },
+          {
+            "tag": "rank(M)",
+            "description": "rank(M)"
+          },
+          {
+            "tag": "trace(M)",
+            "description": "trace(M)"
+          },
+          {
+            "tag": "transp(M)",
+            "description": "transp(M)"
+          },
+          {
+            "tag": "adj(M)",
+            "description": "adj(M)"
+          },
+          {
+            "tag": "cofactor(M)",
+            "description": "cofactor(M)"
+          },
+          {
+            "tag": "inverse(M)",
+            "description": "inverse(M)"
+          },
+          {
+            "tag": "lsolve(A; b)",
+            "description": "lsolve(A; b)"
+          },
+          {
+            "tag": "clsolve(A; b)",
+            "description": "clsolve(A; b)"
+          },
+          {
+            "tag": "msolve(A; B)",
+            "description": "msolve(A; B)"
+          },
+          {
+            "tag": "cmsolve(A; B)",
+            "description": "cmsolve(A; B)"
+          }
+        ],
+        "Norms": [
+          {
+            "tag": "mnorm(",
+            "description": "mnorm(M)"
+          },
+          {
+            "tag": "mnorm_1(M)",
+            "description": "mnorm__1(M)"
+          },
+          {
+            "tag": "mnorm_2(M)",
+            "description": "mnorm__2(M)"
+          },
+          {
+            "tag": "mnorm_e(M)",
+            "description": "mnorm__e(M)"
+          },
+          {
+            "tag": "mnorm_i(M)",
+            "description": "mnorm__i(M)"
+          }
+        ],
+        "Condition Numbers": [
+          {
+            "tag": "cond(M)",
+            "description": "cond(M)"
+          },
+          {
+            "tag": "cond_1(M)",
+            "description": "cond__1(M)"
+          },
+          {
+            "tag": "cond_2(M)",
+            "description": "cond__2(M)"
+          },
+          {
+            "tag": "cond_e(M)",
+            "description": "cond__e(M)"
+          },
+          {
+            "tag": "cond_i(M)",
+            "description": "cond__i(M)"
+          }
+        ],
+        "Eigenvalues And Eigenvectors": [
+          {
+            "tag": "eigenvals(M; nₑ)",
+            "description": "eigenvals(M; nₑ)"
+          },
+          {
+            "tag": "eigenvecs(M; nₑ)",
+            "description": "eigenvecs(M; nₑ)"
+          },
+          {
+            "tag": "eigen(M; nₑ)",
+            "description": "eigen(M; nₑ)"
+          }
+        ],
+        "Decompositions": [
+          {
+            "tag": "cholesky(M)",
+            "description": "cholesky(M)"
+          },
+          {
+            "tag": "lu(M)",
+            "description": "lu(M)"
+          },
+          {
+            "tag": "qr(M)",
+            "description": "qr(M)"
+          },
+          {
+            "tag": "svd(M)",
+            "description": "svd(M)"
+          }
+        ],
+        "Double Interpolation": [
+          {
+            "tag": "take(x; y; M)",
+            "description": "take(x; y; M)"
+          },
+          {
+            "tag": "line(x; y; M)",
+            "description": "line(x; y; M)"
+          },
+          {
+            "tag": "spline(x; y; M)",
+            "description": "spline(x; y; M)"
+          }
+        ]
+      }
+    }
+  },
+  "Units Header": {
+    "Dimensionless": [
+      {
+        "tag": "%",
+        "description": "Percent"
+      },
+      {
+        "tag": "‰",
+        "description": "Permille"
+      },
+      {
+        "tag": "‱",
+        "description": "Permyriad"
+      },
+      {
+        "tag": "pcm",
+        "description": "Per100000"
+      },
+      {
+        "tag": "ppm",
+        "description": "Per Million"
+      },
+      {
+        "tag": "ppb",
+        "description": "Per Billion"
+      },
+      {
+        "tag": "ppt",
+        "description": "Per Trillion"
+      },
+      {
+        "tag": "ppq",
+        "description": "Per Quadrillion"
+      }
+    ],
+    "Angles": [
+      {
+        "tag": "°",
+        "description": "Degrees"
+      },
+      {
+        "tag": "′",
+        "description": "Minutes"
+      },
+      {
+        "tag": "″",
+        "description": "Seconds"
+      },
+      {
+        "tag": "deg",
+        "description": "Deg Degrees"
+      },
+      {
+        "tag": "rad",
+        "description": "Radians"
+      },
+      {
+        "tag": "grad",
+        "description": "Gradians"
+      },
+      {
+        "tag": "rev",
+        "description": "Revolutions"
+      }
+    ],
+    "Metric": {
+      "Mass": [
+        {
+          "tag": "g",
+          "description": "Gram"
+        },
+        {
+          "tag": "hg",
+          "description": "Hectogram"
+        },
+        {
+          "tag": "kg",
+          "description": "Kilogram"
+        },
+        {
+          "tag": "t",
+          "description": "Ton"
+        },
+        {
+          "tag": "kt",
+          "description": "Kiloton"
+        },
+        {
+          "tag": "Mt",
+          "description": "Megaton"
+        },
+        {
+          "tag": "Gt",
+          "description": "Gigaton"
+        },
+        {
+          "tag": "dg",
+          "description": "Decigram"
+        },
+        {
+          "tag": "cg",
+          "description": "Centigram"
+        },
+        {
+          "tag": "mg",
+          "description": "Milligram"
+        },
+        {
+          "tag": "μg",
+          "description": "Microgram"
+        },
+        {
+          "tag": "ng",
+          "description": "Nanogram"
+        },
+        {
+          "tag": "pg",
+          "description": "Picogram"
+        },
+        {
+          "tag": "Da",
+          "description": "Dalton"
+        },
+        {
+          "tag": "u",
+          "description": "Dalton Alt"
+        }
+      ],
+      "Length": [
+        {
+          "tag": "m",
+          "description": "Meter"
+        },
+        {
+          "tag": "km",
+          "description": "Kilometer"
+        },
+        {
+          "tag": "dm",
+          "description": "Decimeter"
+        },
+        {
+          "tag": "cm",
+          "description": "Centimeter"
+        },
+        {
+          "tag": "mm",
+          "description": "Millimeter"
+        },
+        {
+          "tag": "μm",
+          "description": "Micrometer"
+        },
+        {
+          "tag": "nm",
+          "description": "Nanometer"
+        },
+        {
+          "tag": "pm",
+          "description": "Picometer"
+        },
+        {
+          "tag": "AU",
+          "description": "Astronomical Unit"
+        },
+        {
+          "tag": "ly",
+          "description": "Light Year"
+        }
+      ],
+      "Area": [
+        {
+          "tag": "m^2",
+          "description": "Sq Meter"
+        },
+        {
+          "tag": "km^2",
+          "description": "Sq Kilometer"
+        },
+        {
+          "tag": "dm^2",
+          "description": "Sq Decimeter"
+        },
+        {
+          "tag": "cm^2",
+          "description": "Sq Centimeter"
+        },
+        {
+          "tag": "mm^2",
+          "description": "Sq Millimeter"
+        },
+        {
+          "tag": "a",
+          "description": "Are"
+        },
+        {
+          "tag": "daa",
+          "description": "Decare"
+        },
+        {
+          "tag": "ha",
+          "description": "Hectare"
+        }
+      ],
+      "Volume": [
+        {
+          "tag": "m^3",
+          "description": "Cubic Meter"
+        },
+        {
+          "tag": "km^3",
+          "description": "Cubic Kilometer"
+        },
+        {
+          "tag": "dm^3",
+          "description": "Cubic Decimeter"
+        },
+        {
+          "tag": "cm^3",
+          "description": "Cubic Centimeter"
+        },
+        {
+          "tag": "mm^3",
+          "description": "Cubic Millimeter"
+        },
+        {
+          "tag": "L",
+          "description": "Litre"
+        },
+        {
+          "tag": "daL",
+          "description": "Decalitre"
+        },
+        {
+          "tag": "hL",
+          "description": "Hectolitre"
+        },
+        {
+          "tag": "dL",
+          "description": "Decilitre"
+        },
+        {
+          "tag": "cL",
+          "description": "Centilitre"
+        },
+        {
+          "tag": "mL",
+          "description": "Millilitre"
+        },
+        {
+          "tag": "μL",
+          "description": "Microlitre"
+        },
+        {
+          "tag": "nL",
+          "description": "Nanolitre"
+        },
+        {
+          "tag": "pL",
+          "description": "Picolitre"
+        }
+      ],
+      "Time": [
+        {
+          "tag": "s",
+          "description": "Second"
+        },
+        {
+          "tag": "ms",
+          "description": "Millisecond"
+        },
+        {
+          "tag": "μs",
+          "description": "Microsecond"
+        },
+        {
+          "tag": "ns",
+          "description": "Nanosecond"
+        },
+        {
+          "tag": "ps",
+          "description": "Picosecond"
+        },
+        {
+          "tag": "min",
+          "description": "Minute"
+        },
+        {
+          "tag": "h",
+          "description": "Hour"
+        },
+        {
+          "tag": "d",
+          "description": "Day"
+        },
+        {
+          "tag": "w",
+          "description": "Week"
+        },
+        {
+          "tag": "y",
+          "description": "Year"
+        }
+      ],
+      "Frequency": [
+        {
+          "tag": "Hz",
+          "description": "Hertz"
+        },
+        {
+          "tag": "kHz",
+          "description": "Kilohertz"
+        },
+        {
+          "tag": "MHz",
+          "description": "Megahertz"
+        },
+        {
+          "tag": "GHz",
+          "description": "Gigahertz"
+        },
+        {
+          "tag": "THz",
+          "description": "Terahertz"
+        },
+        {
+          "tag": "mHz",
+          "description": "Millihertz"
+        },
+        {
+          "tag": "μHz",
+          "description": "Microhertz"
+        },
+        {
+          "tag": "nHz",
+          "description": "Nanohertz"
+        },
+        {
+          "tag": "pHz",
+          "description": "Picohertz"
+        },
+        {
+          "tag": "rpm",
+          "description": "RPM"
+        }
+      ],
+      "Speed": [
+        {
+          "tag": "m/s",
+          "description": "Meters Per Second"
+        },
+        {
+          "tag": "kmh",
+          "description": "Kilometers Per Hour"
+        }
+      ],
+      "Temperature": [
+        {
+          "tag": "°C",
+          "description": "Degree Celsius"
+        },
+        {
+          "tag": "Δ°C",
+          "description": "Difference In Degrees Celsius"
+        },
+        {
+          "tag": "K",
+          "description": "Kelvin"
+        }
+      ],
+      "Force": [
+        {
+          "tag": "N",
+          "description": "Newton"
+        },
+        {
+          "tag": "daN",
+          "description": "Decanewton"
+        },
+        {
+          "tag": "hN",
+          "description": "Hectonewton"
+        },
+        {
+          "tag": "kN",
+          "description": "Kilonewton"
+        },
+        {
+          "tag": "MN",
+          "description": "Meganewton"
+        },
+        {
+          "tag": "GN",
+          "description": "Giganewton"
+        },
+        {
+          "tag": "TN",
+          "description": "Teranewton"
+        },
+        {
+          "tag": "gf",
+          "description": "Gram Force"
+        },
+        {
+          "tag": "kgf",
+          "description": "Kilogram Force"
+        },
+        {
+          "tag": "tf",
+          "description": "Tonne Force"
+        },
+        {
+          "tag": "dyn",
+          "description": "Dyne"
+        }
+      ],
+      "Torque Moment": [
+        {
+          "tag": "Nm",
+          "description": "Newton Meter"
+        },
+        {
+          "tag": "N*mm",
+          "description": "Newton Millimeter"
+        },
+        {
+          "tag": "N*cm",
+          "description": "Newton Centimeter"
+        },
+        {
+          "tag": "kN*cm",
+          "description": "Kilo Newton Centimeter"
+        },
+        {
+          "tag": "kNm",
+          "description": "Kilo Newton Meter"
+        }
+      ],
+      "Pressure": [
+        {
+          "tag": "N/mm^2",
+          "description": "Newtons Per Sq Millimeter"
+        },
+        {
+          "tag": "N/cm^2",
+          "description": "Newtons Per Sq Centimeter"
+        },
+        {
+          "tag": "N/m^2",
+          "description": "Newtons Per Sq Meter"
+        },
+        {
+          "tag": "kN/cm^2",
+          "description": "Kilo Newtons Per Sq Centimeter"
+        },
+        {
+          "tag": "kN/m^2",
+          "description": "Kilo Newtons Per Sq Meter"
+        },
+        {
+          "tag": "kgf/cm^2",
+          "description": "Kilogram Froce Per Sq Centimeter"
+        },
+        {
+          "tag": "tf/m^2",
+          "description": "Tonne Force Per Sq Meter"
+        },
+        {
+          "tag": "Pa",
+          "description": "Pascal"
+        },
+        {
+          "tag": "daPa",
+          "description": "Decapascal"
+        },
+        {
+          "tag": "hPa",
+          "description": "Hectopascal"
+        },
+        {
+          "tag": "kPa",
+          "description": "Kilopascal"
+        },
+        {
+          "tag": "MPa",
+          "description": "Megapascal"
+        },
+        {
+          "tag": "GPa",
+          "description": "Gigapascal"
+        },
+        {
+          "tag": "TPa",
+          "description": "Terapascal"
+        },
+        {
+          "tag": "dPa",
+          "description": "Decipascal"
+        },
+        {
+          "tag": "cPa",
+          "description": "Centipascal"
+        },
+        {
+          "tag": "mPa",
+          "description": "Micropascal"
+        },
+        {
+          "tag": "μPa",
+          "description": "Millipascal"
+        },
+        {
+          "tag": "nPa",
+          "description": "Nanopascal"
+        },
+        {
+          "tag": "pPa",
+          "description": "Picopascal"
+        },
+        {
+          "tag": "bar",
+          "description": "Bar"
+        },
+        {
+          "tag": "mbar",
+          "description": "Millibar"
+        },
+        {
+          "tag": "μbar",
+          "description": "Microbar"
+        },
+        {
+          "tag": "atm",
+          "description": "Atmosphere"
+        },
+        {
+          "tag": "at",
+          "description": "Technical Atmosphere"
+        },
+        {
+          "tag": "Torr",
+          "description": "Torr"
+        },
+        {
+          "tag": "mmHg",
+          "description": "Milliliters Of Mercury"
+        }
+      ],
+      "Density Unit Weight": [
+        {
+          "tag": "g/mm^3",
+          "description": "Grams Per Cubic Millimeter"
+        },
+        {
+          "tag": "g/cm^3",
+          "description": "Grams Per Cubic Centimeter"
+        },
+        {
+          "tag": "kg/cm^3",
+          "description": "Kilograms Per Cubic Centimeter"
+        },
+        {
+          "tag": "t/m^3",
+          "description": "Tonnes Per Cubic Meter"
+        },
+        {
+          "tag": "kgf/cm^3",
+          "description": "Kilogram Force Per Cubic Centimeter"
+        },
+        {
+          "tag": "tf/m^3",
+          "description": "Tonne Force Per Cubic Meter"
+        },
+        {
+          "tag": "N/mm^3",
+          "description": "Newtons Per Cubic Millimeter"
+        },
+        {
+          "tag": "N/cm^3",
+          "description": "Newtons Per Cubic Centimeter"
+        },
+        {
+          "tag": "kN/cm^3",
+          "description": "Kilonewtons Per Cubic Centimeter"
+        },
+        {
+          "tag": "kN/m^3",
+          "description": "Kilonewtons Per Cubic Meter"
+        }
+      ],
+      "Viscosity": [
+        {
+          "tag": "Pa*s",
+          "description": "Pascal Second"
+        },
+        {
+          "tag": "P",
+          "description": "Poise"
+        },
+        {
+          "tag": "cP",
+          "description": "Centipoise"
+        },
+        {
+          "tag": "m^2/s",
+          "description": "Square Meters Per Second"
+        },
+        {
+          "tag": "St",
+          "description": "Stokes"
+        },
+        {
+          "tag": "cSt",
+          "description": "Centistokes"
+        }
+      ],
+      "Energy Work": [
+        {
+          "tag": "J",
+          "description": "Joule"
+        },
+        {
+          "tag": "kJ",
+          "description": "Kilojoule"
+        },
+        {
+          "tag": "MJ",
+          "description": "Megajoule"
+        },
+        {
+          "tag": "GJ",
+          "description": "Gigajoule"
+        },
+        {
+          "tag": "TJ",
+          "description": "Terajoule"
+        },
+        {
+          "tag": "mJ",
+          "description": "Millijoule"
+        },
+        {
+          "tag": "μJ",
+          "description": "Microjoule"
+        },
+        {
+          "tag": "nJ",
+          "description": "Nanojoule"
+        },
+        {
+          "tag": "pJ",
+          "description": "Picojoule"
+        },
+        {
+          "tag": "eV",
+          "description": "Electronvolt"
+        },
+        {
+          "tag": "keV",
+          "description": "Kiloelectronvolt"
+        },
+        {
+          "tag": "MeV",
+          "description": "Megaelectronvolt"
+        },
+        {
+          "tag": "GeV",
+          "description": "Gigaelectronvolt"
+        },
+        {
+          "tag": "TeV",
+          "description": "Teraelectronvolt"
+        },
+        {
+          "tag": "PeV",
+          "description": "Petaelectronvolt"
+        },
+        {
+          "tag": "EeV",
+          "description": "Exaelectronvolt"
+        },
+        {
+          "tag": "erg",
+          "description": "Erg"
+        },
+        {
+          "tag": "cal",
+          "description": "Calorie"
+        },
+        {
+          "tag": "kcal",
+          "description": "Kilocalorie"
+        }
+      ],
+      "Power": [
+        {
+          "tag": "W",
+          "description": "Watt"
+        },
+        {
+          "tag": "kW",
+          "description": "Kilowatt"
+        },
+        {
+          "tag": "MW",
+          "description": "Megawatt"
+        },
+        {
+          "tag": "GW",
+          "description": "Gigawatt"
+        },
+        {
+          "tag": "TW",
+          "description": "Terawatt"
+        },
+        {
+          "tag": "mW",
+          "description": "Milliwatt"
+        },
+        {
+          "tag": "μW",
+          "description": "Microwatt"
+        },
+        {
+          "tag": "nW",
+          "description": "Nanowatt"
+        },
+        {
+          "tag": "pW",
+          "description": "Picowatt"
+        }
+      ],
+      "Electric": {
+        "direct": [
+          {
+            "tag": "Ω*m",
+            "description": "Ohm Meter"
+          },
+          {
+            "tag": "S/m",
+            "description": "Siemens Per Meter"
+          },
+          {
+            "tag": "V*m",
+            "description": "Volt Meter"
+          }
+        ],
+        "Current": [
+          {
+            "tag": "A",
+            "description": "Ampere"
+          },
+          {
+            "tag": "kA",
+            "description": "Kiloampere"
+          },
+          {
+            "tag": "MA",
+            "description": "Megaampere"
+          },
+          {
+            "tag": "GA",
+            "description": "Gigaampere"
+          },
+          {
+            "tag": "TA",
+            "description": "Teraampere"
+          },
+          {
+            "tag": "mA",
+            "description": "Milliampere"
+          },
+          {
+            "tag": "μA",
+            "description": "Microampere"
+          },
+          {
+            "tag": "nA",
+            "description": "Nanoampere"
+          },
+          {
+            "tag": "pA",
+            "description": "Picoampere"
+          }
+        ],
+        "Charge": [
+          {
+            "tag": "C",
+            "description": "Coulomb"
+          },
+          {
+            "tag": "kC",
+            "description": "Kilocoulomb"
+          },
+          {
+            "tag": "MC",
+            "description": "Megacoulomb"
+          },
+          {
+            "tag": "GC",
+            "description": "Gigacoulomb"
+          },
+          {
+            "tag": "TC",
+            "description": "Teracoulomb"
+          },
+          {
+            "tag": "mC",
+            "description": "Millicoulomb"
+          },
+          {
+            "tag": "μC",
+            "description": "Microcoulomb"
+          },
+          {
+            "tag": "nC",
+            "description": "Nanocoulomb"
+          },
+          {
+            "tag": "pC",
+            "description": "Picocoulomb"
+          },
+          {
+            "tag": "Ah",
+            "description": "Ampere Hour"
+          },
+          {
+            "tag": "mAh",
+            "description": "Millampere Hour"
+          }
+        ],
+        "Potential": [
+          {
+            "tag": "V",
+            "description": "Volt"
+          },
+          {
+            "tag": "kV",
+            "description": "Kilovolt"
+          },
+          {
+            "tag": "MV",
+            "description": "Megavolt"
+          },
+          {
+            "tag": "GV",
+            "description": "Gigavolt"
+          },
+          {
+            "tag": "TV",
+            "description": "Teravolt"
+          },
+          {
+            "tag": "mV",
+            "description": "Millivolt"
+          },
+          {
+            "tag": "μV",
+            "description": "Microvolt"
+          },
+          {
+            "tag": "nV",
+            "description": "Nanovolt"
+          },
+          {
+            "tag": "pV",
+            "description": "Picovolt"
+          }
+        ],
+        "Capacitance": [
+          {
+            "tag": "F",
+            "description": "Farad"
+          },
+          {
+            "tag": "kF",
+            "description": "Kilofarad"
+          },
+          {
+            "tag": "MF",
+            "description": "Megafarad"
+          },
+          {
+            "tag": "GF",
+            "description": "Gigafarad"
+          },
+          {
+            "tag": "TF",
+            "description": "Terafarad"
+          },
+          {
+            "tag": "mF",
+            "description": "Millifarad"
+          },
+          {
+            "tag": "μF",
+            "description": "Microfarad"
+          },
+          {
+            "tag": "nF",
+            "description": "Nanofarad"
+          },
+          {
+            "tag": "pF",
+            "description": "Picofarad"
+          }
+        ],
+        "Resistance": [
+          {
+            "tag": "Ω",
+            "description": "Ohm"
+          },
+          {
+            "tag": "kΩ",
+            "description": "Kiloohm"
+          },
+          {
+            "tag": "MΩ",
+            "description": "Megaohm"
+          },
+          {
+            "tag": "GΩ",
+            "description": "Gigaohm"
+          },
+          {
+            "tag": "TΩ",
+            "description": "Teraohm"
+          },
+          {
+            "tag": "mΩ",
+            "description": "Milliohm"
+          },
+          {
+            "tag": "μΩ",
+            "description": "Microohm"
+          },
+          {
+            "tag": "nΩ",
+            "description": "Nanoohm"
+          },
+          {
+            "tag": "pΩ",
+            "description": "Picoohm"
+          }
+        ],
+        "Conductance": [
+          {
+            "tag": "S",
+            "description": "Siemens"
+          },
+          {
+            "tag": "kS",
+            "description": "Kilosiemens"
+          },
+          {
+            "tag": "MS",
+            "description": "Megasiemens"
+          },
+          {
+            "tag": "GS",
+            "description": "Gigasiemens"
+          },
+          {
+            "tag": "TS",
+            "description": "Terasiemens"
+          },
+          {
+            "tag": "mS",
+            "description": "Millisiemens"
+          },
+          {
+            "tag": "μS",
+            "description": "Microsiemens"
+          },
+          {
+            "tag": "nS",
+            "description": "Nanosiemens"
+          },
+          {
+            "tag": "pS",
+            "description": "Picosiemens"
+          },
+          {
+            "tag": "℧",
+            "description": "Mho"
+          },
+          {
+            "tag": "k℧",
+            "description": "Kilomho"
+          },
+          {
+            "tag": "M℧",
+            "description": "Megamho"
+          },
+          {
+            "tag": "G℧",
+            "description": "Gigamho"
+          },
+          {
+            "tag": "T℧",
+            "description": "Teramho"
+          },
+          {
+            "tag": "m℧",
+            "description": "Millimho"
+          },
+          {
+            "tag": "μ℧",
+            "description": "Micromho"
+          },
+          {
+            "tag": "n℧",
+            "description": "Nanomho"
+          },
+          {
+            "tag": "p℧",
+            "description": "Picomho"
+          }
+        ],
+        "Energy": [
+          {
+            "tag": "Wh",
+            "description": "Watt Hour"
+          },
+          {
+            "tag": "kWh",
+            "description": "Kilowatt Hour"
+          },
+          {
+            "tag": "MWh",
+            "description": "Megawatt Hour"
+          },
+          {
+            "tag": "GWh",
+            "description": "Gigawatt Hour"
+          },
+          {
+            "tag": "TWh",
+            "description": "Terawatt Hour"
+          },
+          {
+            "tag": "mWh",
+            "description": "Milliwatt Hour"
+          },
+          {
+            "tag": "μWh",
+            "description": "Microwatt Hour"
+          },
+          {
+            "tag": "nWh",
+            "description": "Nanowatt Hour"
+          },
+          {
+            "tag": "pWh",
+            "description": "Picowatt Hour"
+          }
+        ],
+        "Power": [
+          {
+            "tag": "VA",
+            "description": "Volt Ampere"
+          },
+          {
+            "tag": "kVA",
+            "description": "Kilovolt Ampere"
+          },
+          {
+            "tag": "MVA",
+            "description": "Megavolt Ampere"
+          },
+          {
+            "tag": "GVA",
+            "description": "Gigavolt Ampere"
+          },
+          {
+            "tag": "TVA",
+            "description": "Teravolt Ampere"
+          },
+          {
+            "tag": "mVA",
+            "description": "Millivolt Ampere"
+          },
+          {
+            "tag": "μVA",
+            "description": "Microvolt Ampere"
+          },
+          {
+            "tag": "nVA",
+            "description": "Nanovolt Ampere"
+          },
+          {
+            "tag": "pVA",
+            "description": "Picovolt Ampere"
+          },
+          {
+            "tag": "VAR",
+            "description": "Volt Ampere Reactive"
+          },
+          {
+            "tag": "kVAR",
+            "description": "Kilovolt Ampere Reactive"
+          },
+          {
+            "tag": "MVAR",
+            "description": "Megavolt Ampere Reactive"
+          },
+          {
+            "tag": "GVAR",
+            "description": "Gigavolt Ampere Reactive"
+          },
+          {
+            "tag": "TVAR",
+            "description": "Teravolt Ampere Reactive"
+          },
+          {
+            "tag": "mVAR",
+            "description": "Millivolt Ampere Reactive"
+          },
+          {
+            "tag": "μVAR",
+            "description": "Microvolt Ampere Reactive"
+          },
+          {
+            "tag": "nVAR",
+            "description": "Nanovolt Ampere Reactive"
+          },
+          {
+            "tag": "pVAR",
+            "description": "Picovolt Ampere Reactive"
+          }
+        ],
+        "Electric Field": [
+          {
+            "tag": "V/m",
+            "description": "Volts Per Meter"
+          },
+          {
+            "tag": "N/C",
+            "description": "Newtons Per Coulomb"
+          }
+        ]
+      },
+      "Magnetic": {
+        "Flux": [
+          {
+            "tag": "Wb",
+            "description": "Weber"
+          },
+          {
+            "tag": "kWb",
+            "description": "Kiloweber"
+          },
+          {
+            "tag": "MWb",
+            "description": "Megaweber"
+          },
+          {
+            "tag": "GWb",
+            "description": "Gigaweber"
+          },
+          {
+            "tag": "TWb",
+            "description": "Teraweber"
+          },
+          {
+            "tag": "mWb",
+            "description": "Milliweber"
+          },
+          {
+            "tag": "μWb",
+            "description": "Microweber"
+          },
+          {
+            "tag": "nWb",
+            "description": "Nanoweber"
+          },
+          {
+            "tag": "pWb",
+            "description": "Picoweber"
+          }
+        ],
+        "Flux Density": [
+          {
+            "tag": "T",
+            "description": "Tesla"
+          },
+          {
+            "tag": "kT",
+            "description": "Kilotesla"
+          },
+          {
+            "tag": "MT",
+            "description": "Megatesla"
+          },
+          {
+            "tag": "GT",
+            "description": "Gigatesla"
+          },
+          {
+            "tag": "TT",
+            "description": "Teratesla"
+          },
+          {
+            "tag": "mT",
+            "description": "Millitesla"
+          },
+          {
+            "tag": "μT",
+            "description": "Microtesla"
+          },
+          {
+            "tag": "nT",
+            "description": "Nanotesla"
+          },
+          {
+            "tag": "pT",
+            "description": "Picotesla"
+          }
+        ],
+        "Inductance": [
+          {
+            "tag": "H",
+            "description": "Henry"
+          },
+          {
+            "tag": "kH",
+            "description": "Kilohenry"
+          },
+          {
+            "tag": "MH",
+            "description": "Megahenry"
+          },
+          {
+            "tag": "GH",
+            "description": "Gigahenry"
+          },
+          {
+            "tag": "TH",
+            "description": "Terahenry"
+          },
+          {
+            "tag": "mH",
+            "description": "Millihenry"
+          },
+          {
+            "tag": "μH",
+            "description": "Microhenry"
+          },
+          {
+            "tag": "nH",
+            "description": "Nanohenry"
+          },
+          {
+            "tag": "pH",
+            "description": "Picohenry"
+          }
+        ]
+      },
+      "Light Radiation": {
+        "direct": [
+          {
+            "tag": "cd",
+            "description": "Candela"
+          },
+          {
+            "tag": "lm",
+            "description": "Lumen"
+          },
+          {
+            "tag": "lm*s",
+            "description": "Lumen Second"
+          },
+          {
+            "tag": "lm*s/m^3",
+            "description": "Lumen Second Per Cubic Meter"
+          },
+          {
+            "tag": "lm/W",
+            "description": "Lumen Per Watt"
+          },
+          {
+            "tag": "cd/m^2",
+            "description": "Candela Per Sq Meter"
+          },
+          {
+            "tag": "lx",
+            "description": "Lux"
+          },
+          {
+            "tag": "lx*s",
+            "description": "Lux Second"
+          }
+        ],
+        "Radioactivity": [
+          {
+            "tag": "Bq",
+            "description": "Becquerel"
+          },
+          {
+            "tag": "kBq",
+            "description": "Kilobecquerel"
+          },
+          {
+            "tag": "MBq",
+            "description": "Megabecquerel"
+          },
+          {
+            "tag": "GBq",
+            "description": "Gigabecquerel"
+          },
+          {
+            "tag": "TBq",
+            "description": "Terabecquerel"
+          },
+          {
+            "tag": "mBq",
+            "description": "Millibecquerel"
+          },
+          {
+            "tag": "μBq",
+            "description": "Microbecquerel"
+          },
+          {
+            "tag": "nBq",
+            "description": "Nanobecquerel"
+          },
+          {
+            "tag": "pBq",
+            "description": "Picobecquerel"
+          },
+          {
+            "tag": "Ci",
+            "description": "Curie"
+          },
+          {
+            "tag": "Rd",
+            "description": "Rutherford"
+          }
+        ],
+        "Exposure": [
+          {
+            "tag": "R",
+            "description": "Roentgen"
+          },
+          {
+            "tag": "C/kg",
+            "description": "Coulomb Per Kilogram"
+          }
+        ],
+        "Absorbed Dose": [
+          {
+            "tag": "Gy",
+            "description": "Gray"
+          },
+          {
+            "tag": "kGy",
+            "description": "Kilogray"
+          },
+          {
+            "tag": "MGy",
+            "description": "Megagray"
+          },
+          {
+            "tag": "GGy",
+            "description": "Gigagray"
+          },
+          {
+            "tag": "TGy",
+            "description": "Teragray"
+          },
+          {
+            "tag": "mGy",
+            "description": "Milligray"
+          },
+          {
+            "tag": "μGy",
+            "description": "Microgray"
+          },
+          {
+            "tag": "nGy",
+            "description": "Nanogray"
+          },
+          {
+            "tag": "pGy",
+            "description": "Picogray"
+          }
+        ],
+        "Equivalent Dose": [
+          {
+            "tag": "Sv",
+            "description": "Sievert"
+          },
+          {
+            "tag": "kSv",
+            "description": "Kilosievert"
+          },
+          {
+            "tag": "MSv",
+            "description": "Megasievert"
+          },
+          {
+            "tag": "GSv",
+            "description": "Gigasievert"
+          },
+          {
+            "tag": "TSv",
+            "description": "Terasievert"
+          },
+          {
+            "tag": "mSv",
+            "description": "Millisievert"
+          },
+          {
+            "tag": "μSv",
+            "description": "Microsievert"
+          },
+          {
+            "tag": "nSv",
+            "description": "Nanosievert"
+          },
+          {
+            "tag": "pSv",
+            "description": "Picosievert"
+          }
+        ]
+      },
+      "Other": [
+        {
+          "tag": "mol",
+          "description": "Mol"
+        },
+        {
+          "tag": "kat",
+          "description": "Catalytic Activity"
+        }
+      ]
+    },
+    "Imperial US": {
+      "Mass": [
+        {
+          "tag": "gr",
+          "description": "gr (grain)"
+        },
+        {
+          "tag": "dr",
+          "description": "dr (drachm)"
+        },
+        {
+          "tag": "oz",
+          "description": "oz (ounce)"
+        },
+        {
+          "tag": "lb",
+          "description": "lb (pound)"
+        },
+        {
+          "tag": "lbm",
+          "description": "lbm (pound)"
+        },
+        {
+          "tag": "lb_m",
+          "description": "lb-m (pound)"
+        },
+        {
+          "tag": "klb",
+          "description": "klb (kilopound)"
+        },
+        {
+          "tag": "kipm",
+          "description": "kipm (kilopound-mass)"
+        },
+        {
+          "tag": "kip_m",
+          "description": "kip-m (kilopound-mass)"
+        },
+        {
+          "tag": "st",
+          "description": "st (stone)"
+        },
+        {
+          "tag": "qr",
+          "description": "qr (quarter)"
+        },
+        {
+          "tag": "cwt_UK",
+          "description": "cwt (hundredweight) - UK"
+        },
+        {
+          "tag": "cwt_US",
+          "description": "cwt (hundredweight) - US"
+        },
+        {
+          "tag": "ton_UK",
+          "description": "ton - UK"
+        },
+        {
+          "tag": "ton_US",
+          "description": "ton - US"
+        },
+        {
+          "tag": "slug",
+          "description": "slug"
+        }
+      ],
+      "Length": [
+        {
+          "tag": "th",
+          "description": "th (thou)"
+        },
+        {
+          "tag": "in",
+          "description": "in (inch)"
+        },
+        {
+          "tag": "ft",
+          "description": "ft (foot)"
+        },
+        {
+          "tag": "yd",
+          "description": "yd (yard)"
+        },
+        {
+          "tag": "ch",
+          "description": "ch (chain)"
+        },
+        {
+          "tag": "fur",
+          "description": "fur (furlong)"
+        },
+        {
+          "tag": "mi",
+          "description": "mi (mile)"
+        },
+        {
+          "tag": "ftm",
+          "description": "ftm (fathom)"
+        },
+        {
+          "tag": "ftm_UK",
+          "description": "ftm (fathom) - UK"
+        },
+        {
+          "tag": "ftm_US",
+          "description": "ftm (fathom) - US"
+        },
+        {
+          "tag": "cable",
+          "description": "cable"
+        },
+        {
+          "tag": "cable_UK",
+          "description": "cable - UK"
+        },
+        {
+          "tag": "cable_US",
+          "description": "cable - US"
+        },
+        {
+          "tag": "nmi",
+          "description": "nmi (nautical mile)"
+        },
+        {
+          "tag": "li",
+          "description": "li (link)"
+        },
+        {
+          "tag": "rod",
+          "description": "rod"
+        },
+        {
+          "tag": "pole",
+          "description": "pole"
+        },
+        {
+          "tag": "perch",
+          "description": "perch"
+        },
+        {
+          "tag": "lea",
+          "description": "lea (league)"
+        }
+      ],
+      "Area": [
+        {
+          "tag": "th^2",
+          "description": "th² (square thou)"
+        },
+        {
+          "tag": "in^2",
+          "description": "in² (square inch)"
+        },
+        {
+          "tag": "ft^2",
+          "description": "ft² (square foot)"
+        },
+        {
+          "tag": "yd^2",
+          "description": "yd² (square yard)"
+        },
+        {
+          "tag": "mi^2",
+          "description": "mi² (square mile)"
+        },
+        {
+          "tag": "rod^2",
+          "description": "rod² (square rod)"
+        },
+        {
+          "tag": "pole^2",
+          "description": "pole² (sq. pole)"
+        },
+        {
+          "tag": "perch^2",
+          "description": "perch² (sq. perch)"
+        },
+        {
+          "tag": "rood",
+          "description": "rood (rood)"
+        },
+        {
+          "tag": "ac",
+          "description": "ac (acre)"
+        }
+      ],
+      "Volume": {
+        "Common": [
+          {
+            "tag": "th^3",
+            "description": "th³ (cubic thou)"
+          },
+          {
+            "tag": "in^3",
+            "description": "in³ (cubic inch)"
+          },
+          {
+            "tag": "ft^3",
+            "description": "ft³ (cubic foot)"
+          },
+          {
+            "tag": "yd^3",
+            "description": "yd³ (cubic yard)"
+          },
+          {
+            "tag": "mi^3",
+            "description": "mi³ (cubic mile)"
+          }
+        ],
+        "Fluid": [
+          {
+            "tag": "fl_oz_UK",
+            "description": "fl-oz (fluid ounce) - UK"
+          },
+          {
+            "tag": "gi_UK",
+            "description": "gi (gill) - UK"
+          },
+          {
+            "tag": "pt_UK",
+            "description": "pt (pint) - UK"
+          },
+          {
+            "tag": "qt_UK",
+            "description": "qt (quart) - UK"
+          },
+          {
+            "tag": "gal_UK",
+            "description": "gal (gallon) - UK"
+          },
+          {
+            "tag": "bbl_UK",
+            "description": "bbl (barrel) - UK"
+          },
+          {
+            "tag": "fl_oz_US",
+            "description": "fl-oz (fluid ounce) - US"
+          },
+          {
+            "tag": "gi_US",
+            "description": "gi (gill) - US"
+          },
+          {
+            "tag": "pt_US",
+            "description": "pt (pint) - US"
+          },
+          {
+            "tag": "qt_US",
+            "description": "qt (quart) - US"
+          },
+          {
+            "tag": "gal_US",
+            "description": "gal (gallon) - US"
+          },
+          {
+            "tag": "bbl_US",
+            "description": "bbl (barrel) - US"
+          }
+        ],
+        "Dry": [
+          {
+            "tag": "pt_dry",
+            "description": "pt (pint) - dry, US"
+          },
+          {
+            "tag": "qt_dry",
+            "description": "qt (quart) - dry, US"
+          },
+          {
+            "tag": "gal_dry",
+            "description": "gal (gallon) - dry, US"
+          },
+          {
+            "tag": "bbl_dry",
+            "description": "bbl (barrel) - dry, US"
+          },
+          {
+            "tag": "pk_UK",
+            "description": "pk (peck) - UK"
+          },
+          {
+            "tag": "pk_US",
+            "description": "pk (peck) - US"
+          },
+          {
+            "tag": "bu_UK",
+            "description": "bu (bushel) - UK"
+          },
+          {
+            "tag": "bu_US",
+            "description": "bu (bushel) - US"
+          }
+        ]
+      },
+      "Speed": [
+        {
+          "tag": "in/s",
+          "description": "in/s (inches per second)"
+        },
+        {
+          "tag": "ft/s",
+          "description": "ft/s (feet per second)"
+        },
+        {
+          "tag": "yd/s",
+          "description": "yd/s (yards per second)"
+        },
+        {
+          "tag": "mph",
+          "description": "mph (miles per hour)"
+        },
+        {
+          "tag": "knot",
+          "description": "knot (nautical miles per hour)"
+        }
+      ],
+      "Temperature": [
+        {
+          "tag": "°F",
+          "description": "°F (degrees Fahrenheit)"
+        },
+        {
+          "tag": "Δ°F",
+          "description": "Δ°F (difference in °F)"
+        },
+        {
+          "tag": "°R",
+          "description": "°R (degrees Rankine)"
+        }
+      ],
+      "Force": [
+        {
+          "tag": "ozf",
+          "description": "ozf (ounce-force)"
+        },
+        {
+          "tag": "lbf",
+          "description": "lbf (pound-force)"
+        },
+        {
+          "tag": "kip",
+          "description": "kip (kilopound-force)"
+        },
+        {
+          "tag": "kipf",
+          "description": "kipf (kilopound-force)"
+        },
+        {
+          "tag": "tonf",
+          "description": "tonf (ton-force)"
+        },
+        {
+          "tag": "oz_f",
+          "description": "oz-f (ounce-force)"
+        },
+        {
+          "tag": "lb_f",
+          "description": "lb-f (pound-force)"
+        },
+        {
+          "tag": "kip_f",
+          "description": "kip-f (kilopound-force)"
+        },
+        {
+          "tag": "ton_f",
+          "description": "ton-f (ton-force)"
+        }
+      ],
+      "Torque Moment": [
+        {
+          "tag": "oz_f*in",
+          "description": "oz-f·in (ounce-force-inch)"
+        },
+        {
+          "tag": "oz_f*ft",
+          "description": "oz-f·ft (ounce-force-foot)"
+        },
+        {
+          "tag": "lb_f*in",
+          "description": "lb-f·in (pound-force-inch)"
+        },
+        {
+          "tag": "lb_f*ft",
+          "description": "lb-f·ft (pound-force-foot)"
+        },
+        {
+          "tag": "kip*in",
+          "description": "kip·in (kilopound-force-inch)"
+        },
+        {
+          "tag": "kip*ft",
+          "description": "kip·ft (kilopound-force-foot)"
+        },
+        {
+          "tag": "ton_f*in",
+          "description": "ton-f·in (ton-force-inch)"
+        },
+        {
+          "tag": "ton_f*ft",
+          "description": "ton-f·ft (ton-force-foot)"
+        }
+      ],
+      "Pressure": [
+        {
+          "tag": "osi",
+          "description": "osi (ounce-force per sq. inch)"
+        },
+        {
+          "tag": "osf",
+          "description": "osf (ounce-force per sq. foot)"
+        },
+        {
+          "tag": "psi",
+          "description": "psi (pound-force per sq. inch)"
+        },
+        {
+          "tag": "psf",
+          "description": "psf (pound-force per sq. foot)"
+        },
+        {
+          "tag": "ksi",
+          "description": "ksi (kilopound-force per sq. inch)"
+        },
+        {
+          "tag": "ksf",
+          "description": "ksf (kilopound-force per sq. foot)"
+        },
+        {
+          "tag": "tsi",
+          "description": "tsi (ton-force per sq. inch)"
+        },
+        {
+          "tag": "tsf",
+          "description": "tsf (ton-force per sq. foot)"
+        },
+        {
+          "tag": "inHg",
+          "description": "inHg (inches of mercuty)"
+        }
+      ],
+      "Density Unit Weight": [
+        {
+          "tag": "oz/in^3",
+          "description": "oz/in³ (ounce per cubic inch)"
+        },
+        {
+          "tag": "oz/ft^3",
+          "description": "oz/ft³ (ounce per cubic foot)"
+        },
+        {
+          "tag": "lb/in^3",
+          "description": "lb/in³ (pound per cubic inch)"
+        },
+        {
+          "tag": "lb/ft^3",
+          "description": "lb/ft³ (pound per cubic foot)"
+        },
+        {
+          "tag": "klb/in^3",
+          "description": "klb/in³ (kilopound per cubic inch)"
+        },
+        {
+          "tag": "klb/ft^3",
+          "description": "klb/ft³ (kilopound per cubic foot)"
+        },
+        {
+          "tag": "lb/gal",
+          "description": "lb/gal³ (pound per gallon)"
+        },
+        {
+          "tag": "lb/bu",
+          "description": "lb/bu (pound per bushel)"
+        },
+        {
+          "tag": "slug/ft^3",
+          "description": "slug/ft³ (slug per cubic foot)"
+        },
+        {
+          "tag": "ton/ft^3",
+          "description": "ton/ft³ (ton per cubic foot)"
+        },
+        {
+          "tag": "ton/yd^3",
+          "description": "ton/yd³ (ton per cubic yard)"
+        },
+        {
+          "tag": "oz_f/in^3",
+          "description": "oz-f/in³ (ounce-force per cubic inch)"
+        },
+        {
+          "tag": "oz_f/ft^3",
+          "description": "oz-f/ft³ (ounce-force per cubic foot)"
+        },
+        {
+          "tag": "lb_f/in^3",
+          "description": "lb-f/in³ (pound-force per cubic inch)"
+        },
+        {
+          "tag": "lb_f/ft^3",
+          "description": "lb-f/ft³ (pound-force per cubic foot)"
+        },
+        {
+          "tag": "kip/in^3",
+          "description": "kip/in³ (kilopound-force per cubic inch)"
+        },
+        {
+          "tag": "kip/ft^3",
+          "description": "kip/ft³ (kilopound-force per cubic foot)"
+        },
+        {
+          "tag": "ton_f/in^3",
+          "description": "ton-f/in³ (ton-force per cubic inch)"
+        },
+        {
+          "tag": "ton_f/ft^3",
+          "description": "ton-f/ft³ (ton-force per cubic foot)"
+        }
+      ],
+      "Energy Work": [
+        {
+          "tag": "in*oz_f",
+          "description": "in·oz-f (inch-ounce-force)"
+        },
+        {
+          "tag": "ft*oz_f",
+          "description": "ft·oz-f (foot-ounce-force)"
+        },
+        {
+          "tag": "in*lb_f",
+          "description": "in·lb-f (inch-pound-force)"
+        },
+        {
+          "tag": "ft*lb_f",
+          "description": "ft·lb-f (foot-pound-force)"
+        },
+        {
+          "tag": "BTU",
+          "description": "BTU (British Thermal Unit)"
+        },
+        {
+          "tag": "therm_UK",
+          "description": "therm - UK"
+        },
+        {
+          "tag": "therm_US",
+          "description": "therm - US"
+        },
+        {
+          "tag": "quad",
+          "description": "quad"
+        }
+      ],
+      "Power": [
+        {
+          "tag": "ft*lb_f/s",
+          "description": "ft·lb-f/s (foot-pound-force per second)"
+        },
+        {
+          "tag": "ft*lb_f/min",
+          "description": "ft·lb-f/min (foot-pound-force per minute)"
+        },
+        {
+          "tag": "ft*lb_f/h",
+          "description": "ft·lb-f/h  (foot-pound-force per hour)"
+        },
+        {
+          "tag": "hp",
+          "description": "hp (horsepower)"
+        },
+        {
+          "tag": "hpE",
+          "description": "hpE (electrical horsepower)"
+        },
+        {
+          "tag": "hpS",
+          "description": "hpS (boiler horsepower)"
+        }
+      ]
+    }
+  },
+  "Function Plot": [
+    {
+      "tag": "$Plot{f(x) @ x = a : b}",
+      "description": "Simple Plot"
+    },
+    {
+      "tag": "$Plot{x(t) | y(t) @ t = a : b}",
+      "description": "Parametric"
+    },
+    {
+      "tag": "$Plot{f1(x) & f2(x) & ... @ x = a : b}",
+      "description": "Multiple"
+    },
+    {
+      "tag": "$Plot{x1(t) | y1(t) & x2(t) | y2(t) & ... @ t = a : b}",
+      "description": "Multiple Parametric"
+    },
+    {
+      "tag": "$Map{f(x; y) @ x = a : b & y = c : d }",
+      "description": " 2 D Color Map"
+    }
+  ],
+  "Numerical Method": [
+    {
+      "tag": "$Root{f(x) = const @ x = a : b}",
+      "description": "Root Finding For X Equals Const"
+    },
+    {
+      "tag": "$Root{f(x) @ x = a : b}",
+      "description": "Root Finding For X Equals Zero"
+    },
+    {
+      "tag": "$Find{f(x) @ x = a : b}",
+      "description": "Non Strict Root Finding"
+    },
+    {
+      "tag": "$Sup{f(x) @ x = a : b}",
+      "description": "Local Maximum"
+    },
+    {
+      "tag": "$Inf{f(x) @ x = a : b}",
+      "description": "Local Minimum"
+    },
+    {
+      "tag": "$Area{f(x) @ x = a : b}",
+      "description": "Adaptive Gauss Lobatto Integration"
+    },
+    {
+      "tag": "$Integral{f(x) @ x = a : b}",
+      "description": "Tanh Sinh Integration"
+    },
+    {
+      "tag": "$Slope{f(x) @ x = a}",
+      "description": "Numerical Differentiation"
+    },
+    {
+      "tag": "$Sum{f(k) @ k = a : b}",
+      "description": "Iterative Sum"
+    },
+    {
+      "tag": "$Product{f(k) @ k = a : b}",
+      "description": "Iterative Product"
+    },
+    {
+      "tag": "$Repeat{f(k) @ k = a : b}",
+      "description": "General Inline Iterative Procedure"
+    }
+  ],
+  "Program Flow Control": [
+    {
+      "tag": "#if 'condition§'Your code here§#end if",
+      "description": "Simple If End If"
+    },
+    {
+      "tag": "#if 'condition§'Your code here§#else§'Your code here§#end if",
+      "description": "Alternative If Else End If"
+    },
+    {
+      "tag": "#if 'condition§'Your code here§#else if 'condition§'Your code here§#else§'Some other code§#end if",
+      "description": "Complete If Else If Else If End If"
+    }
+  ],
+  "Iteration": [
+    {
+      "tag": "#repeat 'number of repetitions§'Your code here§#loop",
+      "description": "Simple Repeat Loop"
+    },
+    {
+      "tag": "#repeat 'number of repetitions§'Your code here§#if 'condition§#break§#end if§'Some more code§#loop",
+      "description": "Conditional Repeat Break Loop"
+    },
+    {
+      "tag": "#repeat 'number of repetitions§'Your code here§#if 'condition§#continue§#end if§'Some more code§#loop",
+      "description": "Conditional Repeat Continue Loop"
+    },
+    {
+      "tag": "#for counter = start : end§'Your code here§#loop",
+      "description": "With Counter For Loop"
+    },
+    {
+      "tag": "#while 'condition§'Your code here§#loop",
+      "description": "Conditional While Loop"
+    }
+  ],
+  "String Variable Or Macro": [
+    {
+      "tag": "#def variable_name$ = content",
+      "description": "Inline String Variable"
+    },
+    {
+      "tag": "#def variable_name$§'content line 1§'content line 2§'...§#end def",
+      "description": "Multiline String Variable"
+    },
+    {
+      "tag": "#def macro_name$(param1$; param2$) = content",
+      "description": "Inline Macro"
+    },
+    {
+      "tag": "#def macro_name$(param1$; param2$)§'content line 1§'content line 2§'...§#end def",
+      "description": "Multiline Macro"
+    },
+    {
+      "tag": "#include filename.cpd",
+      "description": "Include External File"
+    }
+  ],
+  "Data import/export": [
+    {
+      "tag": "#read M from filename.txt@R1C1:R2C2 TYPE=R SEP=','",
+      "description": "Read Text CSV File"
+    },
+    {
+      "tag": "#write M to filename.txt@R1C1:R2C2 TYPE=N SEP=','",
+      "description": "Write Text CSV File"
+    },
+    {
+      "tag": "#append M to filename.txt@R1C1:R2C2 TYPE=N SEP=','",
+      "description": "Append Text CSV File"
+    },
+    {
+      "tag": "#read M from filename.xlsx@Sheet1!A1:B2 TYPE=R",
+      "description": "Read Excel File"
+    },
+    {
+      "tag": "#write M to filename.xlsx@Sheet1!A1:B2 TYPE=N",
+      "description": "Write Excel File"
+    },
+    {
+      "tag": "#append M to filename.xlsx@Sheet1!A1:B2 TYPE=N",
+      "description": "Append Excel File"
+    }
+  ],
+  "Html": [
+    {
+      "tag": "<h3>‖</h3>",
+      "description": "",
+      "label": "H3"
+    },
+    {
+      "tag": "<h4>‖</h4>",
+      "description": "",
+      "label": "H4"
+    },
+    {
+      "tag": "<h5>‖</h5>",
+      "description": "",
+      "label": "H5"
+    },
+    {
+      "tag": "<h6>‖</h6>",
+      "description": "",
+      "label": "H6"
+    },
+    {
+      "tag": "<p>‖</p>",
+      "description": "Paragraph",
+      "label": "  p"
+    },
+    {
+      "tag": "<br/>‖",
+      "description": "Line Break",
+      "label": " br"
+    },
+    {
+      "tag": "<strong>‖</strong>",
+      "description": "Bold",
+      "label": "  B"
+    },
+    {
+      "tag": "<em>‖</em>",
+      "description": "Italic",
+      "label": "  I"
+    },
+    {
+      "tag": "<ins>‖</ins>",
+      "description": ""
+    },
+    {
+      "tag": "<del>‖</del>",
+      "description": ""
+    },
+    {
+      "tag": "<sub>‖</sub>",
+      "description": "Subscript",
+      "label": " x₂"
+    },
+    {
+      "tag": "<sup>‖</sup>",
+      "description": "Superscript",
+      "label": " x²"
+    },
+    {
+      "tag": "<span class=\"err\">‖</span>",
+      "description": "Red Color",
+      "label": "  R"
+    },
+    {
+      "tag": "<span class=\"ok\">‖</span>",
+      "description": "Green Color",
+      "label": "  G"
+    },
+    {
+      "tag": "<span>‖</span>",
+      "description": "Span",
+      "label": " ‹/›"
+    },
+    {
+      "tag": "'<div>§'</div>",
+      "description": "Div",
+      "label": "div"
+    },
+    {
+      "tag": "'<div class=\"fold\">§'<h4>Heading</h4>§'Folded content§'</div>",
+      "description": "Folded Div",
+      "label": " ▼"
+    },
+    {
+      "tag": "'<ul>§'<li>Item 1</li>§'<li>Item 2</li>§'<li>Item 3</li>§'</ul>",
+      "description": "Bulleted List",
+      "label": " •••"
+    },
+    {
+      "tag": "'<ol>§'<li>Item 1</li>§'<li>Item 2</li>§'<li>Item 3</li>§'</ol>",
+      "description": "Numbered List"
+    },
+    {
+      "tag": "§'<table class=\"bordered\">§'<thead>§'<tr><th>col 1</th><th>col 2</th></tr>§'</thead>§'<tbody>§'<tr><td>'11'</td><td>'12'</td></tr>§'<tr><td>'21'</td><td>'22'</td></tr>§'</tbody>§'</table>§",
+      "description": "Table"
+    },
+    {
+      "tag": "<hr/>‖",
+      "description": "Dividing Line",
+      "label": " —"
+    }
+  ],
+  "Html UI": [
+    {
+      "tag": "§'Select an option: <select name=\"target1\">§'<option value=\"11;12\">x1; y1</option>§'<option value=\"21;22\">x2; y2</option>§'<option value=\"31;32\">x3; y3</option>§'</select>§'...§'<p id=\"target1\"> Values:'x = ? {21}','y = ? {22}'</p>§",
+      "description": "Selection"
+    },
+    {
+      "tag": "§'<p>Select: §'<input name=\"target2\" type=\"radio\" id=\"opt1\" value=\"1\"/>§'<label for=\"opt1\">option 1</label>§'<input name=\"target2\" type=\"radio\" id=\"opt2\" value=\"2\"/>§'<label for=\"opt2\">option 2</label>§'...§'<p id=\"target2\">Value -'opt = ? {2}'</p>§",
+      "description": "Radio Buttons"
+    },
+    {
+      "tag": "§'<p><input name=\"target3\" type=\"checkbox\" id=\"chk1\" value=\"3\"/>§'<label for=\"chk1\">Checkbox 1</label></p>§'...§'<p id=\"target3\">Value -'chk = ? {3}'</p>§",
+      "description": "Checkbox"
+    }
+  ],
+  "Drawing SVG": [
+    {
+      "tag": "#val§#hide§w = 400§h = 400§#show§'<svg viewbox=\"'0' '0' 'w' 'h'\" xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" style=\"font-size:16px; width:'w'px; height:'h'px\">§'<rect x=\"'0'\" y=\"'0'\" width=\"'w'\" height=\"'h'\" style=\"stroke:black; stroke-width:1; fill:WhiteSmoke; fill-opacity:0.2; stroke-opacity:0.1\" />§'<text x=\"'w/2'\" y=\"'h/2'\" text-anchor=\"middle\" fill=\"red\" style=\"font-size:32px;\">Your drawing goes here!</text>§'</svg>§#equ",
+      "description": "Drawing"
+    },
+    {
+      "tag": "#hide§x1 = 30§y1 = 30§x2 = 380§y2 = 200§#show§'<line x1=\"'x1'\" y1=\"'y1'\" x2=\"'x2'\" y2=\"'y2'\" style=\"stroke:black; stroke-width:2; stroke-opacity:0.8\" />",
+      "description": "Line"
+    },
+    {
+      "tag": "#hide§x = 80§y = 60§w = 300§h = 200§#show§'<rect x=\"'x'\" y=\"'y'\" width=\"'w'\" height=\"'h'\" style=\"stroke:black; stroke-width:2; fill:yellow; fill-opacity:0.2; stroke-opacity:0.8\" />",
+      "description": "Rectangle"
+    },
+    {
+      "tag": "#h                               ide§cx = 250§cy = 150§r = 70§#show§'<circle cx=\"'cx'\" cy=\"'cy'\" r=\"'r'\" style=\"stroke:black; stroke-width:2; fill:lime; fill-opacity:0.2; stroke-opacity:0.8\" />",
+      "description": "Circle"
+    },
+    {
+      "tag": "#hide§cx = 300§cy = 320§rx = 80§ry = 50§#show§'<ellipse cx=\"'cx'\" cy=\"'cy'\" rx=\"'rx'\" ry=\"'ry'\" style=\"stroke:black; stroke-width:2; fill:magenta; fill-opacity:0.1; stroke-opacity:0.8\" />",
+      "description": "Ellipse"
+    },
+    {
+      "tag": "#hide§x1 = 20','y1 = 40§x2 = 60','y2 = 350§x3 = 250','y3 = 300§x4 = 360','y4 = 150§#show§'<polyline points=\"'x1','y1' 'x2','y2' 'x3','y3' 'x4','y4'\" style=\"stroke:black; stroke-width:2; fill:none; fill-opacity:0.2; stroke-opacity:0.8\" />",
+      "description": "Polyline"
+    },
+    {
+      "tag": "#hide§x1 = 150','y1 = 20§x2 = 10','y2 = 140§x3 = 120','y3 = 360§x4 = 280','y4 = 120§#show§'<polygon points=\"'x1','y1' 'x2','y2' 'x3','y3' 'x4','y4'\" style=\"stroke:black; stroke-width:2; fill:cyan; fill-opacity:0.2; stroke-opacity:0.8\" />",
+      "description": "Polygon"
+    },
+    {
+      "tag": "#hide§x = 50§y = 30§#show§'<text x=\"'x'\" y=\"'y'\" text-anchor=\"start\">text1</text>§",
+      "description": "Text"
+    }
+  ],
+  "Output Visibility Control": [
+    {
+      "tag": "#hide",
+      "description": "#hide"
+    },
+    {
+      "tag": "#show",
+      "description": "#show"
+    },
+    {
+      "tag": "#pre",
+      "description": "#pre"
+    },
+    {
+      "tag": "#post",
+      "description": "#post"
+    },
+    {
+      "tag": "#pause",
+      "description": "#pause"
+    },
+    {
+      "tag": "#input",
+      "description": "#input"
+    },
+    {
+      "tag": "#val",
+      "description": "#val"
+    },
+    {
+      "tag": "#equ",
+      "description": "#equ"
+    },
+    {
+      "tag": "#noc",
+      "description": "#noc"
+    },
+    {
+      "tag": "#nosub",
+      "description": "#nosub"
+    },
+    {
+      "tag": "#novar",
+      "description": "#novar"
+    },
+    {
+      "tag": "#varsub",
+      "description": "#varsub"
+    },
+    {
+      "tag": "#split",
+      "description": "#split"
+    },
+    {
+      "tag": "#wrap",
+      "description": "#wrap"
+    },
+    {
+      "tag": "#round",
+      "description": "#round"
+    },
+    {
+      "tag": "#format",
+      "description": "#format"
+    },
+    {
+      "tag": "#md on",
+      "description": "#md on"
+    },
+    {
+      "tag": "#md off",
+      "description": "#md off"
+    },
+    {
+      "tag": "#deg",
+      "description": "#deg"
+    },
+    {
+      "tag": "#rad",
+      "description": "#rad"
+    },
+    {
+      "tag": "#gra",
+      "description": "#gra"
+    }
+  ]
+}
