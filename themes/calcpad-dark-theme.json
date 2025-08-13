@@ -1,0 +1,201 @@
+{
+  "name": "CalcPad Dark",
+  "type": "dark",
+  "colors": {
+    "editor.background": "#1e1e1e",
+    "editor.foreground": "#d4d4d4",
+    "editorLineNumber.foreground": "#858585",
+    "editorLineNumber.activeForeground": "#c6c6c6",
+    "editor.selectionBackground": "#264f78",
+    "editor.inactiveSelectionBackground": "#3a3d41",
+    "editorWhitespace.foreground": "#404040",
+    "editorIndentGuide.background": "#404040",
+    "editorIndentGuide.activeBackground": "#707070",
+    "editor.findMatchBackground": "#515c6a",
+    "editor.findMatchHighlightBackground": "#ea5c0055",
+    "editor.findRangeHighlightBackground": "#3a3d4166",
+    "editorBracketMatch.background": "#0064001a",
+    "editorBracketMatch.border": "#888888"
+  },
+  "tokenColors": [
+    {
+      "name": "Comments",
+      "scope": [
+        "comment.line.single-quote.calcpad",
+        "comment.block.double-quote.calcpad"
+      ],
+      "settings": {
+        "foreground": "#6A9955",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "HTML Comments",
+      "scope": "comment.block.html.calcpad",
+      "settings": {
+        "foreground": "#808080",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Keywords",
+      "scope": [
+        "keyword.control.calcpad",
+        "keyword.other.calcpad"
+      ],
+      "settings": {
+        "foreground": "#C586C0",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Commands",
+      "scope": "support.function.command.calcpad",
+      "settings": {
+        "foreground": "#C586C0",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Functions",
+      "scope": "support.function.builtin.calcpad",
+      "settings": {
+        "foreground": "#DCDCDC",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "Constants",
+      "scope": [
+        "constant.numeric.calcpad",
+        "constant.numeric.complex.calcpad"
+      ],
+      "settings": {
+        "foreground": "#b5cea8",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Variables",
+      "scope": "variable.other.calcpad",
+      "settings": {
+        "foreground": "#9CDCFE",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Units",
+      "scope": "support.type.units.calcpad",
+      "settings": {
+        "foreground": "#4EC9B0",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Operators",
+      "scope": [
+        "keyword.operator.arithmetic.calcpad",
+        "keyword.operator.comparison.calcpad",
+        "keyword.operator.logical.calcpad",
+        "keyword.operator.assignment.calcpad"
+      ],
+      "settings": {
+        "foreground": "#D7BA7D",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Separators",
+      "scope": "punctuation.separator.calcpad",
+      "settings": {
+        "foreground": "#D7BA7D",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Brackets",
+      "scope": "punctuation.section.brackets.calcpad",
+      "settings": {
+        "foreground": "#DA70D6",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "HTML Tags",
+      "scope": [
+        "meta.tag.html.calcpad",
+        "entity.name.tag.html.calcpad",
+        "punctuation.definition.tag.begin.html.calcpad",
+        "punctuation.definition.tag.end.html.calcpad"
+      ],
+      "settings": {
+        "foreground": "#DDA0DD",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "HTML Attributes",
+      "scope": "entity.other.attribute-name.html.calcpad",
+      "settings": {
+        "foreground": "#DDA0DD",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Strings",
+      "scope": [
+        "string.quoted.double.calcpad",
+        "string.quoted.single.calcpad",
+        "string.quoted.double.html.calcpad",
+        "string.quoted.single.html.calcpad"
+      ],
+      "settings": {
+        "foreground": "#CE9178",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Macros",
+      "scope": "variable.parameter.macro.calcpad",
+      "settings": {
+        "foreground": "#D19AD1",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Input",
+      "scope": [
+        "variable.language.input.calcpad",
+        "punctuation.definition.input.calcpad"
+      ],
+      "settings": {
+        "foreground": "#F44747",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Include",
+      "scope": "keyword.control.include.calcpad",
+      "settings": {
+        "foreground": "#9A4EAE",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Format",
+      "scope": "meta.format.calcpad",
+      "settings": {
+        "foreground": "#808080",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Error",
+      "scope": "invalid.illegal.calcpad",
+      "settings": {
+        "foreground": "#F44747",
+        "fontStyle": ""
+      }
+    }
+  ]
+}

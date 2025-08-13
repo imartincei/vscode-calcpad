@@ -1,0 +1,1 @@
+- Use start-calcpad-server.sh to run the server in Docker

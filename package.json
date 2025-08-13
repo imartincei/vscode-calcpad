@@ -9,18 +9,40 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [
-    "onLanguage:plaintext",
-    "onLanguage:calcpad"
-  ],
+  "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
     "languages": [
       {
         "id": "calcpad",
-        "aliases": ["CalcPad", "calcpad"],
-        "extensions": [".cpd", ".cpdz"],
+        "aliases": [
+          "CalcPad",
+          "calcpad"
+        ],
+        "extensions": [
+          ".cpd",
+          ".cpdz"
+        ],
         "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "calcpad",
+        "scopeName": "source.calcpad",
+        "path": "./syntaxes/calcpad.tmLanguage.json"
+      }
+    ],
+    "themes": [
+      {
+        "label": "CalcPad Light",
+        "uiTheme": "vs",
+        "path": "./themes/calcpad-light-theme.json"
+      },
+      {
+        "label": "CalcPad Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/calcpad-dark-theme.json"
       }
     ],
     "commands": [
@@ -39,13 +61,18 @@
         "icon": "$(add)"
       },
       {
-        "command": "vscode-calcpad.refreshPreview",
-        "title": "Refresh CalcPad Preview",
-        "icon": "$(refresh)"
-      },
-      {
         "command": "vscode-calcpad.exportToPdf",
         "title": "Export CalcPad to PDF",
+        "icon": "$(file-pdf)"
+      },
+      {
+        "command": "vscode-calcpad.previewUnwrapped",
+        "title": "CalcPad Preview Unwrapped",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "vscode-calcpad.printToPdf",
+        "title": "Print CalcPad Preview to PDF",
         "icon": "$(file-pdf)"
       }
     ],
@@ -62,14 +89,28 @@
           "group": "navigation"
         },
         {
-          "command": "vscode-calcpad.refreshPreview",
-          "when": "resourceLangId == plaintext || resourceLangId == calcpad && activeWebviewPanelId == 'htmlPreview'",
-          "group": "navigation"
-        },
-        {
           "command": "vscode-calcpad.exportToPdf",
           "when": "resourceLangId == plaintext || resourceLangId == calcpad",
           "group": "navigation"
+        },
+        {
+          "command": "vscode-calcpad.previewUnwrapped",
+          "when": "resourceLangId == plaintext || resourceLangId == calcpad",
+          "group": "navigation"
+        }
+      ],
+      "webview/context": [
+        {
+          "command": "vscode-calcpad.printToPdf",
+          "when": "webviewId == htmlPreview || webviewId == htmlPreviewUnwrapped",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "vscode-calcpad.printToPdf",
+          "when": "resourceLangId == calcpad || resourceLangId == plaintext",
+          "group": "calcpad@1"
         }
       ]
     },
@@ -80,6 +121,21 @@
           "type": "string",
           "default": "http://localhost:9420",
           "description": "Base URL for the CalcPad API server"
+        },
+        "calcpad.previewTheme": {
+          "type": "string",
+          "default": "system",
+          "enum": [
+            "light",
+            "dark",
+            "system"
+          ],
+          "enumDescriptions": [
+            "Always use light theme for preview",
+            "Always use dark theme for preview",
+            "Follow VS Code theme (light/dark)"
+          ],
+          "description": "Theme to use for CalcPad preview"
         },
         "calcpad.settings": {
           "type": "object",
@@ -98,7 +154,11 @@
                 "degrees": {
                   "type": "integer",
                   "default": 0,
-                  "enum": [0, 1, 2]
+                  "enum": [
+                    0,
+                    1,
+                    2
+                  ]
                 },
                 "isComplex": {
                   "type": "boolean",
@@ -120,7 +180,14 @@
                 "colorScale": {
                   "type": "string",
                   "default": "Rainbow",
-                  "enum": ["Rainbow", "Grayscale", "Hot", "Cool", "Jet", "Parula"]
+                  "enum": [
+                    "Rainbow",
+                    "Grayscale",
+                    "Hot",
+                    "Cool",
+                    "Jet",
+                    "Parula"
+                  ]
                 },
                 "shadows": {
                   "type": "boolean",
@@ -131,7 +198,11 @@
             "units": {
               "type": "string",
               "default": "m",
-              "enum": ["m", "i", "u"]
+              "enum": [
+                "m",
+                "i",
+                "u"
+              ]
             },
             "output": {
               "type": "object",
@@ -139,7 +210,11 @@
                 "format": {
                   "type": "string",
                   "default": "html",
-                  "enum": ["html", "pdf", "docx"]
+                  "enum": [
+                    "html",
+                    "pdf",
+                    "docx"
+                  ]
                 },
                 "silent": {
                   "type": "boolean",

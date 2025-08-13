@@ -1,0 +1,24 @@
+' Test file for keyword highlighting
+#def myfunction(x)
+    x * 2
+#end def
+
+#if x > 5
+    "greater than 5"
+#else
+    "less than or equal to 5"
+#end if
+
+#for i = 1 to 10
+    i^2
+#loop
+
+#while x < 100
+    x = x * 2
+#end while
+
+#show
+#hide
+#format
+#rad
+#deg

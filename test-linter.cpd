@@ -1,0 +1,17 @@
+' Test file for linter keyword validation
+#rhrhr  'This should be flagged as invalid
+#def myfunction(x)
+    x * 2
+#end def
+
+#iff x = 5  'This should suggest #if
+    "test"
+#end if
+
+#includ "test.cpd"  'This should suggest #include
+
+#abc  'This should be flagged as invalid
+
+#show
+#hide
+#format

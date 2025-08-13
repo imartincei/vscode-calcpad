@@ -52,7 +52,7 @@ export class CalcpadLinter {
         'vlookup', 'vlookup_eq', 'vlookup_ne', 'vlookup_lt', 'vlookup_le', 'vlookup_gt', 'vlookup_ge'
     ]);
 
-    // Control keywords from HighLighter.cs
+    // Control keywords from HighLighter.cs Keywords set
     private readonly controlKeywords = new Set([
         // Conditional and flow control
         'if', 'else', 'else if', 'end if', 'for', 'while', 'repeat', 'loop', 'break', 'continue',
@@ -69,6 +69,14 @@ export class CalcpadLinter {
         'md',
         // Data exchange
         'read', 'write', 'append'
+    ]);
+
+    // All valid keywords that can follow # (from HighLighter.cs Keywords set)
+    private readonly validHashKeywords = new Set([
+        'if', 'else', 'else if', 'end if', 'rad', 'deg', 'gra', 'val', 'equ', 'noc', 
+        'round', 'format', 'show', 'hide', 'varsub', 'nosub', 'novar', 'split', 'wrap', 
+        'pre', 'post', 'repeat', 'for', 'while', 'loop', 'break', 'continue', 'include', 
+        'local', 'global', 'def', 'end def', 'pause', 'input', 'md', 'read', 'write', 'append'
     ]);
 
     // Mathematical operators from CalcPad documentation  
@@ -109,6 +117,7 @@ export class CalcpadLinter {
             this.checkCommandUsage(line, lineNumber, diagnostics);
             this.checkOperatorSyntax(line, lineNumber, diagnostics);
             this.checkControlStructures(line, lineNumber, diagnostics);
+            this.checkKeywordValidation(line, lineNumber, diagnostics);
             this.checkAssignments(line, lineNumber, diagnostics);
             this.checkUnits(line, lineNumber, diagnostics);
         }
@@ -396,6 +405,88 @@ export class CalcpadLinter {
                 vscode.DiagnosticSeverity.Error
             ));
         }
+    }
+
+    private checkKeywordValidation(line: string, lineNumber: number, diagnostics: vscode.Diagnostic[]): void {
+        // Check for invalid keywords starting with #
+        const hashKeywordPattern = /#([a-zA-Z]+(?:\s+[a-zA-Z]+)?)/g;
+        let match;
+
+        while ((match = hashKeywordPattern.exec(line)) !== null) {
+            const fullKeywordMatch = match[1].toLowerCase();
+            
+            // Check if it's a compound keyword first (e.g., "else if", "end if", "end def")
+            let keyword = fullKeywordMatch;
+            let keywordEndPos = match.index + match[0].length;
+            
+            if (this.validHashKeywords.has(keyword)) {
+                continue; // Valid compound keyword
+            }
+            
+            // If compound keyword is not valid, check just the first word
+            const firstWord = fullKeywordMatch.split(' ')[0];
+            if (this.validHashKeywords.has(firstWord)) {
+                continue; // Valid single keyword (e.g., "for" in "#for i")
+            }
+            
+            // Neither compound nor single keyword is valid
+            const range = new vscode.Range(
+                lineNumber, 
+                match.index, 
+                lineNumber, 
+                match.index + 1 + firstWord.length // Only highlight the keyword part, not arguments
+            );
+            
+            // Provide suggestions for similar keywords
+            const suggestions = this.getSimilarKeywords(firstWord);
+            const suggestionText = suggestions.length > 0 
+                ? ` Did you mean: ${suggestions.join(', ')}?`
+                : '';
+            
+            diagnostics.push(new vscode.Diagnostic(
+                range,
+                `Invalid keyword '#${firstWord}'.${suggestionText}`,
+                vscode.DiagnosticSeverity.Error
+            ));
+        }
+    }
+
+    private getSimilarKeywords(keyword: string): string[] {
+        const suggestions: string[] = [];
+        const threshold = 2; // Maximum edit distance
+        
+        for (const validKeyword of this.validHashKeywords) {
+            if (this.levenshteinDistance(keyword, validKeyword) <= threshold) {
+                suggestions.push('#' + validKeyword);
+            }
+        }
+        
+        return suggestions.slice(0, 3); // Return max 3 suggestions
+    }
+
+    private levenshteinDistance(str1: string, str2: string): number {
+        const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null));
+
+        for (let i = 0; i <= str1.length; i += 1) {
+            matrix[0][i] = i;
+        }
+
+        for (let j = 0; j <= str2.length; j += 1) {
+            matrix[j][0] = j;
+        }
+
+        for (let j = 1; j <= str2.length; j += 1) {
+            for (let i = 1; i <= str1.length; i += 1) {
+                const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
+                matrix[j][i] = Math.min(
+                    matrix[j][i - 1] + 1, // deletion
+                    matrix[j - 1][i] + 1, // insertion
+                    matrix[j - 1][i - 1] + indicator, // substitution
+                );
+            }
+        }
+
+        return matrix[str2.length][str1.length];
     }
 
     private checkAssignments(line: string, lineNumber: number, diagnostics: vscode.Diagnostic[]): void {

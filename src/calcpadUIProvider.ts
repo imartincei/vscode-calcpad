@@ -42,6 +42,32 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
                     case 'updateSettings':
                         this._settingsManager.updateSettings(message.settings);
                         break;
+                    case 'updatePreviewTheme':
+                        // Update VS Code setting directly
+                        vscode.workspace.getConfiguration('calcpad').update('previewTheme', message.theme, vscode.ConfigurationTarget.Global);
+                        break;
+                    case 'updatePdfSettings':
+                        // Update PDF settings
+                        const pdfConfig = vscode.workspace.getConfiguration('calcpad');
+                        for (const [key, value] of Object.entries(message.pdfSettings)) {
+                            pdfConfig.update(`pdf.${key}`, value, vscode.ConfigurationTarget.Global);
+                        }
+                        break;
+                    case 'getPdfSettings':
+                        const currentPdfSettings = this.getPdfSettings();
+                        webviewView.webview.postMessage({
+                            type: 'pdfSettingsResponse',
+                            pdfSettings: currentPdfSettings
+                        });
+                        break;
+                    case 'resetPdfSettings':
+                        this.resetPdfSettings();
+                        const resetPdfSettings = this.getPdfSettings();
+                        webviewView.webview.postMessage({
+                            type: 'pdfSettingsReset',
+                            pdfSettings: resetPdfSettings
+                        });
+                        break;
                     case 'resetSettings':
                         this._settingsManager.resetSettings();
                         webviewView.webview.postMessage({
@@ -50,9 +76,11 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
                         });
                         break;
                     case 'getSettings':
+                        const currentTheme = vscode.workspace.getConfiguration('calcpad').get('previewTheme', 'system');
                         webviewView.webview.postMessage({
                             type: 'settingsResponse',
-                            settings: this._settingsManager.getSettings()
+                            settings: this._settingsManager.getSettings(),
+                            previewTheme: currentTheme
                         });
                         break;
                 }
@@ -77,6 +105,58 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
 
     public getInsertManager(): CalcpadInsertManager {
         return this._insertManager;
+    }
+
+    private getPdfSettings() {
+        const config = vscode.workspace.getConfiguration('calcpad');
+        return {
+            enableHeader: config.get('pdf.enableHeader', true),
+            documentTitle: config.get('pdf.documentTitle', ''),
+            documentSubtitle: config.get('pdf.documentSubtitle', ''),
+            headerCenter: config.get('pdf.headerCenter', ''),
+            author: config.get('pdf.author', ''),
+            enableFooter: config.get('pdf.enableFooter', true),
+            footerCenter: config.get('pdf.footerCenter', ''),
+            company: config.get('pdf.company', ''),
+            project: config.get('pdf.project', ''),
+            showPageNumbers: config.get('pdf.showPageNumbers', true),
+            format: config.get('pdf.format', 'A4'),
+            orientation: config.get('pdf.orientation', 'portrait'),
+            marginTop: config.get('pdf.marginTop', '2cm'),
+            marginBottom: config.get('pdf.marginBottom', '2cm'),
+            marginLeft: config.get('pdf.marginLeft', '1.5cm'),
+            marginRight: config.get('pdf.marginRight', '1.5cm'),
+            printBackground: config.get('pdf.printBackground', true),
+            scale: config.get('pdf.scale', 1.0)
+        };
+    }
+
+    private resetPdfSettings() {
+        const config = vscode.workspace.getConfiguration('calcpad');
+        const defaultSettings = {
+            'pdf.enableHeader': true,
+            'pdf.documentTitle': '',
+            'pdf.documentSubtitle': '',
+            'pdf.headerCenter': '',
+            'pdf.author': '',
+            'pdf.enableFooter': true,
+            'pdf.footerCenter': '',
+            'pdf.company': '',
+            'pdf.project': '',
+            'pdf.showPageNumbers': true,
+            'pdf.format': 'A4',
+            'pdf.orientation': 'portrait',
+            'pdf.marginTop': '2cm',
+            'pdf.marginBottom': '2cm',
+            'pdf.marginLeft': '1.5cm',
+            'pdf.marginRight': '1.5cm',
+            'pdf.printBackground': true,
+            'pdf.scale': 1.0
+        };
+
+        for (const [key, value] of Object.entries(defaultSettings)) {
+            config.update(key, value, vscode.ConfigurationTarget.Global);
+        }
     }
 
     private _getHtmlForWebview(webview: vscode.Webview) {
@@ -336,6 +416,7 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
         }
         
         .setting-group input[type="number"],
+        .setting-group input[type="text"],
         .setting-group select {
             width: 100%;
             padding: 6px 8px;
@@ -380,6 +461,7 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
         <div class="tab-container">
             <button class="tab active" onclick="switchTab('insert-tab')">Insert</button>
             <button class="tab" onclick="switchTab('settings-tab')">Settings</button>
+            <button class="tab" onclick="switchTab('pdf-tab')">PDF</button>
         </div>
         
         <div class="tab-content active" id="insert-tab">
@@ -467,6 +549,16 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
                     </select>
                 </div>
                 
+                <h3>Preview</h3>
+                <div class="setting-group">
+                    <label for="previewTheme">Preview Theme:</label>
+                    <select id="previewTheme">
+                        <option value="system">Follow VS Code Theme</option>
+                        <option value="light">Always Light</option>
+                        <option value="dark">Always Dark</option>
+                    </select>
+                </div>
+
                 <h3>Units & Output</h3>
                 <div class="setting-group">
                     <label for="units">Unit System:</label>
@@ -492,6 +584,107 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
                 
                 <div class="setting-group">
                     <button id="reset-settings" class="reset-button">Reset to Defaults</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="pdf-tab">
+            <div class="settings-container">
+                <h3>Header Settings</h3>
+                <div class="setting-group">
+                    <label for="enableHeader">
+                        <input type="checkbox" id="enableHeader" checked> Enable Header
+                    </label>
+                </div>
+                <div class="setting-group">
+                    <label for="documentTitle">Document Title:</label>
+                    <input type="text" id="documentTitle" placeholder="Auto-detected from filename">
+                </div>
+                <div class="setting-group">
+                    <label for="documentSubtitle">Document Subtitle:</label>
+                    <input type="text" id="documentSubtitle" placeholder="Optional subtitle">
+                </div>
+                <div class="setting-group">
+                    <label for="headerCenter">Header Center Text:</label>
+                    <input type="text" id="headerCenter" placeholder="Center header text">
+                </div>
+                <div class="setting-group">
+                    <label for="author">Author:</label>
+                    <input type="text" id="author" placeholder="Document author">
+                </div>
+
+                <h3>Footer Settings</h3>
+                <div class="setting-group">
+                    <label for="enableFooter">
+                        <input type="checkbox" id="enableFooter" checked> Enable Footer
+                    </label>
+                </div>
+                <div class="setting-group">
+                    <label for="footerCenter">Footer Center Text:</label>
+                    <input type="text" id="footerCenter" placeholder="Center footer text">
+                </div>
+                <div class="setting-group">
+                    <label for="company">Company:</label>
+                    <input type="text" id="company" placeholder="Company name">
+                </div>
+                <div class="setting-group">
+                    <label for="project">Project:</label>
+                    <input type="text" id="project" placeholder="Project name">
+                </div>
+                <div class="setting-group">
+                    <label for="showPageNumbers">
+                        <input type="checkbox" id="showPageNumbers" checked> Show Page Numbers
+                    </label>
+                </div>
+
+                <h3>Page Layout</h3>
+                <div class="setting-group">
+                    <label for="pdfFormat">Page Format:</label>
+                    <select id="pdfFormat">
+                        <option value="A4" selected>A4</option>
+                        <option value="A3">A3</option>
+                        <option value="A5">A5</option>
+                        <option value="Letter">Letter</option>
+                        <option value="Legal">Legal</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label for="pdfOrientation">Orientation:</label>
+                    <select id="pdfOrientation">
+                        <option value="portrait" selected>Portrait</option>
+                        <option value="landscape">Landscape</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label for="marginTop">Top Margin:</label>
+                    <input type="text" id="marginTop" value="2cm" placeholder="e.g., 2cm, 1in, 20px">
+                </div>
+                <div class="setting-group">
+                    <label for="marginBottom">Bottom Margin:</label>
+                    <input type="text" id="marginBottom" value="2cm" placeholder="e.g., 2cm, 1in, 20px">
+                </div>
+                <div class="setting-group">
+                    <label for="marginLeft">Left Margin:</label>
+                    <input type="text" id="marginLeft" value="1.5cm" placeholder="e.g., 1.5cm, 1in, 15px">
+                </div>
+                <div class="setting-group">
+                    <label for="marginRight">Right Margin:</label>
+                    <input type="text" id="marginRight" value="1.5cm" placeholder="e.g., 1.5cm, 1in, 15px">
+                </div>
+
+                <h3>Content Options</h3>
+                <div class="setting-group">
+                    <label for="printBackground">
+                        <input type="checkbox" id="printBackground" checked> Print Background Colors
+                    </label>
+                </div>
+                <div class="setting-group">
+                    <label for="pdfScale">Scale Factor:</label>
+                    <input type="number" id="pdfScale" min="0.1" max="2.0" step="0.1" value="1.0">
+                </div>
+
+                <div class="setting-group">
+                    <button id="reset-pdf-settings" class="reset-button">Reset PDF Settings to Defaults</button>
                 </div>
             </div>
         </div>
@@ -612,9 +805,17 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
         
         function setupSettingsEvents() {
             // Auto-save settings when they change
-            const inputs = document.querySelectorAll('#settings-tab input, #settings-tab select');
+            const inputs = document.querySelectorAll('#settings-tab input, #settings-tab select:not(#previewTheme)');
             inputs.forEach(input => {
                 input.addEventListener('change', saveSettings);
+            });
+            
+            // Handle preview theme separately as it's a VS Code setting, not CalcPad settings
+            document.getElementById('previewTheme').addEventListener('change', function(e) {
+                vscode.postMessage({
+                    type: 'updatePreviewTheme',
+                    theme: e.target.value
+                });
             });
             
             // Reset button
@@ -634,9 +835,14 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
             switch (message.type) {
                 case 'settingsResponse':
                     loadSettings(message.settings);
+                    if (message.previewTheme) {
+                        document.getElementById('previewTheme').value = message.previewTheme;
+                    }
                     break;
                 case 'settingsReset':
                     loadSettings(message.settings);
+                    // Reset preview theme to default
+                    document.getElementById('previewTheme').value = 'system';
                     break;
             }
         });
@@ -919,9 +1125,122 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
         // Build tree on load
         setTimeout(buildTreeStructure, 100);
         
+        // PDF Settings Management
+        const defaultPdfSettings = {
+            enableHeader: true,
+            documentTitle: '',
+            documentSubtitle: '',
+            headerCenter: '',
+            author: '',
+            enableFooter: true,
+            footerCenter: '',
+            company: '',
+            project: '',
+            showPageNumbers: true,
+            format: 'A4',
+            orientation: 'portrait',
+            marginTop: '2cm',
+            marginBottom: '2cm',
+            marginLeft: '1.5cm',
+            marginRight: '1.5cm',
+            printBackground: true,
+            scale: 1.0
+        };
+
+        function getPdfSettings() {
+            return {
+                enableHeader: document.getElementById('enableHeader').checked,
+                documentTitle: document.getElementById('documentTitle').value,
+                documentSubtitle: document.getElementById('documentSubtitle').value,
+                headerCenter: document.getElementById('headerCenter').value,
+                author: document.getElementById('author').value,
+                enableFooter: document.getElementById('enableFooter').checked,
+                footerCenter: document.getElementById('footerCenter').value,
+                company: document.getElementById('company').value,
+                project: document.getElementById('project').value,
+                showPageNumbers: document.getElementById('showPageNumbers').checked,
+                format: document.getElementById('pdfFormat').value,
+                orientation: document.getElementById('pdfOrientation').value,
+                marginTop: document.getElementById('marginTop').value,
+                marginBottom: document.getElementById('marginBottom').value,
+                marginLeft: document.getElementById('marginLeft').value,
+                marginRight: document.getElementById('marginRight').value,
+                printBackground: document.getElementById('printBackground').checked,
+                scale: parseFloat(document.getElementById('pdfScale').value)
+            };
+        }
+
+        function loadPdfSettings(settings) {
+            document.getElementById('enableHeader').checked = settings.enableHeader;
+            document.getElementById('documentTitle').value = settings.documentTitle;
+            document.getElementById('documentSubtitle').value = settings.documentSubtitle;
+            document.getElementById('headerCenter').value = settings.headerCenter;
+            document.getElementById('author').value = settings.author;
+            document.getElementById('enableFooter').checked = settings.enableFooter;
+            document.getElementById('footerCenter').value = settings.footerCenter;
+            document.getElementById('company').value = settings.company;
+            document.getElementById('project').value = settings.project;
+            document.getElementById('showPageNumbers').checked = settings.showPageNumbers;
+            document.getElementById('pdfFormat').value = settings.format;
+            document.getElementById('pdfOrientation').value = settings.orientation;
+            document.getElementById('marginTop').value = settings.marginTop;
+            document.getElementById('marginBottom').value = settings.marginBottom;
+            document.getElementById('marginLeft').value = settings.marginLeft;
+            document.getElementById('marginRight').value = settings.marginRight;
+            document.getElementById('printBackground').checked = settings.printBackground;
+            document.getElementById('pdfScale').value = settings.scale;
+        }
+
+        function savePdfSettings() {
+            const pdfSettings = getPdfSettings();
+            vscode.postMessage({
+                type: 'updatePdfSettings',
+                pdfSettings: pdfSettings
+            });
+        }
+
+        function resetPdfSettings() {
+            vscode.postMessage({
+                type: 'resetPdfSettings'
+            });
+        }
+
+        function initializePdfSettings() {
+            vscode.postMessage({
+                type: 'getPdfSettings'
+            });
+        }
+
+        function setupPdfSettingsEvents() {
+            // Auto-save PDF settings when they change
+            const pdfInputs = document.querySelectorAll('#pdf-tab input, #pdf-tab select');
+            pdfInputs.forEach(input => {
+                input.addEventListener('change', savePdfSettings);
+            });
+
+            // Reset PDF settings button
+            document.getElementById('reset-pdf-settings').addEventListener('click', resetPdfSettings);
+        }
+
+        // Handle PDF settings messages
+        const originalMessageListener = window.addEventListener;
+        window.addEventListener('message', event => {
+            const message = event.data;
+            switch (message.type) {
+                case 'pdfSettingsResponse':
+                    loadPdfSettings(message.pdfSettings);
+                    break;
+                case 'pdfSettingsReset':
+                    loadPdfSettings(message.pdfSettings);
+                    break;
+            }
+        });
+
         // Initialize everything
         initializeSettings();
         setupSettingsEvents();
+        initializePdfSettings();
+        setupPdfSettingsEvents();
     </script>
 </body>
 </html>`;
