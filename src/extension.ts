@@ -167,8 +167,8 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string)
 
     try {
         outputChannel.appendLine('Getting settings...');
-        const settingsManager = CalcpadSettingsManager.getInstance();
-        const settings = settingsManager.getApiSettings();
+        const settingsManager = CalcpadSettingsManager.getInstance(extensionContext);
+        const settings = await settingsManager.getApiSettings();
         outputChannel.appendLine(`Settings retrieved: ${JSON.stringify(settings)}`);
         
         outputChannel.appendLine('Making API call...');
@@ -239,8 +239,8 @@ async function updatePreviewContentUnwrapped(panel: vscode.WebviewPanel, content
 
     try {
         outputChannel.appendLine('Getting settings...');
-        const settingsManager = CalcpadSettingsManager.getInstance();
-        const settings = settingsManager.getApiSettings();
+        const settingsManager = CalcpadSettingsManager.getInstance(extensionContext);
+        const settings = await settingsManager.getApiSettings();
         outputChannel.appendLine(`Settings retrieved: ${JSON.stringify(settings)}`);
         
         outputChannel.appendLine('Making API call to convert-unwrapped...');
@@ -300,8 +300,8 @@ async function generatePdf(panel: vscode.WebviewPanel, content: string) {
     }
 
     try {
-        const settingsManager = CalcpadSettingsManager.getInstance();
-        const settings = settingsManager.getApiSettings();
+        const settingsManager = CalcpadSettingsManager.getInstance(extensionContext);
+        const settings = await settingsManager.getApiSettings();
         
         // Override the output format to PDF
         const baseSettings = settings as Record<string, unknown>;
@@ -416,8 +416,8 @@ async function printToPdf() {
                 throw new Error('API base URL not configured');
             }
 
-            const settingsManager = CalcpadSettingsManager.getInstance();
-            const settings = settingsManager.getApiSettings();
+            const settingsManager = CalcpadSettingsManager.getInstance(extensionContext);
+            const settings = await settingsManager.getApiSettings();
             const documentContent = activeEditor.document.getText();
             
             if (!documentContent || documentContent.trim().length === 0) {
@@ -562,7 +562,7 @@ export function activate(context: vscode.ExtensionContext) {
     linter = new CalcpadLinter();
 
     // Register webview provider for CalcPad UI panel
-    const uiProvider = new CalcpadUIProvider(context.extensionUri);
+    const uiProvider = new CalcpadUIProvider(context.extensionUri, context);
     const uiProviderDisposable = vscode.window.registerWebviewViewProvider(
         CalcpadUIProvider.viewType, 
         uiProvider

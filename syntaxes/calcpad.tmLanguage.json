@@ -9,16 +9,10 @@
       "include": "#commands"
     },
     {
-      "include": "#html-comments"
-    },
-    {
-      "include": "#comments"
+      "include": "#strings"
     },
     {
       "include": "#html-tags"
-    },
-    {
-      "include": "#strings"
     },
     {
       "include": "#functions"
@@ -50,7 +44,7 @@
       "patterns": [
         {
           "name": "keyword.control.calcpad",
-          "match": "(?i)#(if|else\\s+if|else|end\\s+if|rad|deg|gra|val|equ|noc|round|format|show|hide|varsub|nosub|novar|split|wrap|pre|post|repeat|for|while|loop|break|continue|include|local|global|def|end\\s+def|pause|input|md|read|write|append)\\b"
+          "match": "(?i)#(if|else\\s+if|else|end\\s+if|rad|deg|gra|val|equ|noc|round|format|show|hide|varsub|nosub|novar|split|wrap|pre|post|repeat|for|while|loop|break|continue|include|local|global|def|end\\s+def|pause|input|md|read|write|append|fetch)\\b"
         },
         {
           "name": "keyword.other.calcpad",
@@ -63,35 +57,6 @@
         {
           "name": "support.function.command.calcpad",
           "match": "(?i)\\$(find|root|sup|inf|area|integral|slope|repeat|sum|product|plot|map)\\b"
-        }
-      ]
-    },
-    "comments": {
-      "patterns": [
-        {
-          "name": "comment.line.single-quote.calcpad",
-          "begin": "'",
-          "end": "$",
-          "beginCaptures": {
-            "0": {
-              "name": "punctuation.definition.comment.calcpad"
-            }
-          }
-        },
-        {
-          "name": "comment.block.double-quote.calcpad",
-          "begin": "\"",
-          "end": "\"",
-          "beginCaptures": {
-            "0": {
-              "name": "punctuation.definition.comment.begin.calcpad"
-            }
-          },
-          "endCaptures": {
-            "0": {
-              "name": "punctuation.definition.comment.end.calcpad"
-            }
-          }
         }
       ]
     },
@@ -179,8 +144,11 @@
         {
           "name": "string.quoted.double.calcpad",
           "begin": "\"",
-          "end": "\"",
+          "end": "$",
           "patterns": [
+            {
+              "include": "#html-comments"
+            },
             {
               "include": "#html-tags"
             },
@@ -194,6 +162,9 @@
           "begin": "'",
           "end": "$",
           "patterns": [
+            {
+              "include": "#html-comments"
+            },
             {
               "include": "#html-tags"
             },

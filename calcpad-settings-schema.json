@@ -92,6 +92,32 @@
         }
       }
     },
+    "auth": {
+      "type": "object",
+      "description": "Authentication settings for S3 storage access",
+      "properties": {
+        "loginUrl": {
+          "type": "string",
+          "description": "Login URL accessible from host network",
+          "default": ""
+        },
+        "storageUrl": {
+          "type": "string",
+          "description": "Storage URL accessible from Docker network",
+          "default": ""
+        },
+        "username": {
+          "type": "string",
+          "description": "Username for authentication",
+          "default": ""
+        },
+        "password": {
+          "type": "string",
+          "description": "Password for authentication",
+          "default": ""
+        }
+      }
+    },
     "units": {
       "type": "string",
       "description": "Default unit system (m=metric, i=imperial, u=US)",

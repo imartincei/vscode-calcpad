@@ -1,6 +1,15 @@
 import * as vscode from 'vscode';
 import * as settingsSchema from './calcpad-settings-schema.json';
 
+let _outputChannel: vscode.OutputChannel | undefined;
+
+function getOutputChannel(): vscode.OutputChannel {
+    if (!_outputChannel) {
+        _outputChannel = vscode.window.createOutputChannel('CalcPad');
+    }
+    return _outputChannel;
+}
+
 export interface CalcpadSettings {
     math: {
         decimals: number;
@@ -20,6 +29,12 @@ export interface CalcpadSettings {
         shadows: boolean;
         lightDirection: string;
     };
+    auth: {
+        loginUrl: string;
+        storageUrl: string;
+        username: string;
+        password: string;
+    };
     units: string;
     output: {
         format: string;
@@ -32,15 +47,22 @@ export class CalcpadSettingsManager {
     private _settings: CalcpadSettings;
     private _onDidChangeSettings = new vscode.EventEmitter<CalcpadSettings>();
     public readonly onDidChangeSettings = this._onDidChangeSettings.event;
+    private _context?: vscode.ExtensionContext;
 
-    private constructor() {
+    private constructor(context?: vscode.ExtensionContext) {
         this._settings = this.getDefaultSettings();
         this.loadSettings();
+        if (context) {
+            this._context = context;
+        }
     }
 
-    public static getInstance(): CalcpadSettingsManager {
+    public static getInstance(context?: vscode.ExtensionContext): CalcpadSettingsManager {
         if (!CalcpadSettingsManager.instance) {
-            CalcpadSettingsManager.instance = new CalcpadSettingsManager();
+            CalcpadSettingsManager.instance = new CalcpadSettingsManager(context);
+        }
+        if (context && !CalcpadSettingsManager.instance._context) {
+            CalcpadSettingsManager.instance._context = context;
         }
         return CalcpadSettingsManager.instance;
     }
@@ -64,6 +86,12 @@ export class CalcpadSettingsManager {
                 smoothScale: false,
                 shadows: true,
                 lightDirection: "NorthWest"
+            },
+            auth: {
+                loginUrl: "",
+                storageUrl: "",
+                username: "",
+                password: ""
             },
             units: "m",
             output: {
@@ -102,22 +130,69 @@ export class CalcpadSettingsManager {
         config.update('settings', this._settings, vscode.ConfigurationTarget.Workspace);
     }
 
-    public getApiSettings(): unknown {
-        return {
+    public async getStoredJWT(): Promise<string> {
+        if (!this._context) {
+            const outputChannel = getOutputChannel();
+            outputChannel.appendLine('Warning: Extension context not available for JWT retrieval');
+            return '';
+        }
+        
+        const jwt = await this._context.secrets.get('calcpad.auth.jwt') || '';
+        
+        const outputChannel = getOutputChannel();
+        outputChannel.appendLine(`Getting stored JWT: ${jwt ? `${jwt.substring(0, 20)}...` : 'EMPTY'}`);
+        outputChannel.appendLine(`JWT length: ${jwt ? jwt.length : 0}`);
+        
+        return jwt;
+    }
+
+    public async setStoredJWT(jwt: string): Promise<void> {
+        if (!this._context) {
+            const outputChannel = getOutputChannel();
+            outputChannel.appendLine('Warning: Extension context not available for JWT storage');
+            return;
+        }
+        
+        await this._context.secrets.store('calcpad.auth.jwt', jwt);
+        
+        const outputChannel = getOutputChannel();
+        outputChannel.appendLine(`JWT stored securely: ${jwt ? `${jwt.substring(0, 20)}...` : 'EMPTY'}`);
+        outputChannel.appendLine(`JWT length: ${jwt ? jwt.length : 0}`);
+    }
+
+    public async getApiSettings(): Promise<unknown> {
+        const storedJWT = await this.getStoredJWT();
+        const apiSettings = {
             math: {
                 decimals: this._settings.math.decimals,
                 degrees: this._settings.math.degrees,
-                substitute: this._settings.math.substitute
+                isComplex: this._settings.math.isComplex,
+                substitute: this._settings.math.substitute,
+                formatEquations: this._settings.math.formatEquations
             },
             plot: {
                 colorScale: this._settings.plot.colorScale,
-                shadows: this._settings.plot.shadows
+                lightDirection: this._settings.plot.lightDirection,
+                shadows: this._settings.plot.shadows,
+                vectorGraphics: this._settings.plot.vectorGraphics
+            },
+            auth: {
+                url: this._settings.auth.storageUrl,
+                jwt: storedJWT
             },
             units: this._settings.units,
             output: {
-                format: this._settings.output.format,
-                silent: this._settings.output.silent
+                format: this._settings.output.format
             }
         };
+        
+        // Debug logging
+        const outputChannel = getOutputChannel();
+        outputChannel.appendLine('Auth settings being sent:');
+        outputChannel.appendLine(`  Storage URL: ${this._settings.auth.storageUrl}`);
+        outputChannel.appendLine(`  JWT: ${storedJWT ? `${storedJWT.substring(0, 20)}...` : 'EMPTY'}`);
+        outputChannel.appendLine(`  JWT Length: ${storedJWT ? storedJWT.length : 0}`);
+        
+        return apiSettings;
     }
 }

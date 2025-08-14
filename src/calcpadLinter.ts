@@ -76,7 +76,7 @@ export class CalcpadLinter {
         'if', 'else', 'else if', 'end if', 'rad', 'deg', 'gra', 'val', 'equ', 'noc', 
         'round', 'format', 'show', 'hide', 'varsub', 'nosub', 'novar', 'split', 'wrap', 
         'pre', 'post', 'repeat', 'for', 'while', 'loop', 'break', 'continue', 'include', 
-        'local', 'global', 'def', 'end def', 'pause', 'input', 'md', 'read', 'write', 'append'
+        'local', 'global', 'def', 'end def', 'pause', 'input', 'md', 'read', 'write', 'append', 'fetch'
     ]);
 
     // Mathematical operators from CalcPad documentation  

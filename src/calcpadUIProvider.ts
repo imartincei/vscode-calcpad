@@ -11,8 +11,9 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
+        private readonly _context: vscode.ExtensionContext,
     ) { 
-        this._settingsManager = CalcpadSettingsManager.getInstance();
+        this._settingsManager = CalcpadSettingsManager.getInstance(_context);
         this._insertManager = CalcpadInsertManager.getInstance();
     }
 
@@ -82,6 +83,9 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
                             settings: this._settingsManager.getSettings(),
                             previewTheme: currentTheme
                         });
+                        break;
+                    case 'storeJWT':
+                        this._settingsManager.setStoredJWT(message.jwt);
                         break;
                 }
             },
@@ -558,7 +562,29 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
                         <option value="dark">Always Dark</option>
                     </select>
                 </div>
-
+                
+                <h3>Authentication</h3>
+                <div class="setting-group">
+                    <label for="authLoginUrl">Login URL (Host Network):</label>
+                    <input type="text" id="authLoginUrl" placeholder="http://localhost:5000">
+                </div>
+                <div class="setting-group">
+                    <label for="authStorageUrl">Storage URL (Docker Network):</label>
+                    <input type="text" id="authStorageUrl" placeholder="http://calcpad-api:5000">
+                </div>
+                <div class="setting-group">
+                    <label for="authUsername">Username:</label>
+                    <input type="text" id="authUsername" placeholder="Your username">
+                </div>
+                <div class="setting-group">
+                    <label for="authPassword">Password:</label>
+                    <input type="password" id="authPassword" placeholder="Your password">
+                </div>
+                <div class="setting-group">
+                    <button id="login-button" class="reset-button">Login</button>
+                    <div id="login-status" style="margin-top: 8px; font-size: 12px;"></div>
+                </div>
+                
                 <h3>Units & Output</h3>
                 <div class="setting-group">
                     <label for="units">Unit System:</label>
@@ -761,6 +787,12 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
                     shadows: document.getElementById('shadows').checked,
                     lightDirection: document.getElementById('lightDirection').value
                 },
+                auth: {
+                    loginUrl: document.getElementById('authLoginUrl').value,
+                    storageUrl: document.getElementById('authStorageUrl').value,
+                    username: document.getElementById('authUsername').value,
+                    password: document.getElementById('authPassword').value
+                },
                 units: document.getElementById('units').value,
                 output: {
                     format: document.getElementById('outputFormat').value,
@@ -784,6 +816,11 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
             document.getElementById('shadows').checked = settings.plot.shadows;
             document.getElementById('lightDirection').value = settings.plot.lightDirection;
             
+            document.getElementById('authLoginUrl').value = settings.auth.loginUrl;
+            document.getElementById('authStorageUrl').value = settings.auth.storageUrl;
+            document.getElementById('authUsername').value = settings.auth.username;
+            document.getElementById('authPassword').value = settings.auth.password;
+            
             document.getElementById('units').value = settings.units;
             document.getElementById('outputFormat').value = settings.output.format;
             document.getElementById('silent').checked = settings.output.silent;
@@ -793,6 +830,63 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
             vscode.postMessage({
                 type: 'resetSettings'
             });
+        }
+        
+        async function loginToServer() {
+            const url = document.getElementById('authLoginUrl').value;
+            const username = document.getElementById('authUsername').value;
+            const password = document.getElementById('authPassword').value;
+            const statusElement = document.getElementById('login-status');
+            const loginButton = document.getElementById('login-button');
+            
+            if (!url || !username || !password) {
+                statusElement.textContent = 'Please fill in all fields';
+                statusElement.style.color = '#d32f2f';
+                return;
+            }
+            
+            loginButton.textContent = 'Logging in...';
+            loginButton.disabled = true;
+            statusElement.textContent = 'Authenticating...';
+            statusElement.style.color = '#666';
+            
+            try {
+                const response = await fetch(url + '/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.token || data.jwt) {
+                        const jwt = data.token || data.jwt;
+                        // Store JWT via extension
+                        vscode.postMessage({
+                            type: 'storeJWT',
+                            jwt: jwt
+                        });
+                        statusElement.textContent = 'Login successful!';
+                        statusElement.style.color = '#28a745';
+                    } else {
+                        throw new Error('No token received');
+                    }
+                } else {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.message || 'Login failed: ' + response.status);
+                }
+            } catch (error) {
+                statusElement.textContent = 'Login failed: ' + error.message;
+                statusElement.style.color = '#d32f2f';
+            } finally {
+                loginButton.textContent = 'Login';
+                loginButton.disabled = false;
+            }
         }
         
         function saveSettings() {
@@ -820,6 +914,9 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
             
             // Reset button
             document.getElementById('reset-settings').addEventListener('click', resetSettings);
+            
+            // Login button
+            document.getElementById('login-button').addEventListener('click', loginToServer);
         }
         
         function initializeSettings() {
