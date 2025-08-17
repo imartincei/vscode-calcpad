@@ -1,0 +1,25 @@
+' Test line continuation with _
+
+' Simple continuation
+x = _
+5
+
+' Multiple continuations
+y = _
+10 + _
+20
+
+' Continuation with comments
+z = _ ' this continues
+30
+
+' Normal line (no continuation)
+a = 15
+
+' Function with continuation
+f(param) = _
+param * 2
+
+' Invalid - should flag undefined variable
+invalid = _
+undefinedVar

@@ -1,0 +1,21 @@
+' Simple test for undefined variable detection (no includes, fetch, or macros)
+
+' Define some variables
+x = 5
+y = 10
+total = x + y
+
+' Define a function
+multiply(a; b) = a * b
+
+' Valid usage (should NOT be flagged):
+result1 = x + y             ' Using defined variables
+result2 = multiply(x; y)    ' Using defined function
+result3 = sin(30)           ' Using built-in function
+result4 = total * 2         ' Using defined variable
+
+' Invalid usage (SHOULD be flagged):
+error1 = undefinedVar       ' Undefined variable
+error2 = unknownFunc(10)    ' Undefined function  
+error3 = x + unknownVar     ' Mix of defined and undefined
+error4 = multiply(a; unknownVar)  ' Function with undefined variable

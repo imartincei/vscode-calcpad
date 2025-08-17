@@ -1,0 +1,35 @@
+' Test macro parameter validation
+
+' MULTILINE MACROS:
+' This should be flagged - parameter missing $
+#def myfunction$(x)
+    x * 2
+#end def
+
+' This should be valid - parameter has $
+#def validfunction$(x$)
+    x$ * 2
+#end def
+
+' This should be flagged - multiple parameters, some missing $
+#def badfunction$(a; b$; c)
+    a + b$ + c
+#end def
+
+' This should be valid - all parameters have $
+#def goodfunction$(a$; b$; c$)
+    a$ + b$ + c$
+#end def
+
+' INLINE MACROS:
+' This should be flagged - parameter missing $
+#def inlinebad$(x) = x * 2
+
+' This should be valid - parameter has $
+#def inlinegood$(x$) = x$ * 2
+
+' This should be flagged - multiple parameters, some missing $
+#def inlinemixed$(a; b$; c) = a + b$ + c
+
+' This should be valid - all parameters have $
+#def inlinevalid$(a$; b$; c$) = a$ + b$ + c$

@@ -561,7 +561,8 @@ export function activate(context: vscode.ExtensionContext) {
     outputChannel = vscode.window.createOutputChannel('CalcPad');
     outputChannel.appendLine('CalcPad extension activated');
     
-    linter = new CalcpadLinter();
+    const settingsManager = CalcpadSettingsManager.getInstance(context);
+    linter = new CalcpadLinter(settingsManager);
 
     // Register webview provider for CalcPad UI panel
     const uiProvider = new CalcpadUIProvider(context.extensionUri, context);
@@ -609,16 +610,16 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     // Lint on document open
-    const onDidOpenTextDocument = vscode.workspace.onDidOpenTextDocument(document => {
+    const onDidOpenTextDocument = vscode.workspace.onDidOpenTextDocument(async document => {
         if (document.languageId === 'calcpad' || document.languageId === 'plaintext') {
-            linter.lintDocument(document);
+            await linter.lintDocument(document);
         }
     });
 
     // Lint on document save
-    const onDidSaveTextDocument = vscode.workspace.onDidSaveTextDocument(document => {
+    const onDidSaveTextDocument = vscode.workspace.onDidSaveTextDocument(async document => {
         if (document.languageId === 'calcpad' || document.languageId === 'plaintext') {
-            linter.lintDocument(document);
+            await linter.lintDocument(document);
         }
     });
 
@@ -629,8 +630,8 @@ export function activate(context: vscode.ExtensionContext) {
             if (lintTimeout) {
                 clearTimeout(lintTimeout as NodeJS.Timeout);
             }
-            lintTimeout = setTimeout(() => {
-                linter.lintDocument(event.document);
+            lintTimeout = setTimeout(async () => {
+                await linter.lintDocument(event.document);
             }, 500);
         }
         schedulePreviewUpdate();
@@ -645,9 +646,9 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     // Lint all open calcpad documents on activation
-    vscode.workspace.textDocuments.forEach(document => {
+    vscode.workspace.textDocuments.forEach(async document => {
         if (document.languageId === 'calcpad' || document.languageId === 'plaintext') {
-            linter.lintDocument(document);
+            await linter.lintDocument(document);
         }
     });
 

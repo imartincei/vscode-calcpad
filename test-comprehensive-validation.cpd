@@ -1,0 +1,29 @@
+' Comprehensive test for variable validation
+
+' Define a variable
+g = 5
+
+' Function definition using external variable (should NOT flag g as undefined)
+f(x) = 2*x*g             ' x is parameter, g is external variable
+
+' Function call (should work)
+result1 = f(4)
+
+' Invalid variable assignments (SHOULD be flagged)
+x = fg                   ' Invalid bare identifier
+y = invalidname          ' Invalid bare identifier  
+z = sin                  ' Missing parentheses for function
+
+' Valid assignments (should NOT be flagged)
+a = g + 5                ' Using defined variable
+b = sin(30)              ' Using built-in function with parentheses
+c = f(10)                ' Using defined function
+
+' String content (should NOT be flagged)
+msg = "This contains invalidname and undefined variables"
+
+' Function with multiple parameters
+add(first; second) = first + second + g    ' first, second are params; g is external
+
+' Call the multi-parameter function
+result2 = add(1; 2)

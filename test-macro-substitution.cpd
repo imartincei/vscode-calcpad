@@ -1,0 +1,20 @@
+' Test macro parameter substitution
+
+' Define variables that will be used as macro arguments
+x = 5
+y = 10
+
+' Define a macro
+#def greeting$ = "Hello World"
+
+' Define a macro with parameters
+#def calculate$(a$; b$) = a$ + b$
+
+' Valid usage:
+result1 = x + y
+message = greeting$
+result2 = calculate$(x; y)
+
+' Invalid usage (should be flagged):
+invalid1 = undefined_var
+invalid2 = calculate$(unknown1; unknown2)

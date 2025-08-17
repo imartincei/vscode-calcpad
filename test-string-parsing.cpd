@@ -1,0 +1,16 @@
+' Test string parsing with escaped quotes
+
+x = 5
+y = 10
+
+' These should NOT flag undefined variables inside strings:
+msg1 = "This contains undefined variable reference but it''s in a string"
+msg2 = 'Another undefined reference in ''single'' quotes'  
+msg3 = "Escaped quote example: ""Hello"" world"
+
+' These SHOULD flag undefined variables (outside strings):
+result1 = x + undefinedVar
+result2 = "Valid string" + anotherUndefinedVar
+
+' Mixed examples:
+result3 = validVar + "string with undefined inside" + invalidVar

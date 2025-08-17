@@ -155,6 +155,16 @@
       }
     },
     {
+      "name": "Escape Characters",
+      "scope": [
+        "constant.character.escape.calcpad"
+      ],
+      "settings": {
+        "foreground": "#D7BA7D",
+        "fontStyle": "bold"
+      }
+    },
+    {
       "name": "Macros",
       "scope": "variable.parameter.macro.calcpad",
       "settings": {

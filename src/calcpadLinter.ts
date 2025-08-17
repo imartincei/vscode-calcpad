@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import { CalcpadSettingsManager } from './calcpadSettings';
 
 // Interface for centralized definition collection
 interface DefinitionCollector {
@@ -13,8 +14,19 @@ interface DefinitionCollector {
     getValidHashKeywords(): Set<string>;
 }
 
+// Interface for parsed line segments
+interface ParsedLine {
+    codeSegments: Array<{text: string, startPos: number, lineNumber: number}>;
+    stringSegments: Array<{text: string, startPos: number, endPos: number, lineNumber: number}>;
+    lineNumber: number;
+    originalLine: string;
+}
+
 export class CalcpadLinter {
     private diagnosticCollection: vscode.DiagnosticCollection;
+    private outputChannel: vscode.OutputChannel;
+    private contentCache: Map<string, string[]> = new Map();
+    private settingsManager: CalcpadSettingsManager;
 
     // Common regex patterns used throughout the linter
     private static readonly IDENTIFIER_CHARS = 'a-zA-Zα-ωΑ-Ω°øØ∡0-9_,′″‴⁗⁰¹²³⁴⁵⁶⁷⁸⁹ⁿ⁺⁻';
@@ -133,8 +145,10 @@ export class CalcpadLinter {
         '$repeat', '$sum', '$product', '$plot', '$map'
     ]);
 
-    constructor() {
+    constructor(settingsManager: CalcpadSettingsManager) {
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('calcpad');
+        this.outputChannel = vscode.window.createOutputChannel('CalcPad Linter Debug');
+        this.settingsManager = settingsManager;
     }
 
     // Helper methods for common operations
@@ -164,6 +178,73 @@ export class CalcpadLinter {
         return this.builtInFunctions.has(identifier.toLowerCase()) || 
                this.controlKeywords.has(identifier.toLowerCase()) ||
                CalcpadLinter.COMMON_CONSTANTS.has(identifier.toLowerCase());
+    }
+
+    // Pre-cache all fetch content asynchronously
+    public async preCacheContent(lines: string[]): Promise<void> {
+        const fetchUrls = new Set<string>();
+        
+        // Find all fetch operations
+        for (const line of lines) {
+            const fetchMatch = /#fetch\s+([^\s]+)/.exec(line);
+            if (fetchMatch) {
+                const fileName = fetchMatch[1].replace(/['"]/g, '');
+                fetchUrls.add(fileName);
+            }
+        }
+        
+        // Cache content for each unique file
+        for (const fileName of fetchUrls) {
+            if (!this.contentCache.has(fileName)) {
+                try {
+                    this.outputChannel.appendLine(`[DEBUG] Pre-caching content from S3: ${fileName}`);
+                    const content = await this.fetchFileFromS3(fileName, this.settingsManager);
+                    const lines = content.split('\n').filter(line => line.trim() !== '');
+                    this.contentCache.set(fileName, lines);
+                    this.outputChannel.appendLine(`[DEBUG] Cached ${lines.length} lines for ${fileName}`);
+                } catch (error) {
+                    this.outputChannel.appendLine(`[DEBUG] Failed to cache ${fileName}: ${error}`);
+                    this.contentCache.set(fileName, [`' Error fetching: ${fileName} - ${error}`]);
+                }
+            }
+        }
+    }
+
+    // Fetch file from S3 using the same pattern as the C# implementation
+    private async fetchFileFromS3(fileName: string, settingsManager: CalcpadSettingsManager): Promise<string> {
+        const fullSettings = await settingsManager.getSettings();
+        const apiSettings = await settingsManager.getApiSettings() as {
+            auth: { jwt: string; url: string }
+        };
+        const jwt = apiSettings.auth.jwt;
+        // Use loginUrl instead of storageUrl for VS Code requests (WSL networking)
+        const baseUrl = fullSettings.auth.loginUrl;
+        
+        if (!jwt) {
+            throw new Error('No JWT token available for S3 authentication');
+        }
+        
+        const encodedFileName = encodeURIComponent(fileName);
+        const requestUrl = `${baseUrl}/api/blobstorage/download/${encodedFileName}`;
+        
+        this.outputChannel.appendLine(`[DEBUG] Fetching from: ${requestUrl}`);
+        
+        const response = await fetch(requestUrl, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${jwt}`,
+                'User-Agent': 'Calcpad-VSCode/1.0',
+                'Accept': '*/*'
+            },
+            signal: AbortSignal.timeout(10000) // 10 second timeout
+        });
+        
+        if (!response.ok) {
+            const responseText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${response.statusText} | Response: ${responseText}`);
+        }
+        
+        return await response.text();
     }
 
     private getSimilarIdentifiers(identifier: string, candidates: Iterable<string>, suffix: string = ''): string[] {
@@ -282,21 +363,135 @@ export class CalcpadLinter {
         };
     }
 
+    private hasMacroCalls(lines: string[]): boolean {
+        let inMacroDefinition = false;
+        
+        for (const line of lines) {
+            const trimmed = line.trim();
+            
+            // Track macro definition blocks
+            if (trimmed.startsWith('#def ')) {
+                // Check if it's an inline macro (has = sign)
+                const inlineMacroMatch = CalcpadLinter.PATTERNS.inlineMacroDef.exec(trimmed);
+                if (!inlineMacroMatch) {
+                    // Multiline macro definition starts
+                    inMacroDefinition = true;
+                }
+                continue;
+            }
+            
+            if (trimmed === '#end def') {
+                inMacroDefinition = false;
+                continue;
+            }
+            
+            // Skip lines inside macro definitions
+            if (inMacroDefinition) {
+                continue;
+            }
+            
+            // Look for macro calls (identifiers ending with $, but not in definitions)
+            const macroCallRegex = new RegExp(`\\b([${CalcpadLinter.IDENTIFIER_START_CHARS}][${CalcpadLinter.IDENTIFIER_CHARS}]*\\$)`, 'g');
+            if (macroCallRegex.test(trimmed)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    private needsComplexResolution(lines: string[]): boolean {
+        for (const line of lines) {
+            const trimmed = line.trim();
+            
+            // Check for includes
+            if (trimmed.startsWith('#include ')) {
+                return true;
+            }
+            
+            // Check for fetch operations
+            if (trimmed.startsWith('#fetch ')) {
+                return true;
+            }
+            
+            // Check for macro definitions (both inline and multiline)
+            if (trimmed.startsWith('#def ')) {
+                return true;
+            }
+        }
+        
+        // Check for macro calls (but not definitions)
+        if (this.hasMacroCalls(lines)) {
+            return true;
+        }
+        
+        return false;
+    }
+
     public getCompiledContent(document: vscode.TextDocument): {
         expandedLines: string[],
         sourceMap: Map<number, number>,
+        macroExpansionLines: Map<number, string>,
+        lineContinuationMap: Map<number, number[]>,
         userDefinedFunctions: Map<string, number>,
         userDefinedMacros: Map<string, number>,
         definedVariables: Set<string>,
         definitions: DefinitionCollector
     } {
         const text = document.getText();
-        const lines = text.split('\n');
+        let lines = text.split('\n');
 
-        // Content resolution: expand includes, macros, and fetch operations
-        const resolvedContent = this.resolveContent(lines, document.uri);
-        const expandedLines = resolvedContent.expandedLines;
-        const sourceMap = resolvedContent.sourceMap;
+        // Process line continuations first (before any other processing)
+        const { processedLines, lineContinuationMap } = this.processLineContinuations(lines);
+        this.outputChannel.appendLine(`[DEBUG] Line continuation processing:`);
+        this.outputChannel.appendLine(`  Original lines: ${lines.length}, Processed lines: ${processedLines.length}`);
+        for (const [processedIndex, originalIndices] of lineContinuationMap.entries()) {
+            if (originalIndices.length > 1) {
+                this.outputChannel.appendLine(`  Line ${processedIndex}: "${processedLines[processedIndex]}" (from original lines ${originalIndices.join(', ')})`);
+            }
+        }
+        lines = processedLines;
+
+        // Check if file needs complex resolution (has includes, fetch, or macros)
+        const needsComplexResolution = this.needsComplexResolution(lines);
+        this.outputChannel.appendLine(`[DEBUG] needsComplexResolution: ${needsComplexResolution}`);
+
+        let expandedLines: string[];
+        let sourceMap: Map<number, number>;
+        let macroExpansionLines: Map<number, string>;
+
+        if (needsComplexResolution) {
+            // Content resolution: expand includes, macros, and fetch operations
+            this.outputChannel.appendLine(`[DEBUG] Using complex resolution for ${lines.length} lines`);
+            const resolvedContent = this.resolveContent(lines, document.uri);
+            expandedLines = resolvedContent.expandedLines;
+            sourceMap = resolvedContent.sourceMap;
+            macroExpansionLines = resolvedContent.macroExpansionLines;
+            
+            // Adjust source map to account for line continuations
+            sourceMap = this.adjustSourceMapForLineContinuations(sourceMap, lineContinuationMap);
+            this.outputChannel.appendLine(`[DEBUG] Expanded to ${expandedLines.length} lines:`);
+            expandedLines.forEach((line, i) => {
+                this.outputChannel.appendLine(`  [${i}]: ${line}`);
+            });
+        } else {
+            // Simple mode: use original lines with line continuation mapping
+            expandedLines = [...lines];
+            sourceMap = new Map<number, number>();
+            macroExpansionLines = new Map<number, string>();
+            
+            // Create source mapping that accounts for line continuations
+            for (let i = 0; i < lines.length; i++) {
+                const continuationOriginalLines = lineContinuationMap.get(i);
+                if (continuationOriginalLines && continuationOriginalLines.length > 0) {
+                    sourceMap.set(i, continuationOriginalLines[0]);
+                    this.outputChannel.appendLine(`[DEBUG] Line mapping: processed line ${i} → original line ${continuationOriginalLines[0]} (from continuation ${continuationOriginalLines.join(', ')})`);
+                } else {
+                    sourceMap.set(i, i);
+                    this.outputChannel.appendLine(`[DEBUG] Line mapping: processed line ${i} → original line ${i} (no continuation)`);
+                }
+            }
+        }
 
         // Collect definitions from resolved content
         const userDefinedFunctions = this.collectUserDefinedFunctions(expandedLines);
@@ -309,6 +504,8 @@ export class CalcpadLinter {
         return {
             expandedLines,
             sourceMap,
+            macroExpansionLines,
+            lineContinuationMap,
             userDefinedFunctions,
             userDefinedMacros,
             definedVariables,
@@ -316,9 +513,10 @@ export class CalcpadLinter {
         };
     }
 
-    private resolveContent(lines: string[], documentUri: vscode.Uri): { expandedLines: string[], sourceMap: Map<number, number> } {
+    private resolveContent(lines: string[], documentUri: vscode.Uri): { expandedLines: string[], sourceMap: Map<number, number>, macroExpansionLines: Map<number, string> } {
         const expandedLines: string[] = [];
         const sourceMap = new Map<number, number>(); // Maps expanded line number to original line number
+        const macroExpansionLines = new Map<number, string>(); // Maps expanded line number to original macro call
         const macros = new Map<string, { params: string[], content: string[] }>();
         let currentMacro: string | null = null;
         let macroContent: string[] = [];
@@ -329,23 +527,29 @@ export class CalcpadLinter {
 
             // Handle macro definitions
             if (line.startsWith('#def ')) {
+                this.outputChannel.appendLine(`[DEBUG] Processing macro definition: "${line}"`);
                 const macroMatch = this.parseMacroDefinition(line);
                 if (macroMatch) {
                     if (macroMatch.isInline) {
                         // Inline macro: store directly
+                        this.outputChannel.appendLine(`[DEBUG] Storing inline macro: ${macroMatch.name}`);
                         macros.set(macroMatch.name, { params: macroMatch.params, content: [macroMatch.content] });
                     } else {
                         // Multiline macro: start collecting
+                        this.outputChannel.appendLine(`[DEBUG] Starting multiline macro: ${macroMatch.name}`);
                         currentMacro = macroMatch.name;
                         macroContent = [];
                         macros.set(macroMatch.name, { params: macroMatch.params, content: [] });
                     }
+                } else {
+                    this.outputChannel.appendLine(`[DEBUG] Failed to parse macro definition`);
                 }
                 continue;
             }
 
             // Handle end of multiline macro
             if (line === '#end def' && currentMacro) {
+                this.outputChannel.appendLine(`[DEBUG] Ending multiline macro: ${currentMacro}, content: [${macroContent.join(', ')}]`);
                 macros.get(currentMacro)!.content = [...macroContent];
                 currentMacro = null;
                 macroContent = [];
@@ -354,13 +558,16 @@ export class CalcpadLinter {
 
             // Collect macro content
             if (currentMacro) {
+                this.outputChannel.appendLine(`[DEBUG] Adding content to macro ${currentMacro}: "${lines[i]}"`);
                 macroContent.push(lines[i]); // Keep original line formatting
                 continue;
             }
 
             // Handle includes
             if (line.startsWith('#include ')) {
+                this.outputChannel.appendLine(`[DEBUG] Processing include: ${line}`);
                 const includedLines = this.resolveInclude(line, documentUri);
+                this.outputChannel.appendLine(`[DEBUG] Include resolved to ${includedLines.length} lines`);
                 for (const includedLine of includedLines) {
                     expandedLines.push(includedLine);
                     sourceMap.set(expandedLines.length - 1, originalLineNumber);
@@ -370,23 +577,53 @@ export class CalcpadLinter {
 
             // Handle fetch operations
             if (line.startsWith('#fetch ')) {
-                // For now, skip fetch operations as they require network access
-                // In a full implementation, this would fetch remote content
-                expandedLines.push(`' Fetch operation: ${line}`);
-                sourceMap.set(expandedLines.length - 1, originalLineNumber);
+                this.outputChannel.appendLine(`[DEBUG] Processing fetch: ${line}`);
+                const fetchedLines = this.resolveFetch(line);
+                this.outputChannel.appendLine(`[DEBUG] Fetch resolved to ${fetchedLines.length} lines`);
+                for (const fetchedLine of fetchedLines) {
+                    expandedLines.push(fetchedLine);
+                    sourceMap.set(expandedLines.length - 1, originalLineNumber);
+                }
                 continue;
             }
 
             // Expand macros in regular lines
+            if (expandedLines.length === 0) {
+                this.outputChannel.appendLine(`[DEBUG] Final macro map before expansion:`);
+                for (const [name, macro] of macros.entries()) {
+                    this.outputChannel.appendLine(`  ${name}: params=[${macro.params.join(', ')}], content=[${macro.content.join(' | ')}]`);
+                }
+            }
             let expandedLine = this.expandMacros(lines[i], macros);
-            expandedLines.push(expandedLine);
-            sourceMap.set(expandedLines.length - 1, originalLineNumber);
+            const isFromMacroExpansion = expandedLine !== lines[i];
+            
+            // Handle multiline expansions
+            if (expandedLine.includes('\n')) {
+                const expandedSubLines = expandedLine.split('\n');
+                for (const subLine of expandedSubLines) {
+                    expandedLines.push(subLine);
+                    sourceMap.set(expandedLines.length - 1, originalLineNumber);
+                    // Mark lines that came from macro expansions
+                    if (isFromMacroExpansion) {
+                        macroExpansionLines.set(expandedLines.length - 1, lines[i]);
+                    }
+                }
+            } else {
+                expandedLines.push(expandedLine);
+                sourceMap.set(expandedLines.length - 1, originalLineNumber);
+                // Mark lines that came from macro expansions
+                if (isFromMacroExpansion) {
+                    macroExpansionLines.set(expandedLines.length - 1, lines[i]);
+                }
+            }
         }
 
-        return { expandedLines, sourceMap };
+        return { expandedLines, sourceMap, macroExpansionLines };
     }
 
     private parseMacroDefinition(line: string): { name: string, params: string[], content: string, isInline: boolean } | null {
+        this.outputChannel.appendLine(`[DEBUG] parseMacroDefinition: "${line}"`);
+        
         // Inline macro: #def name$(param1$; param2$) = content
         const inlineMatch = CalcpadLinter.PATTERNS.inlineMacroDef.exec(line);
         if (inlineMatch) {
@@ -394,6 +631,7 @@ export class CalcpadLinter {
             const paramsStr = inlineMatch[2] || '';
             const content = inlineMatch[3];
             const params = CalcpadLinter.splitParameters(paramsStr);
+            this.outputChannel.appendLine(`[DEBUG] Parsed inline macro: name="${name}", params=[${params.join(', ')}], content="${content}"`);
             return { name, params, content, isInline: true };
         }
 
@@ -403,9 +641,11 @@ export class CalcpadLinter {
             const name = multilineMatch[1];
             const paramsStr = multilineMatch[2] || '';
             const params = CalcpadLinter.splitParameters(paramsStr);
+            this.outputChannel.appendLine(`[DEBUG] Parsed multiline macro: name="${name}", params=[${params.join(', ')}]`);
             return { name, params, content: '', isInline: false };
         }
 
+        this.outputChannel.appendLine(`[DEBUG] No macro definition found in line`);
         return null;
     }
 
@@ -432,32 +672,65 @@ export class CalcpadLinter {
         }
     }
 
+    private resolveFetch(line: string): string[] {
+        const fetchPattern = /#fetch\s+([^\s]+)/;
+        const match = fetchPattern.exec(line);
+        if (!match) {
+            return [`' Invalid fetch: ${line}`];
+        }
+
+        const fileName = match[1].replace(/['"]/g, ''); // Remove quotes
+        
+        // Return cached content if available
+        if (this.contentCache.has(fileName)) {
+            const cachedContent = this.contentCache.get(fileName)!;
+            this.outputChannel.appendLine(`[DEBUG] Using cached content for ${fileName}: ${cachedContent.length} lines`);
+            return cachedContent;
+        }
+        
+        // If not cached, return error message
+        return [`' Content not cached for: ${fileName} (run preCacheContent first)`];
+    }
+
     private expandMacros(line: string, macros: Map<string, { params: string[], content: string[] }>): string {
         let expandedLine = line;
+        this.outputChannel.appendLine(`[DEBUG] expandMacros input: "${line}"`);
+        this.outputChannel.appendLine(`[DEBUG] Available macros: ${Array.from(macros.keys()).join(', ')}`);
 
         // Find macro calls: macroName$ or macroName$(param1; param2)
         expandedLine = expandedLine.replace(CalcpadLinter.PATTERNS.macroCall, (match, macroName, paramsStr) => {
+            this.outputChannel.appendLine(`[DEBUG] Found macro call: ${match}, name: ${macroName}, params: ${paramsStr}`);
             const macro = macros.get(macroName);
             if (!macro) {
+                this.outputChannel.appendLine(`[DEBUG] Macro ${macroName} not found in definitions`);
                 return match; // Macro not found, leave as is
             }
 
             const actualParams = CalcpadLinter.splitParameters(paramsStr || '');
+            this.outputChannel.appendLine(`[DEBUG] Macro ${macroName} found, expected params: [${macro.params.join(', ')}], actual: [${actualParams.join(', ')}]`);
             
             if (actualParams.length !== macro.params.length) {
+                this.outputChannel.appendLine(`[DEBUG] Parameter count mismatch for ${macroName}`);
                 return match; // Parameter count mismatch, leave as is
             }
 
             // Expand macro content
             let content = macro.content.join('\n');
+            this.outputChannel.appendLine(`[DEBUG] Macro content before substitution: "${content}"`);
             for (let i = 0; i < macro.params.length; i++) {
-                const paramPattern = new RegExp('\\b' + macro.params[i].replace(/\$/g, '\\$') + '\\b', 'g');
-                content = content.replace(paramPattern, actualParams[i]);
+                // Direct string replacement of parameter names
+                const paramName = macro.params[i];
+                const argValue = actualParams[i];
+                const escapedParamName = paramName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                content = content.replace(new RegExp(escapedParamName, 'g'), argValue);
+                this.outputChannel.appendLine(`[DEBUG] After replacing ${paramName} with ${argValue}: "${content}"`);
             }
 
+            this.outputChannel.appendLine(`[DEBUG] Final expanded content: "${content}"`);
             return content;
         });
 
+        this.outputChannel.appendLine(`[DEBUG] expandMacros output: "${expandedLine}"`);
         return expandedLine;
     }
 
@@ -476,10 +749,12 @@ export class CalcpadLinter {
                 // Skip if it's a function definition (has parentheses)
                 if (!line.includes('(') || line.indexOf('(') > line.indexOf('=')) {
                     variables.add(varName);
+                    this.outputChannel.appendLine(`[DEBUG] Collected variable: ${varName} from line: "${line}"`);
                 }
             }
         }
         
+        this.outputChannel.appendLine(`[DEBUG] Total variables collected: [${Array.from(variables).join(', ')}]`);
         return variables;
     }
 
@@ -526,10 +801,16 @@ export class CalcpadLinter {
         return userMacros;
     }
 
-    public lintDocument(document: vscode.TextDocument): void {
+    public async lintDocument(document: vscode.TextDocument): Promise<void> {
         const diagnostics: vscode.Diagnostic[] = [];
         const text = document.getText();
         const lines = text.split('\n');
+
+        // Pre-cache all fetch content before linting
+        await this.preCacheContent(lines);
+
+        // Parse all lines into code and string segments upfront
+        const parsedLines = lines.map((line, index) => this.extractCodeAndStrings(line, index));
 
         // Get compiled/resolved content
         const compiledContent = this.getCompiledContent(document);
@@ -538,34 +819,203 @@ export class CalcpadLinter {
         this.checkControlBlockBalance(lines, diagnostics);
 
         // Validate original source lines (syntax, structure, etc.)
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            const lineNumber = i;
+        // Lint the expanded/resolved content instead of original lines
+        for (let i = 0; i < compiledContent.expandedLines.length; i++) {
+            const expandedLine = compiledContent.expandedLines[i];
+            const originalLineNumber = compiledContent.sourceMap.get(i) ?? 0;
+            const originalMacroCall = compiledContent.macroExpansionLines.get(i);
+            const parsedLine = this.extractCodeAndStrings(expandedLine, originalLineNumber);
+            
+            this.outputChannel.appendLine(`[DEBUG] Linting line ${i}: "${expandedLine}" → mapped to original line ${originalLineNumber}`);
 
             // Skip empty lines and comments
-            if (line.trim() === '' || line.trim().startsWith('"') || line.trim().startsWith("'")) {
+            if (expandedLine.trim() === '' || expandedLine.trim().startsWith('"') || expandedLine.trim().startsWith("'")) {
                 continue;
             }
 
-            // Check for various syntax issues
-            this.checkParenthesesBalance(line, lineNumber, diagnostics);
-            this.checkBracketBalance(line, lineNumber, diagnostics);
-            this.checkVariableNaming(line, lineNumber, diagnostics);
-            this.checkFunctionUsage(line, lineNumber, diagnostics, compiledContent.userDefinedFunctions);
-            this.checkCommandUsage(line, lineNumber, diagnostics);
-            this.checkOperatorSyntax(line, lineNumber, diagnostics);
-            this.checkControlStructures(line, lineNumber, diagnostics);
-            this.checkKeywordValidation(line, lineNumber, diagnostics);
-            this.checkAssignments(line, lineNumber, diagnostics);
-            this.checkMacroSyntax(line, lineNumber, diagnostics);
-            this.checkMacroUsage(line, lineNumber, diagnostics, compiledContent.userDefinedMacros);
-            this.checkUnits(line, lineNumber, diagnostics);
+            // Store diagnostics count before checking this line
+            const diagnosticsCountBefore = diagnostics.length;
+            
+            // Check if this line came from line continuation
+            const lineContinuationOriginalLines = compiledContent.lineContinuationMap.get(i);
+            const isFromLineContinuation = lineContinuationOriginalLines && lineContinuationOriginalLines.length > 1;
+
+            // If this line came from macro expansion, highlight the original macro call instead
+            if (originalMacroCall) {
+                // Lint expanded content but report errors on the original macro line
+                const macroLineDiagnostics: vscode.Diagnostic[] = [];
+                
+                // Run all checks on the expanded content but capture diagnostics separately
+                this.checkParenthesesBalance(parsedLine, macroLineDiagnostics);
+                this.checkBracketBalance(parsedLine, macroLineDiagnostics);  
+                this.checkVariableNaming(parsedLine, macroLineDiagnostics);
+                this.checkFunctionDefinition(parsedLine, macroLineDiagnostics);
+                this.checkFunctionUsage(parsedLine, macroLineDiagnostics, compiledContent.userDefinedFunctions);
+                this.checkCommandUsage(parsedLine, macroLineDiagnostics);
+                this.checkOperatorSyntax(parsedLine, macroLineDiagnostics);
+                this.checkControlStructures(parsedLine, macroLineDiagnostics);
+                this.checkKeywordValidation(parsedLine, macroLineDiagnostics);
+                this.checkAssignments(parsedLine, macroLineDiagnostics);
+                this.checkMacroSyntax(parsedLine, macroLineDiagnostics);
+                this.checkUnits(parsedLine, macroLineDiagnostics);
+                this.checkUndefinedVariablesInCompiledLine(expandedLine, originalLineNumber, macroLineDiagnostics, compiledContent.definitions);
+
+                // Convert any diagnostics to highlight the entire macro call
+                for (const macroDiagnostic of macroLineDiagnostics) {
+                    const macroCallRange = this.findMacroCallRange(originalMacroCall, originalLineNumber);
+                    const adjustedDiagnostic = new vscode.Diagnostic(
+                        macroCallRange,
+                        `Macro expansion error: ${macroDiagnostic.message}`,
+                        macroDiagnostic.severity
+                    );
+                    diagnostics.push(adjustedDiagnostic);
+                }
+            } else {
+                // Normal line - lint as usual
+                this.checkParenthesesBalance(parsedLine, diagnostics);
+                this.checkBracketBalance(parsedLine, diagnostics);  
+                this.checkVariableNaming(parsedLine, diagnostics);
+                this.checkFunctionDefinition(parsedLine, diagnostics);
+                this.checkFunctionUsage(parsedLine, diagnostics, compiledContent.userDefinedFunctions);
+                this.checkCommandUsage(parsedLine, diagnostics);
+                this.checkOperatorSyntax(parsedLine, diagnostics);
+                this.checkControlStructures(parsedLine, diagnostics);
+                this.checkKeywordValidation(parsedLine, diagnostics);
+                this.checkAssignments(parsedLine, diagnostics);
+                this.checkMacroSyntax(parsedLine, diagnostics);
+                this.checkMacroUsage(expandedLine, originalLineNumber, diagnostics, compiledContent.userDefinedMacros);
+                this.checkUnits(parsedLine, diagnostics);
+                this.checkUndefinedVariablesInCompiledLine(expandedLine, originalLineNumber, diagnostics, compiledContent.definitions);
+            }
+            
+            // If this line came from line continuation and we added new diagnostics, adjust their ranges
+            if (isFromLineContinuation && diagnostics.length > diagnosticsCountBefore) {
+                this.adjustDiagnosticsForLineContinuation(diagnostics, diagnosticsCountBefore, i, compiledContent.lineContinuationMap);
+            }
         }
 
-        // Validate compiled content for undefined variables with proper source mapping
-        this.validateCompiledContent(compiledContent, diagnostics);
 
         this.diagnosticCollection.set(document.uri, diagnostics);
+    }
+
+    private processLineContinuations(lines: string[]): { processedLines: string[], lineContinuationMap: Map<number, number[]> } {
+        const processedLines: string[] = [];
+        const lineContinuationMap = new Map<number, number[]>(); // Maps processed line index to original line numbers
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            const originalLineNumbers = [i]; // Start with current line number
+            
+            // Check if this line ends with line continuation: whitespace + _ + whitespace (+ optional comment)
+            const lineContinuationPattern = /\s+_\s*(?:'.*|".*)?$/;
+            
+            if (lineContinuationPattern.test(line)) {
+                // This line has continuation, start building the combined line
+                let combinedLine = line.replace(lineContinuationPattern, ''); // Remove the _ and trailing whitespace
+                let nextLineIndex = i + 1;
+                
+                // Keep collecting continuation lines
+                while (nextLineIndex < lines.length) {
+                    const nextLine = lines[nextLineIndex];
+                    originalLineNumbers.push(nextLineIndex);
+                    
+                    // Check if the next line also has continuation
+                    if (lineContinuationPattern.test(nextLine)) {
+                        // Remove continuation marker and add to combined line
+                        combinedLine += ' ' + nextLine.replace(lineContinuationPattern, '').trim();
+                        nextLineIndex++;
+                    } else {
+                        // Last line of continuation
+                        combinedLine += ' ' + nextLine.trim();
+                        break;
+                    }
+                }
+                
+                // Add the combined line
+                processedLines.push(combinedLine);
+                lineContinuationMap.set(processedLines.length - 1, originalLineNumbers);
+                
+                // Skip the lines we just processed
+                i = nextLineIndex;
+            } else {
+                // Regular line, no continuation
+                processedLines.push(line);
+                lineContinuationMap.set(processedLines.length - 1, originalLineNumbers);
+            }
+        }
+        
+        return { processedLines, lineContinuationMap };
+    }
+
+    private adjustSourceMapForLineContinuations(sourceMap: Map<number, number>, lineContinuationMap: Map<number, number[]>): Map<number, number> {
+        const adjustedSourceMap = new Map<number, number>();
+        
+        for (const [expandedLineIndex, originalLineIndex] of sourceMap.entries()) {
+            // Check if the original line index corresponds to a line continuation
+            const continuationOriginalLines = lineContinuationMap.get(originalLineIndex);
+            if (continuationOriginalLines && continuationOriginalLines.length > 0) {
+                // Use the first original line from the continuation
+                adjustedSourceMap.set(expandedLineIndex, continuationOriginalLines[0]);
+            } else {
+                // No continuation, use the original mapping
+                adjustedSourceMap.set(expandedLineIndex, originalLineIndex);
+            }
+        }
+        
+        return adjustedSourceMap;
+    }
+
+    private adjustDiagnosticsForLineContinuation(diagnostics: vscode.Diagnostic[], startIndex: number, processedLineIndex: number, lineContinuationMap: Map<number, number[]>): void {
+        // Get the original line numbers that make up this continuation
+        const lineContinuationOriginalLines = lineContinuationMap.get(processedLineIndex);
+        if (!lineContinuationOriginalLines || lineContinuationOriginalLines.length <= 1) {
+            return; // No continuation to adjust
+        }
+
+        // For any diagnostics added after startIndex, create diagnostics for all continuation lines
+        const originalDiagnostics = diagnostics.slice(startIndex);
+        
+        // Remove the original diagnostics
+        diagnostics.splice(startIndex);
+        
+        // Add diagnostics for each line in the continuation
+        for (const originalDiagnostic of originalDiagnostics) {
+            for (let i = 0; i < lineContinuationOriginalLines.length; i++) {
+                const originalLineNumber = lineContinuationOriginalLines[i];
+                
+                // Create a range that spans the entire line
+                const fullLineRange = new vscode.Range(originalLineNumber, 0, originalLineNumber, Number.MAX_SAFE_INTEGER);
+                
+                // Create message based on position in continuation
+                let message;
+                if (i === 0) {
+                    message = `Line continuation error: ${originalDiagnostic.message}`;
+                } else {
+                    message = `Line continuation (continued from above): ${originalDiagnostic.message}`;
+                }
+                
+                const adjustedDiagnostic = new vscode.Diagnostic(
+                    fullLineRange,
+                    message,
+                    originalDiagnostic.severity
+                );
+                
+                diagnostics.push(adjustedDiagnostic);
+            }
+        }
+    }
+
+    private findMacroCallRange(originalMacroCall: string, lineNumber: number): vscode.Range {
+        // Find the macro call pattern in the original line
+        const macroCallMatch = CalcpadLinter.PATTERNS.macroCall.exec(originalMacroCall);
+        if (macroCallMatch && macroCallMatch.index !== undefined) {
+            const startPos = macroCallMatch.index;
+            const endPos = startPos + macroCallMatch[0].length;
+            return new vscode.Range(lineNumber, startPos, lineNumber, endPos);
+        }
+        
+        // Fallback: highlight the entire line
+        return new vscode.Range(lineNumber, 0, lineNumber, originalMacroCall.length);
     }
 
     private validateCompiledContent(compiledContent: {
@@ -595,29 +1045,188 @@ export class CalcpadLinter {
         }
     }
 
+    private extractCodeAndStrings(line: string, lineNumber: number): ParsedLine {
+        const codeSegments: Array<{text: string, startPos: number, lineNumber: number}> = [];
+        const stringSegments: Array<{text: string, startPos: number, endPos: number, lineNumber: number}> = [];
+        
+        let inString = false;
+        let stringQuote = '';
+        let stringStart = 0;
+        let lastCodeEnd = 0;
+        
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            
+            if (!inString) {
+                if (char === '"' || char === "'") {
+                    // Save code segment before string
+                    if (i > lastCodeEnd) {
+                        const codeText = line.slice(lastCodeEnd, i);
+                        if (codeText.trim()) {
+                            codeSegments.push({
+                                text: codeText,
+                                startPos: lastCodeEnd,
+                                lineNumber: lineNumber
+                            });
+                        }
+                    }
+                    
+                    inString = true;
+                    stringQuote = char;
+                    stringStart = i;
+                }
+            } else {
+                if (char === stringQuote) {
+                    // Check if this is an escaped quote ('' or "")
+                    const nextChar = line[i + 1];
+                    if (nextChar === stringQuote) {
+                        // Escaped quote - skip both characters
+                        i++; // Skip the second quote
+                        continue;
+                    } else {
+                        // String ends
+                        const stringText = line.slice(stringStart, i + 1);
+                        stringSegments.push({
+                            text: stringText,
+                            startPos: stringStart,
+                            endPos: i + 1,
+                            lineNumber: lineNumber
+                        });
+                        
+                        inString = false;
+                        stringQuote = '';
+                        lastCodeEnd = i + 1;
+                    }
+                }
+            }
+        }
+        
+        // Add remaining code segment
+        if (!inString && lastCodeEnd < line.length) {
+            const codeText = line.slice(lastCodeEnd);
+            if (codeText.trim()) {
+                codeSegments.push({
+                    text: codeText,
+                    startPos: lastCodeEnd,
+                    lineNumber: lineNumber
+                });
+            }
+        }
+        
+        return { 
+            codeSegments, 
+            stringSegments, 
+            lineNumber, 
+            originalLine: line 
+        };
+    }
+
     private checkUndefinedVariablesInCompiledLine(line: string, originalLineNumber: number, diagnostics: vscode.Diagnostic[], 
                                                  definitions: DefinitionCollector): void {
         if (CalcpadLinter.isEmptyCommentOrDirective(line)) {
             return;
         }
 
-        // Skip variable definition lines
-        if (CalcpadLinter.PATTERNS.variableAssignment.test(line.trim())) {
+        // Handle assignments and function definitions - check their RHS expressions
+        const trimmedLine = line.trim();
+        
+        // Check if it's a variable assignment: x = expression
+        const assignmentMatch = CalcpadLinter.PATTERNS.variableAssignment.exec(trimmedLine);
+        if (assignmentMatch) {
+            const equalSignPos = line.indexOf('=');
+            if (equalSignPos !== -1) {
+                // Only check the expression after the = sign
+                const rhsLine = line.substring(equalSignPos + 1);
+                const parsed = this.extractCodeAndStrings(rhsLine, originalLineNumber);
+                
+                // Adjust positions to account for the offset
+                const adjustedSegments = parsed.codeSegments.map(segment => ({
+                    ...segment,
+                    startPos: segment.startPos + equalSignPos + 1
+                }));
+                
+                for (const codeSegment of adjustedSegments) {
+                    this.lintCodeSegmentForUndefinedVariables(codeSegment, diagnostics, definitions);
+                }
+            }
             return;
         }
 
+        // Check if it's a function definition: f(params) = expression
+        const functionMatch = CalcpadLinter.PATTERNS.functionDefinition.exec(trimmedLine);
+        if (functionMatch) {
+            const equalSignPos = line.indexOf('=');
+            if (equalSignPos !== -1) {
+                // Extract parameters to exclude them from undefined variable checking
+                const params = functionMatch[2].trim();
+                const paramNames = new Set<string>();
+                if (params) {
+                    params.split(';').forEach(param => {
+                        const paramName = param.trim();
+                        if (paramName) {
+                            paramNames.add(paramName);
+                        }
+                    });
+                }
+                
+                // Check the expression after the = sign, but exclude function parameters
+                const rhsLine = line.substring(equalSignPos + 1);
+                const parsed = this.extractCodeAndStrings(rhsLine, originalLineNumber);
+                
+                // Adjust positions to account for the offset
+                const adjustedSegments = parsed.codeSegments.map(segment => ({
+                    ...segment,
+                    startPos: segment.startPos + equalSignPos + 1
+                }));
+                
+                for (const codeSegment of adjustedSegments) {
+                    this.lintCodeSegmentForUndefinedVariablesWithExclusions(codeSegment, diagnostics, definitions, paramNames);
+                }
+            }
+            return;
+        }
+
+        // Extract code and string segments
+        const parsed = this.extractCodeAndStrings(line, originalLineNumber);
+        
+        // Only lint code segments for undefined variables
+        for (const codeSegment of parsed.codeSegments) {
+            this.lintCodeSegmentForUndefinedVariables(codeSegment, diagnostics, definitions);
+        }
+        
+        // TODO: Lint string segments with different rules (for next task)
+        // for (const stringSegment of parsed.stringSegments) {
+        //     this.lintStringSegment(stringSegment, diagnostics);
+        // }
+    }
+
+    private lintCodeSegmentForUndefinedVariables(
+        segment: {text: string, startPos: number, lineNumber: number}, 
+        diagnostics: vscode.Diagnostic[], 
+        definitions: DefinitionCollector
+    ): void {
+        this.lintCodeSegmentForUndefinedVariablesWithExclusions(segment, diagnostics, definitions, new Set());
+    }
+
+    private lintCodeSegmentForUndefinedVariablesWithExclusions(
+        segment: {text: string, startPos: number, lineNumber: number}, 
+        diagnostics: vscode.Diagnostic[], 
+        definitions: DefinitionCollector,
+        excludedIdentifiers: Set<string>
+    ): void {
         // Find variable/identifier references
         CalcpadLinter.PATTERNS.identifier.lastIndex = 0; // Reset regex state
         let match;
 
-        while ((match = CalcpadLinter.PATTERNS.identifier.exec(line)) !== null) {
+        while ((match = CalcpadLinter.PATTERNS.identifier.exec(segment.text)) !== null) {
             const identifier = match[1];
-            const identifierPos = match.index;
+            const identifierPosInSegment = match.index;
+            const actualPos = segment.startPos + identifierPosInSegment;
 
-            // Skip if it's followed by parentheses (function call)
+            // Skip if it's followed by parentheses (function call) - check in segment text
             const nextCharIndex = match.index + identifier.length;
-            const nextChar = line[nextCharIndex];
-            if (nextChar === '(' || (nextChar === ' ' && line[nextCharIndex + 1] === '(')) {
+            const nextChar = segment.text[nextCharIndex];
+            if (nextChar === '(' || (nextChar === ' ' && segment.text[nextCharIndex + 1] === '(')) {
                 continue; // This is handled by function validation
             }
 
@@ -626,30 +1235,38 @@ export class CalcpadLinter {
                 continue;
             }
 
-            // Use centralized identifier checking
+            // Skip if this identifier is excluded (e.g., function parameter)
+            if (excludedIdentifiers.has(identifier)) {
+                continue;
+            }
+
+            // Use centralized identifier checking, but treat bare function names as undefined
             const identifierInfo = this.isKnownIdentifier(identifier, definitions);
             
-            if (!identifierInfo.isKnown) {
+            // If it's a built-in function but not followed by parentheses, treat as undefined variable
+            const isBareFunction = identifierInfo.isKnown && identifierInfo.type === 'builtin';
+            
+            if (!identifierInfo.isKnown || isBareFunction) {
                 // Handle special case for macros
                 if (identifier.endsWith('$') && !definitions.getAllMacros().has(identifier)) {
-                    const range = new vscode.Range(originalLineNumber, identifierPos, originalLineNumber, identifierPos + identifier.length);
+                    const range = new vscode.Range(segment.lineNumber, actualPos, segment.lineNumber, actualPos + identifier.length);
                     const suggestions = this.getSuggestionsFromCollector(identifier, definitions);
                     const suggestionText = suggestions.length > 0 ? ` Did you mean: ${suggestions.join(', ')}?` : '';
                     
                     diagnostics.push(new vscode.Diagnostic(
                         range,
-                        `Undefined macro '${identifier}' (found in expanded content).${suggestionText}`,
+                        `Undefined macro '${identifier}'`,
                         vscode.DiagnosticSeverity.Error
                     ));
                 } else if (!identifier.endsWith('$')) {
                     // Regular undefined variable
-                    const range = new vscode.Range(originalLineNumber, identifierPos, originalLineNumber, identifierPos + identifier.length);
+                    const range = new vscode.Range(segment.lineNumber, actualPos, segment.lineNumber, actualPos + identifier.length);
                     const suggestions = this.getSuggestionsFromCollector(identifier, definitions);
                     const suggestionText = suggestions.length > 0 ? ` Did you mean: ${suggestions.join(', ')}?` : '';
 
                     diagnostics.push(new vscode.Diagnostic(
                         range,
-                        `Undefined variable '${identifier}' (found in expanded content).${suggestionText}`,
+                        `Undefined variable '${identifier}'`,
                         vscode.DiagnosticSeverity.Error
                     ));
                 }
@@ -734,7 +1351,9 @@ export class CalcpadLinter {
         }
     }
 
-    private checkParenthesesBalance(line: string, lineNumber: number, diagnostics: vscode.Diagnostic[]): void {
+    private checkParenthesesBalance(parsedLine: ParsedLine, diagnostics: vscode.Diagnostic[]): void {
+        const line = parsedLine.originalLine;
+        const lineNumber = parsedLine.lineNumber;
         let balance = 0;
         let lastOpenPos = -1;
 
@@ -766,7 +1385,9 @@ export class CalcpadLinter {
         }
     }
 
-    private checkBracketBalance(line: string, lineNumber: number, diagnostics: vscode.Diagnostic[]): void {
+    private checkBracketBalance(parsedLine: ParsedLine, diagnostics: vscode.Diagnostic[]): void {
+        const line = parsedLine.originalLine;
+        const lineNumber = parsedLine.lineNumber;
         let squareBalance = 0;
         let curlyBalance = 0;
 
@@ -804,7 +1425,9 @@ export class CalcpadLinter {
         }
     }
 
-    private checkVariableNaming(line: string, lineNumber: number, diagnostics: vscode.Diagnostic[]): void {
+    private checkVariableNaming(parsedLine: ParsedLine, diagnostics: vscode.Diagnostic[]): void {
+        const line = parsedLine.originalLine;
+        const lineNumber = parsedLine.lineNumber;
         // Variables must start with a letter and can contain letters, numbers, underscores, and special symbols
         const variablePattern = /\b([a-zA-Zα-ωΑ-Ω°øØ∡][a-zA-Zα-ωΑ-Ω°øØ∡0-9_,′″‴⁗⁰¹²³⁴⁵⁶⁷⁸⁹ⁿ⁺⁻]*)\s*=/g;
         let match;
@@ -834,20 +1457,61 @@ export class CalcpadLinter {
         }
     }
 
-    private checkFunctionUsage(line: string, lineNumber: number, diagnostics: vscode.Diagnostic[], userDefinedFunctions: Map<string, number>): void {
+    private checkFunctionDefinition(parsedLine: ParsedLine, diagnostics: vscode.Diagnostic[]): void {
+        const line = parsedLine.originalLine;
+        const lineNumber = parsedLine.lineNumber;
+        const trimmedLine = line.trim();
+        
+        // Check if it's a function definition
+        const match = CalcpadLinter.PATTERNS.functionDefinition.exec(trimmedLine);
+        if (match) {
+            const funcName = match[1];
+            const params = match[2].trim();
+            
+            // Functions must have at least one parameter
+            if (params === '') {
+                const openParenPos = line.indexOf('(');
+                const closeParenPos = line.indexOf(')', openParenPos);
+                const range = new vscode.Range(lineNumber, openParenPos, lineNumber, closeParenPos + 1);
+                
+                diagnostics.push(new vscode.Diagnostic(
+                    range,
+                    `Function '${funcName}' must have at least one parameter`,
+                    vscode.DiagnosticSeverity.Error
+                ));
+            }
+        }
+    }
+
+    private checkFunctionUsage(parsedLine: ParsedLine, diagnostics: vscode.Diagnostic[], userDefinedFunctions: Map<string, number>): void {
+        const line = parsedLine.originalLine;
+        const lineNumber = parsedLine.lineNumber;
+        // Only check function calls in code segments, not strings
+        for (const codeSegment of parsedLine.codeSegments) {
+            this.checkFunctionUsageInCodeSegment(codeSegment, diagnostics, userDefinedFunctions);
+        }
+    }
+
+    private checkFunctionUsageInCodeSegment(
+        segment: {text: string, startPos: number, lineNumber: number},
+        diagnostics: vscode.Diagnostic[],
+        userDefinedFunctions: Map<string, number>
+    ): void {
         // Check for function calls with missing parentheses or incorrect syntax
         const functionCallPattern = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\(([^)]*)\)/g;
         let match;
 
-        while ((match = functionCallPattern.exec(line)) !== null) {
+        while ((match = functionCallPattern.exec(segment.text)) !== null) {
             const funcName = match[1];
             const paramsString = match[2].trim();
+
+            const actualPos = segment.startPos + match.index;
 
             // Check if it's an unknown function (not built-in or user-defined)
             if (!this.builtInFunctions.has(funcName.toLowerCase()) && 
                 !this.controlKeywords.has(funcName.toLowerCase()) && 
                 !userDefinedFunctions.has(funcName)) {
-                const range = new vscode.Range(lineNumber, match.index, lineNumber, match.index + funcName.length);
+                const range = new vscode.Range(segment.lineNumber, actualPos, segment.lineNumber, actualPos + funcName.length);
                 diagnostics.push(new vscode.Diagnostic(
                     range,
                     `Unknown function '${funcName}'`,
@@ -862,7 +1526,7 @@ export class CalcpadLinter {
                 const actualParams = paramsString === '' ? 0 : paramsString.split(';').filter(p => p.trim()).length;
                 
                 if (actualParams !== expectedParams) {
-                    const range = new vscode.Range(lineNumber, match.index, lineNumber, match.index + match[0].length);
+                    const range = new vscode.Range(segment.lineNumber, actualPos, segment.lineNumber, actualPos + match[0].length);
                     diagnostics.push(new vscode.Diagnostic(
                         range,
                         `Function '${funcName}' expects ${expectedParams} parameter${expectedParams !== 1 ? 's' : ''} but got ${actualParams}`,
@@ -876,11 +1540,12 @@ export class CalcpadLinter {
         const semicolonFunctions = ['min', 'max', 'sum', 'average', 'gcd', 'lcm'];
         for (const func of semicolonFunctions) {
             const pattern = new RegExp(`\\b${func}\\s*\\(([^)]+)\\)`, 'gi');
-            const funcMatch = pattern.exec(line);
+            const funcMatch = pattern.exec(segment.text);
             if (funcMatch) {
                 const params = funcMatch[1];
                 if (params.includes(',') && !params.includes(';')) {
-                    const range = new vscode.Range(lineNumber, funcMatch.index, lineNumber, funcMatch.index + funcMatch[0].length);
+                    const actualPos = segment.startPos + funcMatch.index;
+                    const range = new vscode.Range(segment.lineNumber, actualPos, segment.lineNumber, actualPos + funcMatch[0].length);
                     diagnostics.push(new vscode.Diagnostic(
                         range,
                         `Function '${func}' parameters should be separated by semicolons, not commas`,
@@ -891,7 +1556,9 @@ export class CalcpadLinter {
         }
     }
 
-    private checkCommandUsage(line: string, lineNumber: number, diagnostics: vscode.Diagnostic[]): void {
+    private checkCommandUsage(parsedLine: ParsedLine, diagnostics: vscode.Diagnostic[]): void {
+        const line = parsedLine.originalLine;
+        const lineNumber = parsedLine.lineNumber;
         // Check for command usage (e.g., $Plot, $Root, etc.)
         const commandPattern = /\$([a-zA-Z_][a-zA-Z0-9_]*)/g;
         let match;
@@ -910,7 +1577,9 @@ export class CalcpadLinter {
         }
     }
 
-    private checkOperatorSyntax(line: string, lineNumber: number, diagnostics: vscode.Diagnostic[]): void {
+    private checkOperatorSyntax(parsedLine: ParsedLine, diagnostics: vscode.Diagnostic[]): void {
+        const line = parsedLine.originalLine;
+        const lineNumber = parsedLine.lineNumber;
         // Check for consecutive operators
         const consecutiveOpsPattern = /[+\-*/^÷\\⦼]{2,}/g;
         let match;
@@ -940,7 +1609,9 @@ export class CalcpadLinter {
         }
     }
 
-    private checkControlStructures(line: string, lineNumber: number, diagnostics: vscode.Diagnostic[]): void {
+    private checkControlStructures(parsedLine: ParsedLine, diagnostics: vscode.Diagnostic[]): void {
+        const line = parsedLine.originalLine;
+        const lineNumber = parsedLine.lineNumber;
         const trimmedLine = line.trim();
 
         // Check for control keywords that should start with #
@@ -964,7 +1635,9 @@ export class CalcpadLinter {
         }
     }
 
-    private checkKeywordValidation(line: string, lineNumber: number, diagnostics: vscode.Diagnostic[]): void {
+    private checkKeywordValidation(parsedLine: ParsedLine, diagnostics: vscode.Diagnostic[]): void {
+        const line = parsedLine.originalLine;
+        const lineNumber = parsedLine.lineNumber;
         // Check for invalid keywords starting with #
         const hashKeywordPattern = /#([a-zA-Z]+(?:\s+[a-zA-Z]+)?)/g;
         let match;
@@ -1037,7 +1710,9 @@ export class CalcpadLinter {
         return matrix[str2.length][str1.length];
     }
 
-    private checkAssignments(line: string, lineNumber: number, diagnostics: vscode.Diagnostic[]): void {
+    private checkAssignments(parsedLine: ParsedLine, diagnostics: vscode.Diagnostic[]): void {
+        const line = parsedLine.originalLine;
+        const lineNumber = parsedLine.lineNumber;
         // Check for multiple assignment operators
         const assignmentCount = (line.match(/=/g) || []).length;
         if (assignmentCount > 1) {
@@ -1068,11 +1743,54 @@ export class CalcpadLinter {
             ));
         }
 
+        // Check for string assignments to variables
+        this.checkStringAssignments(parsedLine, diagnostics);
+
         // Check assignment expressions for invalid bare identifiers
-        this.checkAssignmentExpressions(line, lineNumber, diagnostics);
+        this.checkAssignmentExpressions(parsedLine, diagnostics);
     }
 
-    private checkAssignmentExpressions(line: string, lineNumber: number, diagnostics: vscode.Diagnostic[]): void {
+    private checkStringAssignments(parsedLine: ParsedLine, diagnostics: vscode.Diagnostic[]): void {
+        const line = parsedLine.originalLine;
+        const lineNumber = parsedLine.lineNumber;
+        
+        // Skip lines that don't contain assignments, are macro definitions, or function definitions
+        if (!line.includes('=') || line.trim().startsWith('#') || (line.includes('(') && line.includes(')'))) {
+            return;
+        }
+
+        // Pattern to match variable assignments: variableName = expression
+        const assignmentPattern = /([a-zA-Zα-ωΑ-Ω°øØ∡][a-zA-Zα-ωΑ-Ω°øØ∡0-9_,′″‴⁗⁰¹²³⁴⁵⁶⁷⁸⁹ⁿ⁺⁻]*\$?)\s*=\s*(.+)/;
+        const match = assignmentPattern.exec(line.trim());
+        
+        if (match) {
+            const variableName = match[1];
+            const expression = match[2].trim();
+            
+            // Allow string assignments to macros (variables ending with $)
+            const isMacroAssignment = variableName.endsWith('$');
+            
+            // Check if the expression is a string literal (starts and ends with quotes)
+            const isStringLiteral = (expression.startsWith('"') && expression.endsWith('"')) || 
+                                   (expression.startsWith("'") && expression.endsWith("'"));
+            
+            // Only flag error if it's a string assigned to a regular variable (not a macro)
+            if (isStringLiteral && !isMacroAssignment) {
+                const varStartPos = line.indexOf(variableName);
+                const equalPos = line.indexOf('=', varStartPos);
+                const range = new vscode.Range(lineNumber, varStartPos, lineNumber, equalPos + expression.length + 1);
+                diagnostics.push(new vscode.Diagnostic(
+                    range,
+                    'Strings cannot be assigned to variables. Use a macro (name$) instead',
+                    vscode.DiagnosticSeverity.Error
+                ));
+            }
+        }
+    }
+
+    private checkAssignmentExpressions(parsedLine: ParsedLine, diagnostics: vscode.Diagnostic[]): void {
+        const line = parsedLine.originalLine;
+        const lineNumber = parsedLine.lineNumber;
         // Skip lines that don't contain assignments
         if (!line.includes('=') || line.trim().startsWith('#') || line.trim().startsWith('"') || line.trim().startsWith("'")) {
             return;
@@ -1114,7 +1832,9 @@ export class CalcpadLinter {
     }
 
 
-    private checkMacroSyntax(line: string, lineNumber: number, diagnostics: vscode.Diagnostic[]): void {
+    private checkMacroSyntax(parsedLine: ParsedLine, diagnostics: vscode.Diagnostic[]): void {
+        const line = parsedLine.originalLine;
+        const lineNumber = parsedLine.lineNumber;
         const trimmedLine = line.trim();
         
         // Skip comments and empty lines
@@ -1124,40 +1844,90 @@ export class CalcpadLinter {
 
         // Check for #def macro definitions
         if (trimmedLine.startsWith('#def ')) {
-            this.checkMacroDefinition(line, lineNumber, diagnostics);
+            this.checkMacroDefinition(parsedLine, diagnostics);
         }
     }
 
-    private checkMacroDefinition(line: string, lineNumber: number, diagnostics: vscode.Diagnostic[]): void {
+    private checkMacroDefinition(parsedLine: ParsedLine, diagnostics: vscode.Diagnostic[]): void {
+        const line = parsedLine.originalLine;
+        const lineNumber = parsedLine.lineNumber;
         const trimmedLine = line.trim();
         
-        // Check for inline macro definition: #def name$ = content
-        const inlineMacroPattern = /#def\s+([a-zA-Zα-ωΑ-Ω°øØ∡][a-zA-Zα-ωΑ-Ω°øØ∡0-9_,′″‴⁗⁰¹²³⁴⁵⁶⁷⁸⁹ⁿ⁺⁻]*)\s*=\s*(.+)/;
+        // Check for inline macro definition: #def name$ = content or #def name$(params) = content
+        const inlineMacroPattern = /#def\s+([a-zA-Zα-ωΑ-Ω°øØ∡][a-zA-Zα-ωΑ-Ω°øØ∡0-9_,′″‴⁗⁰¹²³⁴⁵⁶⁷⁸⁹ⁿ⁺⁻]*\$?(?:\([^)]*\))?)\s*=\s*(.+)/;
         const inlineMatch = inlineMacroPattern.exec(trimmedLine);
         
         if (inlineMatch) {
-            const macroName = inlineMatch[1];
-            if (!macroName.endsWith('$')) {
-                const macroStartPos = line.indexOf(macroName);
-                const range = new vscode.Range(lineNumber, macroStartPos, lineNumber, macroStartPos + macroName.length);
-                diagnostics.push(new vscode.Diagnostic(
-                    range,
-                    `Macro name '${macroName}' should end with '$'`,
-                    vscode.DiagnosticSeverity.Error
-                ));
+            const macroDeclaration = inlineMatch[1];
+            
+            // Check if it's a macro with parameters
+            const macroWithParamsPattern = /^([a-zA-Zα-ωΑ-Ω°øØ∡][a-zA-Zα-ωΑ-Ω°øØ∡0-9_,′″‴⁗⁰¹²³⁴⁵⁶⁷⁸⁹ⁿ⁺⁻]*\$?)\(([^)]*)\)$/;
+            const paramMatch = macroWithParamsPattern.exec(macroDeclaration);
+            
+            if (paramMatch) {
+                // Inline macro with parameters
+                const macroName = paramMatch[1];
+                const params = paramMatch[2];
+                
+                // Check macro name ends with $
+                if (!macroName.endsWith('$')) {
+                    const macroStartPos = line.indexOf(macroName);
+                    const range = new vscode.Range(lineNumber, macroStartPos, lineNumber, macroStartPos + macroName.length);
+                    diagnostics.push(new vscode.Diagnostic(
+                        range,
+                        `Macro name '${macroName}' should end with '$'`,
+                        vscode.DiagnosticSeverity.Error
+                    ));
+                }
+                
+                // Check each parameter ends with $
+                if (params.trim()) {
+                    const paramList = params.split(';').map(p => p.trim());
+                    const paramsStartInLine = line.indexOf('(') + 1;
+                    let currentParamPos = paramsStartInLine;
+                    
+                    for (const param of paramList) {
+                        if (param && !param.endsWith('$')) {
+                            // Find the parameter position within the parameter list
+                            const paramStartPos = line.indexOf(param, currentParamPos);
+                            if (paramStartPos !== -1) {
+                                const range = new vscode.Range(lineNumber, paramStartPos, lineNumber, paramStartPos + param.length);
+                                diagnostics.push(new vscode.Diagnostic(
+                                    range,
+                                    `Macro parameter '${param}' should end with '$'`,
+                                    vscode.DiagnosticSeverity.Warning
+                                ));
+                            }
+                        }
+                        // Move to the next parameter position (after current param + semicolon + spaces)
+                        currentParamPos = line.indexOf(param, currentParamPos) + param.length + 1;
+                    }
+                }
+            } else {
+                // Simple inline macro without parameters
+                const macroName = macroDeclaration;
+                if (!macroName.endsWith('$')) {
+                    const macroStartPos = line.indexOf(macroName);
+                    const range = new vscode.Range(lineNumber, macroStartPos, lineNumber, macroStartPos + macroName.length);
+                    diagnostics.push(new vscode.Diagnostic(
+                        range,
+                        `Macro name '${macroName}' should end with '$'`,
+                        vscode.DiagnosticSeverity.Error
+                    ));
+                }
             }
             return;
         }
 
         // Check for multiline macro definition: #def name$ or #def name$(param1$; param2$; ...)
-        const multilineMacroPattern = /#def\s+([a-zA-Zα-ωΑ-Ω°øØ∡][a-zA-Zα-ωΑ-Ω°øØ∡0-9_,′″‴⁗⁰¹²³⁴⁵⁶⁷⁸⁹ⁿ⁺⁻]*(?:\([^)]*\))?)\s*$/;
+        const multilineMacroPattern = /#def\s+([a-zA-Zα-ωΑ-Ω°øØ∡][a-zA-Zα-ωΑ-Ω°øØ∡0-9_,′″‴⁗⁰¹²³⁴⁵⁶⁷⁸⁹ⁿ⁺⁻]*\$?(?:\([^)]*\))?)\s*$/;
         const multilineMatch = multilineMacroPattern.exec(trimmedLine);
         
         if (multilineMatch) {
             const macroDeclaration = multilineMatch[1];
             
             // Check if it's a macro with parameters
-            const macroWithParamsPattern = /^([a-zA-Zα-ωΑ-Ω°øØ∡][a-zA-Zα-ωΑ-Ω°øØ∡0-9_,′″‴⁗⁰¹²³⁴⁵⁶⁷⁸⁹ⁿ⁺⁻]*)\(([^)]*)\)$/;
+            const macroWithParamsPattern = /^([a-zA-Zα-ωΑ-Ω°øØ∡][a-zA-Zα-ωΑ-Ω°øØ∡0-9_,′″‴⁗⁰¹²³⁴⁵⁶⁷⁸⁹ⁿ⁺⁻]*\$?)\(([^)]*)\)$/;
             const paramMatch = macroWithParamsPattern.exec(macroDeclaration);
             
             if (paramMatch) {
@@ -1179,18 +1949,24 @@ export class CalcpadLinter {
                 // Check each parameter ends with $
                 if (params.trim()) {
                     const paramList = params.split(';').map(p => p.trim());
+                    const paramsStartInLine = line.indexOf('(') + 1;
+                    let currentParamPos = paramsStartInLine;
+                    
                     for (const param of paramList) {
                         if (param && !param.endsWith('$')) {
-                            const paramStartPos = line.indexOf(param);
+                            // Find the parameter position within the parameter list
+                            const paramStartPos = line.indexOf(param, currentParamPos);
                             if (paramStartPos !== -1) {
                                 const range = new vscode.Range(lineNumber, paramStartPos, lineNumber, paramStartPos + param.length);
                                 diagnostics.push(new vscode.Diagnostic(
                                     range,
                                     `Macro parameter '${param}' should end with '$'`,
-                                    vscode.DiagnosticSeverity.Error
+                                    vscode.DiagnosticSeverity.Warning
                                 ));
                             }
                         }
+                        // Move to the next parameter position (after current param + semicolon + spaces)
+                        currentParamPos = line.indexOf(param, currentParamPos) + param.length + 1;
                     }
                 }
             } else {
@@ -1263,7 +2039,9 @@ export class CalcpadLinter {
         return allSuggestions.slice(0, 3); // Return max 3 suggestions
     }
 
-    private checkUnits(line: string, lineNumber: number, diagnostics: vscode.Diagnostic[]): void {
+    private checkUnits(parsedLine: ParsedLine, diagnostics: vscode.Diagnostic[]): void {
+        const line = parsedLine.originalLine;
+        const lineNumber = parsedLine.lineNumber;
         // Check for common unit conversion issues
         const unitPattern = /\b\d+(\.\d+)?\s*([a-zA-Z°]+)\b/g;
         let match;
@@ -1397,5 +2175,6 @@ export class CalcpadLinter {
 
     public dispose(): void {
         this.diagnosticCollection.dispose();
+        this.outputChannel.dispose();
     }
 }

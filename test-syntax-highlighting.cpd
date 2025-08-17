@@ -1,0 +1,23 @@
+' Test syntax highlighting for escaped quotes
+
+x = 5
+
+' Double quoted strings with escapes:
+msg1 = "This is a simple string"
+msg2 = "This contains an escaped quote: ""Hello"" world"
+msg3 = "Multiple ""escaped"" ""quotes"" in one string"
+
+' Single quoted strings with escapes:
+msg4 = 'Simple single quote string'
+msg5 = 'This has an escaped quote: ''Hello'' world'
+msg6 = 'Multiple ''escaped'' ''quotes'' here'
+
+' Mixed examples:
+result = x + "String with ""escaped"" quote" + 10
+comment = 'Don''t forget to test this'
+
+' Edge cases:
+empty = ""
+emptyEscape = """"
+singleChar = "a"
+justEscape = "''"

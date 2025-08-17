@@ -1,0 +1,19 @@
+' Test function parameter validation
+
+' Valid function definitions (should NOT be flagged)
+f(g) = 4*g + 6                    ' Single parameter function
+add(x; y) = x + y                 ' Two parameter function  
+calc() = 42                       ' No parameters function
+
+' Function parameters should NOT be flagged as undefined:
+multiply(a; b; c) = a * b * c     ' Three parameters
+complex(real; imag) = real + imag*i  ' Using built-in constant
+
+' Valid usage of defined functions:
+result1 = f(5)
+result2 = add(3; 7)
+result3 = calc()
+
+' Invalid usage (SHOULD be flagged):
+error1 = undefinedVar             ' Undefined variable
+error2 = unknownFunc(10)          ' Undefined function

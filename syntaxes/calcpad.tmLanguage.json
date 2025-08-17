@@ -143,35 +143,31 @@
       "patterns": [
         {
           "name": "string.quoted.double.calcpad",
-          "begin": "\"",
-          "end": "$",
-          "patterns": [
-            {
-              "include": "#html-comments"
-            },
-            {
-              "include": "#html-tags"
-            },
-            {
-              "include": "#macros"
+          "match": "\"(\"\"|[^\"\\n])*(\"|$)",
+          "captures": {
+            "0": {
+              "patterns": [
+                {
+                  "name": "constant.character.escape.calcpad",
+                  "match": "\"\""
+                }
+              ]
             }
-          ]
+          }
         },
         {
           "name": "string.quoted.single.calcpad",
-          "begin": "'",
-          "end": "$",
-          "patterns": [
-            {
-              "include": "#html-comments"
-            },
-            {
-              "include": "#html-tags"
-            },
-            {
-              "include": "#macros"
+          "match": "'(''|[^'\\n])*('|$)",
+          "captures": {
+            "0": {
+              "patterns": [
+                {
+                  "name": "constant.character.escape.calcpad",
+                  "match": "''"
+                }
+              ]
             }
-          ]
+          }
         }
       ]
     },
