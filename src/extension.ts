@@ -150,13 +150,14 @@ function getPreviewHtml(): string {
 async function updatePreviewContent(panel: vscode.WebviewPanel, content: string) {
     outputChannel.appendLine('Starting updatePreviewContent...');
     
-    const config = vscode.workspace.getConfiguration('calcpad');
-    const apiBaseUrl = config.get<string>('apiBaseUrl');
+    const settingsManager = CalcpadSettingsManager.getInstance();
+    const settings = settingsManager.getSettings();
+    const apiBaseUrl = settings.server.url;
     if (!apiBaseUrl) {
-        outputChannel.appendLine('ERROR: API base URL not configured');
-        throw new Error('API base URL not configured');
+        outputChannel.appendLine('ERROR: Server URL not configured');
+        throw new Error('Server URL not configured');
     }
-    outputChannel.appendLine(`API base URL: ${apiBaseUrl}`);
+    outputChannel.appendLine(`Server URL: ${apiBaseUrl}`);
 
     // Update panel title with current file name
     const activeEditor = vscode.window.activeTextEditor;
@@ -222,13 +223,14 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string)
 async function updatePreviewContentUnwrapped(panel: vscode.WebviewPanel, content: string) {
     outputChannel.appendLine('Starting updatePreviewContentUnwrapped...');
     
-    const config = vscode.workspace.getConfiguration('calcpad');
-    const apiBaseUrl = config.get<string>('apiBaseUrl');
+    const settingsManager = CalcpadSettingsManager.getInstance();
+    const settings = settingsManager.getSettings();
+    const apiBaseUrl = settings.server.url;
     if (!apiBaseUrl) {
-        outputChannel.appendLine('ERROR: API base URL not configured');
-        throw new Error('API base URL not configured');
+        outputChannel.appendLine('ERROR: Server URL not configured');
+        throw new Error('Server URL not configured');
     }
-    outputChannel.appendLine(`API base URL: ${apiBaseUrl}`);
+    outputChannel.appendLine(`Server URL: ${apiBaseUrl}`);
 
     // Update panel title with current file name
     const activeEditor = vscode.window.activeTextEditor;
@@ -292,10 +294,11 @@ async function updatePreviewContentUnwrapped(panel: vscode.WebviewPanel, content
 }
 
 async function generatePdf(panel: vscode.WebviewPanel, content: string) {
-    const config = vscode.workspace.getConfiguration('calcpad');
-    const apiBaseUrl = config.get<string>('apiBaseUrl');
+    const settingsManager = CalcpadSettingsManager.getInstance();
+    const settings = settingsManager.getSettings();
+    const apiBaseUrl = settings.server.url;
     if (!apiBaseUrl) {
-        vscode.window.showErrorMessage('API base URL not configured');
+        vscode.window.showErrorMessage('Server URL not configured');
         return;
     }
 
@@ -410,13 +413,12 @@ async function printToPdf() {
         }, async (progress) => {
             progress.report({ increment: 0, message: "Starting PDF generation..." });
 
-            const config = vscode.workspace.getConfiguration('calcpad');
-            const apiBaseUrl = config.get<string>('apiBaseUrl');
-            if (!apiBaseUrl) {
-                throw new Error('API base URL not configured');
-            }
-
             const settingsManager = CalcpadSettingsManager.getInstance(extensionContext);
+            const calcpadSettings = settingsManager.getSettings();
+            const apiBaseUrl = calcpadSettings.server.url;
+            if (!apiBaseUrl) {
+                throw new Error('Server URL not configured');
+            }
             const settings = await settingsManager.getApiSettings();
             const documentContent = activeEditor.document.getText();
             

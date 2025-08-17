@@ -563,6 +563,12 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
                     </select>
                 </div>
                 
+                <h3>Server</h3>
+                <div class="setting-group">
+                    <label for="serverUrl">Server URL:</label>
+                    <input type="text" id="serverUrl" placeholder="http://localhost:9420">
+                </div>
+                
                 <h3>Authentication</h3>
                 <div class="setting-group">
                     <label for="authLoginUrl">Login URL (Host Network):</label>
@@ -787,6 +793,9 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
                     shadows: document.getElementById('shadows').checked,
                     lightDirection: document.getElementById('lightDirection').value
                 },
+                server: {
+                    url: document.getElementById('serverUrl').value
+                },
                 auth: {
                     loginUrl: document.getElementById('authLoginUrl').value,
                     storageUrl: document.getElementById('authStorageUrl').value,
@@ -815,6 +824,8 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
             document.getElementById('smoothScale').checked = settings.plot.smoothScale;
             document.getElementById('shadows').checked = settings.plot.shadows;
             document.getElementById('lightDirection').value = settings.plot.lightDirection;
+            
+            document.getElementById('serverUrl').value = settings.server.url;
             
             document.getElementById('authLoginUrl').value = settings.auth.loginUrl;
             document.getElementById('authStorageUrl').value = settings.auth.storageUrl;

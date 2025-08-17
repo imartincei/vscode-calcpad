@@ -92,6 +92,17 @@
         }
       }
     },
+    "server": {
+      "type": "object",
+      "description": "CalcPad server configuration",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "Server URL for CalcPad API",
+          "default": "http://localhost:9420"
+        }
+      }
+    },
     "auth": {
       "type": "object",
       "description": "Authentication settings for S3 storage access",

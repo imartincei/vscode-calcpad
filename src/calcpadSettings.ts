@@ -29,6 +29,9 @@ export interface CalcpadSettings {
         shadows: boolean;
         lightDirection: string;
     };
+    server: {
+        url: string;
+    };
     auth: {
         loginUrl: string;
         storageUrl: string;
@@ -86,6 +89,9 @@ export class CalcpadSettingsManager {
                 smoothScale: false,
                 shadows: true,
                 lightDirection: "NorthWest"
+            },
+            server: {
+                url: "http://localhost:9420"
             },
             auth: {
                 loginUrl: "",
