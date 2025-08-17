@@ -94,10 +94,10 @@ export class CalcpadSettingsManager {
                 url: "http://localhost:9420"
             },
             auth: {
-                loginUrl: "",
-                storageUrl: "",
-                username: "",
-                password: ""
+                loginUrl: "http://localhost:5000",
+                storageUrl: "http://calcpad-api:5000",
+                username: "admin",
+                password: "admin"
             },
             units: "m",
             output: {

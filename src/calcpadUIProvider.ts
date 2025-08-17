@@ -580,11 +580,11 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
                 </div>
                 <div class="setting-group">
                     <label for="authUsername">Username:</label>
-                    <input type="text" id="authUsername" placeholder="Your username">
+                    <input type="text" id="authUsername" placeholder="admin">
                 </div>
                 <div class="setting-group">
                     <label for="authPassword">Password:</label>
-                    <input type="password" id="authPassword" placeholder="Your password">
+                    <input type="password" id="authPassword" placeholder="admin">
                 </div>
                 <div class="setting-group">
                     <button id="login-button" class="reset-button">Login</button>

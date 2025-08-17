@@ -110,22 +110,22 @@
         "loginUrl": {
           "type": "string",
           "description": "Login URL accessible from host network",
-          "default": ""
+          "default": "http://localhost:5000"
         },
         "storageUrl": {
           "type": "string",
           "description": "Storage URL accessible from Docker network",
-          "default": ""
+          "default": "http://calcpad-api:5000"
         },
         "username": {
           "type": "string",
           "description": "Username for authentication",
-          "default": ""
+          "default": "admin"
         },
         "password": {
           "type": "string",
           "description": "Password for authentication",
-          "default": ""
+          "default": "admin"
         }
       }
     },
