@@ -1,0 +1,27 @@
+' Test file for assignment validation
+
+' Valid assignments
+x = 5              ' Number
+y = 3.14           ' Decimal number
+z = sin(30)        ' Function call
+a = x + y          ' Expression with variables
+b = sqrt(16)       ' Function call
+result = 2 * pi    ' Expression with constant
+macro$ = "hello"   ' Macro assignment
+
+' Invalid assignments that should be flagged
+x = fg             ' Invalid bare identifier - should suggest function
+y = bg             ' Invalid bare identifier
+z = fx             ' Invalid bare identifier - might suggest a function
+w = invalidname    ' Invalid bare identifier
+
+' Edge cases that should NOT be flagged
+e = 2.718          ' Common constant 'e' is valid
+pi = 3.14159       ' Common constant 'pi' is valid
+i = 1              ' Common variable 'i' is valid
+angle = deg        ' 'deg' is a valid keyword/unit
+
+' More complex expressions
+result1 = x * sin(y) + z   ' Complex expression - valid
+result2 = max(a; b; c)     ' Function with multiple parameters - valid
+result3 = if(x > 0; 1; 0)  ' Conditional function - valid

@@ -1,0 +1,38 @@
+' Test file for content resolution system
+
+' Include shared variables and functions
+#include shared-variables.cpd
+
+' Define local macros
+#def localMacro$ = "Local content"
+#def mathOp$(x$; y$) = x$ + y$
+
+' Now use variables from included file - these should NOT be flagged as undefined
+result1 = sharedVar + 10        ' sharedVar is defined in included file
+result2 = multiply(5; 3)        ' multiply() is defined in included file
+result3 = squared(4)            ' squared() is defined in included file
+
+' Use macros from included file
+message1 = greeting$            ' greeting$ is defined in included file
+value1 = calculate$(50)         ' calculate$() is defined in included file
+
+' Use local macros
+message2 = localMacro$          ' Local macro
+value2 = mathOp$(10; 20)        ' Local macro with parameters
+
+' Use macro expansion in expressions
+expanded = multiply(sharedVar; coefficient)  ' Both variables from included file
+
+' These SHOULD be flagged as undefined
+error1 = undefinedVar           ' Not defined anywhere
+error2 = unknownFunc(10)        ' Function not defined
+error3 = missingMacro$          ' Macro not defined
+
+' Test macro expansion
+#def template$(name$; age$)
+    Name: name$
+    Age: age$
+#end def
+
+' Use the multiline macro
+info = template$("John"; "25")  ' Should expand correctly

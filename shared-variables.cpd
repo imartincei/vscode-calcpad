@@ -1,0 +1,13 @@
+' Shared variables and functions file
+
+' Define some variables
+sharedVar = 100
+coefficient = 1.5
+
+' Define some functions
+multiply(a; b) = a * b
+squared(x) = x^2
+
+' Define macros
+#def greeting$ = "Hello from shared file"
+#def calculate$(value$) = value$ * coefficient

@@ -1,0 +1,22 @@
+' Demo: Source mapping for error reporting
+
+' Define a macro that contains an undefined variable
+#def problematicMacro$(x$) = x$ + undefinedVar
+
+' Include a file (that may contain undefined variables)
+#include shared-variables.cpd
+
+' Use the macro - error should map back to this line
+result1 = problematicMacro$(5)
+
+' Direct undefined variable - error should map to this exact line
+result2 = directUndefinedVar
+
+' Macro expansion with multiple issues
+#def complexMacro$(a$; b$)
+    temp = a$ + missingVariable
+    output = temp * b$
+#end def
+
+' Use complex macro - errors should map back to this line
+result3 = complexMacro$(10; 20)

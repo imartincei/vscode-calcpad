@@ -1,0 +1,24 @@
+' Test file for function definition validation
+
+' Valid function definitions (should NOT be flagged)
+f(g) = 4*g + 6                    ' Single parameter function
+area(length; width) = length * width   ' Two parameter function
+volume(l; w; h) = l * w * h       ' Three parameter function
+quadratic(x) = x^2 + 2*x + 1      ' Mathematical function
+max_of_three(a; b; c) = max(max(a; b); c)  ' Function using built-ins
+
+' Valid variable assignments (should NOT be flagged)
+x = 5              ' Number
+y = sin(30)        ' Function call
+z = f(10)          ' User function call (after definition)
+result = x + y     ' Expression
+
+' Invalid variable assignments (SHOULD be flagged)
+x = fg             ' Invalid bare identifier
+y = invalidname    ' Invalid bare identifier
+z = sin            ' Missing parentheses for function
+
+' Edge cases
+myFunc(x) = x      ' Single parameter
+calc() = 42        ' No parameters (valid)
+func(a;b;c;d;e) = a+b+c+d+e  ' Multiple parameters

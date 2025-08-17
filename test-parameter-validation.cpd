@@ -1,0 +1,37 @@
+' Test file for parameter count validation
+
+' Define functions with different parameter counts
+f(x) = x * 2                    ' 1 parameter
+add(a; b) = a + b              ' 2 parameters
+volume(l; w; h) = l * w * h    ' 3 parameters
+noParams() = 42                ' 0 parameters
+
+' Define macros with different parameter counts
+#def simple$ = "Hello"                          ' 0 parameters
+#def greet$(name$) = "Hello " + name$          ' 1 parameter
+#def template$(title$; content$) = title$ + ": " + content$  ' 2 parameters
+
+' Valid function calls (should NOT be flagged)
+result1 = f(5)                  ' Correct: 1 parameter
+result2 = add(10; 20)          ' Correct: 2 parameters
+result3 = volume(2; 3; 4)      ' Correct: 3 parameters
+result4 = noParams()           ' Correct: 0 parameters
+
+' Valid macro calls (should NOT be flagged)
+msg1 = simple$                 ' Correct: 0 parameters
+msg2 = greet$("World")        ' Correct: 1 parameter
+msg3 = template$("Title"; "Content")  ' Correct: 2 parameters
+
+' Invalid function calls (SHOULD be flagged)
+error1 = f()                   ' Error: expects 1 parameter, got 0
+error2 = f(1; 2)              ' Error: expects 1 parameter, got 2
+error3 = add(5)               ' Error: expects 2 parameters, got 1
+error4 = add(1; 2; 3)         ' Error: expects 2 parameters, got 3
+error5 = volume(1; 2)         ' Error: expects 3 parameters, got 2
+error6 = noParams(5)          ' Error: expects 0 parameters, got 1
+
+' Invalid macro calls (SHOULD be flagged)
+error7 = simple$(1)           ' Error: expects 0 parameters, got 1
+error8 = greet$()             ' Error: expects 1 parameter, got 0
+error9 = greet$("A"; "B")     ' Error: expects 1 parameter, got 2
+error10 = template$("Title")  ' Error: expects 2 parameters, got 1
