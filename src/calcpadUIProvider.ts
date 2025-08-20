@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { CalcpadSettingsManager, CalcpadSettings } from './calcpadSettings';
 import { CalcpadInsertManager, InsertItem } from './calcpadInsertManager';
+import { CalcpadContentResolver, MacroDefinition } from './calcpadContentResolver';
 
 export class CalcpadUIProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'calcpadUI';
@@ -8,6 +9,8 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
     private _view?: vscode.WebviewView;
     private _settingsManager: CalcpadSettingsManager;
     private _insertManager: CalcpadInsertManager;
+    private _contentResolver: CalcpadContentResolver;
+    private _outputChannel: vscode.OutputChannel;
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
@@ -15,6 +18,8 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
     ) { 
         this._settingsManager = CalcpadSettingsManager.getInstance(_context);
         this._insertManager = CalcpadInsertManager.getInstance();
+        this._outputChannel = vscode.window.createOutputChannel('CalcPad UI Variables');
+        this._contentResolver = new CalcpadContentResolver(this._settingsManager, this._outputChannel);
     }
 
     public resolveWebviewView(
@@ -22,6 +27,7 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
         context: vscode.WebviewViewResolveContext,
         _token: vscode.CancellationToken,
     ) {
+        this._outputChannel.appendLine(`[resolveWebviewView] CalcPad UI webview being resolved`);
         this._view = webviewView;
 
         webviewView.webview.options = {
@@ -87,6 +93,9 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
                     case 'storeJWT':
                         this._settingsManager.setStoredJWT(message.jwt);
                         break;
+                    case 'debug':
+                        this._outputChannel.appendLine(message.message);
+                        break;
                 }
             },
             undefined
@@ -109,6 +118,21 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
 
     public getInsertManager(): CalcpadInsertManager {
         return this._insertManager;
+    }
+
+    public updateVariables(data: { macros: MacroDefinition[], variables: Array<{name: string, definition: string}>, functions: Array<{name: string, params: string[]}> }) {
+        this._outputChannel.appendLine(`[updateVariables] Called with ${data.macros.length} macros, ${data.variables.length} variables, ${data.functions.length} functions`);
+        if (this._view) {
+            // Ensure we're targeting the CalcPad UI webview specifically
+            this._outputChannel.appendLine(`[updateVariables] Sending to CalcPad UI webview (viewType: ${CalcpadUIProvider.viewType})`);
+            this._view.webview.postMessage({
+                type: 'updateVariables',
+                data: data
+            });
+            this._outputChannel.appendLine(`[updateVariables] Message sent to CalcPad UI webview`);
+        } else {
+            this._outputChannel.appendLine(`[updateVariables] No CalcPad UI webview available - webview may not be visible or resolved yet`);
+        }
     }
 
     private getPdfSettings() {
@@ -458,6 +482,104 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
         .reset-button:hover {
             background: var(--vscode-button-secondaryHoverBackground);
         }
+        
+        /* Variables tab styles */
+        .variables-section {
+            margin-bottom: 20px;
+        }
+        
+        .variables-header {
+            background: var(--vscode-sideBar-background);
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+        }
+        
+        .variables-header:hover {
+            background: var(--vscode-list-hoverBackground);
+        }
+        
+        .variables-header.collapsed .expand-icon {
+            transform: rotate(-90deg);
+        }
+        
+        .expand-icon {
+            transition: transform 0.2s;
+            font-size: 12px;
+        }
+        
+        .variables-content {
+            border-left: 2px solid var(--vscode-panel-border);
+            margin-left: 10px;
+            padding-left: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .variables-content.collapsed {
+            display: none;
+        }
+        
+        .variable-item {
+            padding: 8px 12px;
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 3px;
+            margin-bottom: 6px;
+            cursor: pointer;
+            transition: background-color 0.1s;
+        }
+        
+        .variable-item:hover {
+            background: var(--vscode-list-hoverBackground);
+        }
+        
+        .variable-name {
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--vscode-symbolIcon-variableForeground);
+            margin-bottom: 4px;
+        }
+        
+        .variable-type {
+            font-size: 11px;
+            color: var(--vscode-descriptionForeground);
+            margin-bottom: 4px;
+        }
+        
+        .variable-content {
+            font-family: var(--vscode-editor-font-family);
+            font-size: 11px;
+            background: var(--vscode-textCodeBlock-background);
+            padding: 4px 6px;
+            border-radius: 2px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            max-height: 60px;
+            overflow-y: auto;
+        }
+        
+        .variable-source {
+            font-size: 10px;
+            color: var(--vscode-descriptionForeground);
+            margin-top: 4px;
+        }
+        
+        .source-local { color: var(--vscode-gitDecoration-addedResourceForeground); }
+        .source-include { color: var(--vscode-gitDecoration-modifiedResourceForeground); }
+        .source-fetch { color: var(--vscode-gitDecoration-untrackedResourceForeground); }
+        
+        .loading, .no-variables {
+            text-align: center;
+            color: var(--vscode-descriptionForeground);
+            padding: 20px;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -466,6 +588,7 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
             <button class="tab active" onclick="switchTab('insert-tab')">Insert</button>
             <button class="tab" onclick="switchTab('settings-tab')">Settings</button>
             <button class="tab" onclick="switchTab('pdf-tab')">PDF</button>
+            <button class="tab" onclick="switchTab('variables-tab')">Variables</button>
         </div>
         
         <div class="tab-content active" id="insert-tab">
@@ -720,6 +843,18 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
                 </div>
             </div>
         </div>
+        
+        <div class="tab-content" id="variables-tab">
+            <input 
+                id="variables-search-input"
+                type="text" 
+                placeholder="Search variables, macros, functions..." 
+                style="width: 100%; margin-bottom: 8px; padding: 8px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); color: var(--vscode-input-foreground); border-radius: 3px; font-size: 12px;"
+            />
+            <div id="variables-container">
+                <div class="loading">Loading variables...</div>
+            </div>
+        </div>
     </div>
 
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -951,6 +1086,10 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
                     loadSettings(message.settings);
                     // Reset preview theme to default
                     document.getElementById('previewTheme').value = 'system';
+                    break;
+                case 'updateVariables':
+                    vscode.postMessage({ type: 'debug', message: '[Variables] Received updateVariables message with ' + (message.data.macros?.length || 0) + ' macros, ' + (message.data.variables?.length || 0) + ' variables, ' + (message.data.functions?.length || 0) + ' functions' });
+                    updateVariablesTab(message.data);
                     break;
             }
         });
@@ -1349,6 +1488,201 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
         setupSettingsEvents();
         initializePdfSettings();
         setupPdfSettingsEvents();
+        
+        // Variables Tab Management
+        let allVariablesData = null; // Store original data for filtering
+        
+        function updateVariablesTab(data) {
+            allVariablesData = data; // Store for search filtering
+            setupVariablesSearch(); // Setup search listener if not already done
+            renderVariablesContent(data);
+        }
+        
+        function setupVariablesSearch() {
+            const searchInput = document.getElementById('variables-search-input');
+            if (searchInput && !searchInput.hasAttribute('data-listener-added')) {
+                searchInput.setAttribute('data-listener-added', 'true');
+                searchInput.addEventListener('input', (e) => {
+                    filterVariables(e.target.value);
+                });
+            }
+        }
+        
+        function filterVariables(searchTerm) {
+            if (!allVariablesData) return;
+            
+            if (!searchTerm.trim()) {
+                renderVariablesContent(allVariablesData);
+                return;
+            }
+            
+            const term = searchTerm.toLowerCase();
+            
+            // Helper function to sort by priority (name matches first)
+            function sortByPriority(items, getName, getSecondary) {
+                const nameMatches = [];
+                const secondaryMatches = [];
+                
+                items.forEach(item => {
+                    const name = getName(item).toLowerCase();
+                    const secondary = getSecondary(item);
+                    
+                    if (name.includes(term)) {
+                        nameMatches.push(item);
+                    } else if (secondary.toLowerCase().includes(term)) {
+                        secondaryMatches.push(item);
+                    }
+                });
+                
+                return [...nameMatches, ...secondaryMatches];
+            }
+            
+            // Filter and sort each category
+            const filteredData = {
+                macros: sortByPriority(
+                    allVariablesData.macros.filter(macro => 
+                        macro.name.toLowerCase().includes(term) ||
+                        macro.params.some(param => param.toLowerCase().includes(term)) ||
+                        macro.source.toLowerCase().includes(term)
+                    ),
+                    macro => macro.name,
+                    macro => macro.params.join(' ') + ' ' + macro.source
+                ),
+                variables: sortByPriority(
+                    allVariablesData.variables.filter(variable => 
+                        variable.name.toLowerCase().includes(term) ||
+                        variable.definition.toLowerCase().includes(term)
+                    ),
+                    variable => variable.name,
+                    variable => variable.definition
+                ),
+                functions: sortByPriority(
+                    allVariablesData.functions.filter(func => 
+                        func.name.toLowerCase().includes(term) ||
+                        func.params.some(param => param.toLowerCase().includes(term))
+                    ),
+                    func => func.name,
+                    func => func.params.join(' ')
+                )
+            };
+            
+            renderVariablesContent(filteredData);
+        }
+        
+        function renderVariablesContent(data) {
+            const container = document.getElementById('variables-container');
+            
+            if (!data.macros.length && !data.variables.length && !data.functions.length) {
+                container.innerHTML = '<div class="no-variables">No variables found in current document</div>';
+                return;
+            }
+            
+            let html = '';
+            
+            // Macros section
+            if (data.macros.length > 0) {
+                html += '<div class="variables-section">';
+                html += '<div class="variables-header" onclick="toggleSection(this)">';
+                html += '<span>Macros (' + data.macros.length + ')</span>';
+                html += '<span class="expand-icon">▼</span>';
+                html += '</div>';
+                html += '<div class="variables-content">';
+                
+                data.macros.forEach(macro => {
+                    const paramText = macro.params.length > 0 ? 'Parameters: ' + macro.params.join('; ') : 'No parameters';
+                    const sourceClass = 'source-' + macro.source;
+                    const insertText = macro.params.length > 0 ? 
+                        macro.name + '(' + macro.params.join('; ') + ')' :
+                        macro.name;
+                    
+                    // @ts-ignore
+                    html += '<div class="variable-item" onclick="insertText(\\'' + escapeForJs(insertText) + '\\')\">';
+                    html += '<div class="variable-name">' + escapeHtml(macro.name) + '</div>';
+                    html += '<div class="variable-type">' + paramText + '</div>';
+                    html += '<div class="variable-source"><span class="' + sourceClass + '">' + macro.source + '</span>';
+                    if (macro.sourceFile) html += '<span> - ' + escapeHtml(macro.sourceFile) + '</span>';
+                    html += '</div>';
+                    html += '</div>';
+                });
+                
+                html += '</div></div>';
+            }
+            
+            // Functions section
+            if (data.functions.length > 0) {
+                html += '<div class="variables-section">';
+                html += '<div class="variables-header" onclick="toggleSection(this)">';
+                html += '<span>Functions (' + data.functions.length + ')</span>';
+                html += '<span class="expand-icon">▼</span>';
+                html += '</div>';
+                html += '<div class="variables-content">';
+                
+                data.functions.forEach(func => {
+                    const paramText = func.params.length > 0 ? 
+                        'Parameters: ' + func.params.join('; ') : 
+                        'No parameters';
+                    const paramPlaceholders = func.params.length > 0 ? 
+                        '(' + func.params.join('; ') + ')' : '()';
+                    
+                    // @ts-ignore
+                    html += '<div class="variable-item" onclick="insertText(\\'' + escapeForJs(func.name + paramPlaceholders) + '\\')\">';
+                    html += '<div class="variable-name">' + escapeHtml(func.name) + '</div>';
+                    html += '<div class="variable-type">' + paramText + '</div>';
+                    html += '<div class="variable-source"><span class="source-local">local</span></div>';
+                    html += '</div>';
+                });
+                
+                html += '</div></div>';
+            }
+            
+            // Variables section
+            if (data.variables.length > 0) {
+                html += '<div class="variables-section">';
+                html += '<div class="variables-header" onclick="toggleSection(this)">';
+                html += '<span>Variables (' + data.variables.length + ')</span>';
+                html += '<span class="expand-icon">▼</span>';
+                html += '</div>';
+                html += '<div class="variables-content">';
+                
+                data.variables.forEach(variable => {
+                    // @ts-ignore
+                    html += '<div class="variable-item" onclick="insertText(\\'' + escapeForJs(variable.name) + '\\')\">';
+                    html += '<div class="variable-name">' + escapeHtml(variable.name) + '</div>';
+                    html += '<div class="variable-type">' + escapeHtml(variable.definition) + '</div>';
+                    html += '<div class="variable-source"><span class="source-local">local</span></div>';
+                    html += '</div>';
+                });
+                
+                html += '</div></div>';
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        function toggleSection(header) {
+            const content = header.nextElementSibling;
+            const icon = header.querySelector('.expand-icon');
+            
+            header.classList.toggle('collapsed');
+            content.classList.toggle('collapsed');
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function escapeForJs(text) {
+            return text.replace(/\'/g, "\\'").replace(/\"/g, '\\"');
+        }
+        
+        function insertText(text) {
+            vscode.postMessage({
+                type: 'insertText',
+                text: text
+            });
+        }
     </script>
 </body>
 </html>`;

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { CalcpadSettingsManager } from './calcpadSettings';
+import { CalcpadContentResolver } from './calcpadContentResolver';
 
 // Interface for centralized definition collection
 interface DefinitionCollector {
@@ -25,20 +26,20 @@ interface ParsedLine {
 export class CalcpadLinter {
     private diagnosticCollection: vscode.DiagnosticCollection;
     private outputChannel: vscode.OutputChannel;
-    private contentCache: Map<string, string[]> = new Map();
-    private settingsManager: CalcpadSettingsManager;
+    private contentResolver: CalcpadContentResolver;
 
     // Common regex patterns used throughout the linter
-    private static readonly IDENTIFIER_CHARS = 'a-zA-Zα-ωΑ-Ω°øØ∡0-9_,′″‴⁗⁰¹²³⁴⁵⁶⁷⁸⁹ⁿ⁺⁻';
+    private static readonly IDENTIFIER_CHARS = 'a-zA-Zα-ωΑ-Ω°øØ∡0-9_,′″‴⁗⁰¹²³⁴⁵⁶⁷⁸⁹ⁿ⁺⁻$';
     private static readonly IDENTIFIER_START_CHARS = 'a-zA-Zα-ωΑ-Ω°øØ∡';
     
     // Regex patterns for common identifier types
     private static readonly PATTERNS = {
-        // Basic identifier (variable/function name)
-        identifier: new RegExp(`\\b([${CalcpadLinter.IDENTIFIER_START_CHARS}][${CalcpadLinter.IDENTIFIER_CHARS}]*\\$?)\\b`, 'g'),
+        // Basic identifier (variable/function name) - capture full identifier including $ suffix
+        // Use negative lookbehind/lookahead to ensure proper word boundaries without excluding $
+        identifier: new RegExp(`(?<![${CalcpadLinter.IDENTIFIER_CHARS}])([${CalcpadLinter.IDENTIFIER_START_CHARS}][${CalcpadLinter.IDENTIFIER_CHARS}]*)(?![${CalcpadLinter.IDENTIFIER_CHARS}])`, 'g'),
         
         // Variable assignment pattern
-        variableAssignment: new RegExp(`^([${CalcpadLinter.IDENTIFIER_START_CHARS}][${CalcpadLinter.IDENTIFIER_CHARS}]*\\$?)\\s*=`),
+        variableAssignment: new RegExp(`^([${CalcpadLinter.IDENTIFIER_START_CHARS}][${CalcpadLinter.IDENTIFIER_CHARS}]*)\\s*=`),
         
         // Function definition pattern  
         functionDefinition: new RegExp(`^([${CalcpadLinter.IDENTIFIER_START_CHARS}][${CalcpadLinter.IDENTIFIER_CHARS}]*)\\s*\\(([^)]*)\\)\\s*=`),
@@ -50,10 +51,10 @@ export class CalcpadLinter {
         macroCall: new RegExp(`\\b([${CalcpadLinter.IDENTIFIER_START_CHARS}][${CalcpadLinter.IDENTIFIER_CHARS}]*\\$)(?:\\(([^)]*)\\))?`, 'g'),
         
         // Inline macro definition
-        inlineMacroDef: new RegExp(`#def\\s+([${CalcpadLinter.IDENTIFIER_START_CHARS}][${CalcpadLinter.IDENTIFIER_CHARS}]*\\$?)(?:\\(([^)]*)\\))?\\s*=\\s*(.+)`),
+        inlineMacroDef: new RegExp(`#def\\s+([${CalcpadLinter.IDENTIFIER_START_CHARS}][${CalcpadLinter.IDENTIFIER_CHARS}]*)(?:\\(([^)]*)\\))?\\s*=\\s*(.+)`),
         
         // Multiline macro definition
-        multilineMacroDef: new RegExp(`#def\\s+([${CalcpadLinter.IDENTIFIER_START_CHARS}][${CalcpadLinter.IDENTIFIER_CHARS}]*\\$?)(?:\\(([^)]*)\\))?\\s*$`)
+        multilineMacroDef: new RegExp(`#def\\s+([${CalcpadLinter.IDENTIFIER_START_CHARS}][${CalcpadLinter.IDENTIFIER_CHARS}]*)(?:\\(([^)]*)\\))?\\s*$`)
     };
 
     // Common constants
@@ -148,7 +149,11 @@ export class CalcpadLinter {
     constructor(settingsManager: CalcpadSettingsManager) {
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('calcpad');
         this.outputChannel = vscode.window.createOutputChannel('CalcPad Linter Debug');
-        this.settingsManager = settingsManager;
+        this.contentResolver = new CalcpadContentResolver(settingsManager, this.outputChannel);
+    }
+
+    public getContentResolver(): CalcpadContentResolver {
+        return this.contentResolver;
     }
 
     // Helper methods for common operations
@@ -180,72 +185,6 @@ export class CalcpadLinter {
                CalcpadLinter.COMMON_CONSTANTS.has(identifier.toLowerCase());
     }
 
-    // Pre-cache all fetch content asynchronously
-    public async preCacheContent(lines: string[]): Promise<void> {
-        const fetchUrls = new Set<string>();
-        
-        // Find all fetch operations
-        for (const line of lines) {
-            const fetchMatch = /#fetch\s+([^\s]+)/.exec(line);
-            if (fetchMatch) {
-                const fileName = fetchMatch[1].replace(/['"]/g, '');
-                fetchUrls.add(fileName);
-            }
-        }
-        
-        // Cache content for each unique file
-        for (const fileName of fetchUrls) {
-            if (!this.contentCache.has(fileName)) {
-                try {
-                    this.outputChannel.appendLine(`[DEBUG] Pre-caching content from S3: ${fileName}`);
-                    const content = await this.fetchFileFromS3(fileName, this.settingsManager);
-                    const lines = content.split('\n').filter(line => line.trim() !== '');
-                    this.contentCache.set(fileName, lines);
-                    this.outputChannel.appendLine(`[DEBUG] Cached ${lines.length} lines for ${fileName}`);
-                } catch (error) {
-                    this.outputChannel.appendLine(`[DEBUG] Failed to cache ${fileName}: ${error}`);
-                    this.contentCache.set(fileName, [`' Error fetching: ${fileName} - ${error}`]);
-                }
-            }
-        }
-    }
-
-    // Fetch file from S3 using the same pattern as the C# implementation
-    private async fetchFileFromS3(fileName: string, settingsManager: CalcpadSettingsManager): Promise<string> {
-        const fullSettings = await settingsManager.getSettings();
-        const apiSettings = await settingsManager.getApiSettings() as {
-            auth: { jwt: string; url: string }
-        };
-        const jwt = apiSettings.auth.jwt;
-        // Use loginUrl instead of storageUrl for VS Code requests (WSL networking)
-        const baseUrl = fullSettings.auth.loginUrl;
-        
-        if (!jwt) {
-            throw new Error('No JWT token available for S3 authentication');
-        }
-        
-        const encodedFileName = encodeURIComponent(fileName);
-        const requestUrl = `${baseUrl}/api/blobstorage/download/${encodedFileName}`;
-        
-        this.outputChannel.appendLine(`[DEBUG] Fetching from: ${requestUrl}`);
-        
-        const response = await fetch(requestUrl, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${jwt}`,
-                'User-Agent': 'Calcpad-VSCode/1.0',
-                'Accept': '*/*'
-            },
-            signal: AbortSignal.timeout(10000) // 10 second timeout
-        });
-        
-        if (!response.ok) {
-            const responseText = await response.text();
-            throw new Error(`HTTP ${response.status}: ${response.statusText} | Response: ${responseText}`);
-        }
-        
-        return await response.text();
-    }
 
     private getSimilarIdentifiers(identifier: string, candidates: Iterable<string>, suffix: string = ''): string[] {
         const suggestions: string[] = [];
@@ -575,17 +514,6 @@ export class CalcpadLinter {
                 continue;
             }
 
-            // Handle fetch operations
-            if (line.startsWith('#fetch ')) {
-                this.outputChannel.appendLine(`[DEBUG] Processing fetch: ${line}`);
-                const fetchedLines = this.resolveFetch(line);
-                this.outputChannel.appendLine(`[DEBUG] Fetch resolved to ${fetchedLines.length} lines`);
-                for (const fetchedLine of fetchedLines) {
-                    expandedLines.push(fetchedLine);
-                    sourceMap.set(expandedLines.length - 1, originalLineNumber);
-                }
-                continue;
-            }
 
             // Expand macros in regular lines
             if (expandedLines.length === 0) {
@@ -672,25 +600,6 @@ export class CalcpadLinter {
         }
     }
 
-    private resolveFetch(line: string): string[] {
-        const fetchPattern = /#fetch\s+([^\s]+)/;
-        const match = fetchPattern.exec(line);
-        if (!match) {
-            return [`' Invalid fetch: ${line}`];
-        }
-
-        const fileName = match[1].replace(/['"]/g, ''); // Remove quotes
-        
-        // Return cached content if available
-        if (this.contentCache.has(fileName)) {
-            const cachedContent = this.contentCache.get(fileName)!;
-            this.outputChannel.appendLine(`[DEBUG] Using cached content for ${fileName}: ${cachedContent.length} lines`);
-            return cachedContent;
-        }
-        
-        // If not cached, return error message
-        return [`' Content not cached for: ${fileName} (run preCacheContent first)`];
-    }
 
     private expandMacros(line: string, macros: Map<string, { params: string[], content: string[] }>): string {
         let expandedLine = line;
@@ -807,24 +716,57 @@ export class CalcpadLinter {
         const lines = text.split('\n');
 
         // Pre-cache all fetch content before linting
-        await this.preCacheContent(lines);
+        await this.contentResolver.preCacheContent(lines);
 
         // Parse all lines into code and string segments upfront
         const parsedLines = lines.map((line, index) => this.extractCodeAndStrings(line, index));
 
         // Get compiled/resolved content
-        const compiledContent = this.getCompiledContent(document);
+        const compiledContent = this.contentResolver.getCompiledContent(document);
 
         // Check for unmatched control blocks first
         this.checkControlBlockBalance(lines, diagnostics);
 
         // Validate original source lines (syntax, structure, etc.)
+        // Track macro context as we process lines
+        let currentMacroContext: {name: string, params: string[]} | undefined = undefined;
+        
         // Lint the expanded/resolved content instead of original lines
         for (let i = 0; i < compiledContent.expandedLines.length; i++) {
             const expandedLine = compiledContent.expandedLines[i];
             const originalLineNumber = compiledContent.sourceMap.get(i) ?? 0;
             const originalMacroCall = compiledContent.macroExpansionLines.get(i);
             const parsedLine = this.extractCodeAndStrings(expandedLine, originalLineNumber);
+            
+            // Track macro definition boundaries
+            const trimmedLine = expandedLine.trim();
+            let lineMacroContext: {name: string, params: string[]} | undefined = currentMacroContext;
+            
+            if (trimmedLine.startsWith('#def ')) {
+                // Parse macro definition to get parameters
+                const macroMatch = /^#def\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?:\(\s*([^)]*)\s*\))?(?:\s*=\s*(.+))?/.exec(trimmedLine);
+                if (macroMatch) {
+                    const macroName = macroMatch[1];
+                    const paramsStr = macroMatch[2] || '';
+                    const macroContent = macroMatch[3]; // Content after = for inline macros
+                    const params = CalcpadLinter.splitParameters(paramsStr);
+                    
+                    if (macroContent) {
+                        // Inline macro - context applies only to this line
+                        lineMacroContext = { name: macroName, params };
+                        this.outputChannel.appendLine(`[DEBUG] Inline macro context: ${macroName} with params: [${params.join(', ')}]`);
+                    } else {
+                        // Multiline macro - context applies until #end def
+                        currentMacroContext = { name: macroName, params };
+                        lineMacroContext = currentMacroContext;
+                        this.outputChannel.appendLine(`[DEBUG] Entering multiline macro context: ${macroName} with params: [${params.join(', ')}]`);
+                    }
+                }
+            } else if (trimmedLine === '#end def') {
+                this.outputChannel.appendLine(`[DEBUG] Exiting macro context: ${currentMacroContext?.name || 'unknown'}`);
+                currentMacroContext = undefined;
+                lineMacroContext = undefined;
+            }
             
             this.outputChannel.appendLine(`[DEBUG] Linting line ${i}: "${expandedLine}" → mapped to original line ${originalLineNumber}`);
 
@@ -858,7 +800,8 @@ export class CalcpadLinter {
                 this.checkAssignments(parsedLine, macroLineDiagnostics);
                 this.checkMacroSyntax(parsedLine, macroLineDiagnostics);
                 this.checkUnits(parsedLine, macroLineDiagnostics);
-                this.checkUndefinedVariablesInCompiledLine(expandedLine, originalLineNumber, macroLineDiagnostics, compiledContent.definitions);
+                const definitions = this.createDefinitionCollector(compiledContent.expandedLines);
+                this.checkUndefinedVariablesInCompiledLine(expandedLine, originalLineNumber, macroLineDiagnostics, definitions, lineMacroContext);
 
                 // Convert any diagnostics to highlight the entire macro call
                 for (const macroDiagnostic of macroLineDiagnostics) {
@@ -885,7 +828,8 @@ export class CalcpadLinter {
                 this.checkMacroSyntax(parsedLine, diagnostics);
                 this.checkMacroUsage(expandedLine, originalLineNumber, diagnostics, compiledContent.userDefinedMacros);
                 this.checkUnits(parsedLine, diagnostics);
-                this.checkUndefinedVariablesInCompiledLine(expandedLine, originalLineNumber, diagnostics, compiledContent.definitions);
+                const definitions = this.createDefinitionCollector(compiledContent.expandedLines);
+                this.checkUndefinedVariablesInCompiledLine(expandedLine, originalLineNumber, diagnostics, definitions, lineMacroContext);
             }
             
             // If this line came from line continuation and we added new diagnostics, adjust their ranges
@@ -1036,11 +980,13 @@ export class CalcpadLinter {
                 continue; // Skip lines that don't map back to source
             }
             
+            const definitions = this.createDefinitionCollector(compiledContent.expandedLines);
             this.checkUndefinedVariablesInCompiledLine(
                 expandedLine, 
                 originalLineNumber, 
                 diagnostics, 
-                compiledContent.definitions
+                definitions,
+                undefined // No macro context in this case
             );
         }
     }
@@ -1122,7 +1068,7 @@ export class CalcpadLinter {
     }
 
     private checkUndefinedVariablesInCompiledLine(line: string, originalLineNumber: number, diagnostics: vscode.Diagnostic[], 
-                                                 definitions: DefinitionCollector): void {
+                                                 definitions: DefinitionCollector, macroContext?: {name: string, params: string[]}): void {
         if (CalcpadLinter.isEmptyCommentOrDirective(line)) {
             return;
         }
@@ -1133,6 +1079,19 @@ export class CalcpadLinter {
         // Check if it's a variable assignment: x = expression
         const assignmentMatch = CalcpadLinter.PATTERNS.variableAssignment.exec(trimmedLine);
         if (assignmentMatch) {
+            const variableName = assignmentMatch[1];
+            
+            // Validate the left-hand side variable name for invalid $ usage
+            if (variableName.endsWith('$') && !macroContext) {
+                const varStartPos = trimmedLine.indexOf(variableName);
+                const range = new vscode.Range(originalLineNumber, varStartPos, originalLineNumber, varStartPos + variableName.length);
+                diagnostics.push(new vscode.Diagnostic(
+                    range,
+                    `Invalid use of '$' suffix in variable assignment: '${variableName}' is not a macro`,
+                    vscode.DiagnosticSeverity.Error
+                ));
+            }
+            
             const equalSignPos = line.indexOf('=');
             if (equalSignPos !== -1) {
                 // Only check the expression after the = sign
@@ -1146,7 +1105,7 @@ export class CalcpadLinter {
                 }));
                 
                 for (const codeSegment of adjustedSegments) {
-                    this.lintCodeSegmentForUndefinedVariables(codeSegment, diagnostics, definitions);
+                    this.lintCodeSegmentForUndefinedVariables(codeSegment, diagnostics, definitions, macroContext);
                 }
             }
             return;
@@ -1180,7 +1139,9 @@ export class CalcpadLinter {
                 }));
                 
                 for (const codeSegment of adjustedSegments) {
-                    this.lintCodeSegmentForUndefinedVariablesWithExclusions(codeSegment, diagnostics, definitions, paramNames);
+                    // For function parameters, create a mock macro context to exclude them
+                    const functionContext = { name: 'function', params: Array.from(paramNames) };
+                    this.lintCodeSegmentForUndefinedVariables(codeSegment, diagnostics, definitions, functionContext);
                 }
             }
             return;
@@ -1191,7 +1152,7 @@ export class CalcpadLinter {
         
         // Only lint code segments for undefined variables
         for (const codeSegment of parsed.codeSegments) {
-            this.lintCodeSegmentForUndefinedVariables(codeSegment, diagnostics, definitions);
+            this.lintCodeSegmentForUndefinedVariables(codeSegment, diagnostics, definitions, macroContext);
         }
         
         // TODO: Lint string segments with different rules (for next task)
@@ -1203,43 +1164,42 @@ export class CalcpadLinter {
     private lintCodeSegmentForUndefinedVariables(
         segment: {text: string, startPos: number, lineNumber: number}, 
         diagnostics: vscode.Diagnostic[], 
-        definitions: DefinitionCollector
-    ): void {
-        this.lintCodeSegmentForUndefinedVariablesWithExclusions(segment, diagnostics, definitions, new Set());
-    }
-
-    private lintCodeSegmentForUndefinedVariablesWithExclusions(
-        segment: {text: string, startPos: number, lineNumber: number}, 
-        diagnostics: vscode.Diagnostic[], 
         definitions: DefinitionCollector,
-        excludedIdentifiers: Set<string>
+        macroContext?: {name: string, params: string[]}
     ): void {
+        if (CalcpadLinter.isEmptyCommentOrDirective(segment.text)) {
+            return;
+        }
+        
         // Find variable/identifier references
         CalcpadLinter.PATTERNS.identifier.lastIndex = 0; // Reset regex state
         let match;
-
         while ((match = CalcpadLinter.PATTERNS.identifier.exec(segment.text)) !== null) {
-            const identifier = match[1];
+            const identifier = match[1]; // Full identifier including $ if present
             const identifierPosInSegment = match.index;
             const actualPos = segment.startPos + identifierPosInSegment;
-
+            
+            // Debug: Log what was captured
+            this.outputChannel.appendLine(`[DEBUG IDENTIFIER] Segment: "${segment.text}", Match: "${match[0]}", Group1: "${match[1]}", Final identifier: "${identifier}"`);
+            
             // Skip if it's followed by parentheses (function call) - check in segment text
             const nextCharIndex = match.index + identifier.length;
             const nextChar = segment.text[nextCharIndex];
             if (nextChar === '(' || (nextChar === ' ' && segment.text[nextCharIndex + 1] === '(')) {
                 continue; // This is handled by function validation
             }
-
-            // Skip numbers and operators
+            
+            // Skip if it's a literal number or operator
             if (/^\d/.test(identifier) || this.operators.test(identifier)) {
                 continue;
             }
-
-            // Skip if this identifier is excluded (e.g., function parameter)
-            if (excludedIdentifiers.has(identifier)) {
+            
+            // Skip if this is a macro parameter (simplified approach - just check if it's in the parameter list)
+            if (macroContext && macroContext.params.includes(identifier)) {
+                this.outputChannel.appendLine(`[DEBUG] Skipping macro parameter: ${identifier} (from macro ${macroContext.name})`);
                 continue;
             }
-
+            
             // Use centralized identifier checking, but treat bare function names as undefined
             const identifierInfo = this.isKnownIdentifier(identifier, definitions);
             
@@ -1251,28 +1211,37 @@ export class CalcpadLinter {
                 if (identifier.endsWith('$') && !definitions.getAllMacros().has(identifier)) {
                     const range = new vscode.Range(segment.lineNumber, actualPos, segment.lineNumber, actualPos + identifier.length);
                     const suggestions = this.getSuggestionsFromCollector(identifier, definitions);
-                    const suggestionText = suggestions.length > 0 ? ` Did you mean: ${suggestions.join(', ')}?` : '';
-                    
-                    diagnostics.push(new vscode.Diagnostic(
-                        range,
-                        `Undefined macro '${identifier}'`,
-                        vscode.DiagnosticSeverity.Error
-                    ));
+                    let message = `Undefined macro '${identifier}'`;
+                    if (suggestions.length > 0) {
+                        message += `. Did you mean: ${suggestions.join(', ')}?`;
+                    }
+                    diagnostics.push(new vscode.Diagnostic(range, message, vscode.DiagnosticSeverity.Error));
                 } else if (!identifier.endsWith('$')) {
-                    // Regular undefined variable
                     const range = new vscode.Range(segment.lineNumber, actualPos, segment.lineNumber, actualPos + identifier.length);
                     const suggestions = this.getSuggestionsFromCollector(identifier, definitions);
-                    const suggestionText = suggestions.length > 0 ? ` Did you mean: ${suggestions.join(', ')}?` : '';
-
+                    let message = `Undefined variable '${identifier}'`;
+                    if (suggestions.length > 0) {
+                        message += `. Did you mean: ${suggestions.join(', ')}?`;
+                    }
+                    if (isBareFunction) {
+                        message = `Function '${identifier}' used without parentheses. Did you mean '${identifier}()'?`;
+                    }
+                    diagnostics.push(new vscode.Diagnostic(range, message, vscode.DiagnosticSeverity.Error));
+                }
+            } else if (identifier.endsWith('$') && identifierInfo.isKnown && identifierInfo.type !== 'macro') {
+                // Flag $ usage outside of macro context when it's not a macro or parameter
+                if (!macroContext) {
+                    const range = new vscode.Range(segment.lineNumber, actualPos, segment.lineNumber, actualPos + identifier.length);
                     diagnostics.push(new vscode.Diagnostic(
-                        range,
-                        `Undefined variable '${identifier}'`,
+                        range, 
+                        `Invalid use of '$' suffix: '${identifier}' is not a macro and is used outside macro context`,
                         vscode.DiagnosticSeverity.Error
                     ));
                 }
             }
         }
     }
+
 
     private checkControlBlockBalance(lines: string[], diagnostics: vscode.Diagnostic[]): void {
         const blockStack: { type: string; lineNumber: number; position: number }[] = [];

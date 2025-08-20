@@ -1,1 +1,2 @@
 - Use start-calcpad-server.sh to run the server in Docker
+- Don't use console.log, use VS Code Output

@@ -558,11 +558,44 @@ export function activate(context: vscode.ExtensionContext) {
     extensionContext = context;
     
     // Create output channel for debugging
-    outputChannel = vscode.window.createOutputChannel('CalcPad');
+    outputChannel = vscode.window.createOutputChannel('CalcPad Extension');
     outputChannel.appendLine('CalcPad extension activated');
     
     const settingsManager = CalcpadSettingsManager.getInstance(context);
     linter = new CalcpadLinter(settingsManager);
+
+    // Unified document processing function
+    async function processDocument(document: vscode.TextDocument) {
+        if (document.languageId !== 'calcpad' && document.languageId !== 'plaintext') {
+            return;
+        }
+
+        outputChannel.appendLine(`[processDocument] Processing document: ${document.uri.fsPath}`);
+
+        // Run linting
+        await linter.lintDocument(document);
+
+        // Extract macros and send to UI
+        try {
+            const contentResolver = linter.getContentResolver();
+            const text = document.getText();
+            const lines = text.split('\n');
+            
+            await contentResolver.preCacheContent(lines);
+            const resolvedContent = contentResolver.getCompiledContent(document);
+            
+            outputChannel.appendLine(`[processDocument] Found ${resolvedContent.allMacros.length} macros, ${resolvedContent.variablesWithDefinitions.length} variables, ${resolvedContent.functionsWithParams.length} functions`);
+            
+            // Send all user-defined content to UI provider
+            uiProvider.updateVariables({
+                macros: resolvedContent.allMacros,
+                variables: resolvedContent.variablesWithDefinitions,
+                functions: resolvedContent.functionsWithParams
+            });
+        } catch (error) {
+            outputChannel.appendLine(`Error extracting macros: ${error}`);
+        }
+    }
 
     // Register webview provider for CalcPad UI panel
     const uiProvider = new CalcpadUIProvider(context.extensionUri, context);
@@ -570,6 +603,7 @@ export function activate(context: vscode.ExtensionContext) {
         CalcpadUIProvider.viewType, 
         uiProvider
     );
+
 
     const disposable = vscode.commands.registerCommand('vscode-calcpad.activate', () => {
         vscode.window.showInformationMessage('CalcPad activated!');
@@ -609,18 +643,14 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
-    // Lint on document open
+    // Process document on open
     const onDidOpenTextDocument = vscode.workspace.onDidOpenTextDocument(async document => {
-        if (document.languageId === 'calcpad' || document.languageId === 'plaintext') {
-            await linter.lintDocument(document);
-        }
+        await processDocument(document);
     });
 
-    // Lint on document save
+    // Process document on save
     const onDidSaveTextDocument = vscode.workspace.onDidSaveTextDocument(async document => {
-        if (document.languageId === 'calcpad' || document.languageId === 'plaintext') {
-            await linter.lintDocument(document);
-        }
+        await processDocument(document);
     });
 
     // Lint on document change (with debouncing)
@@ -631,25 +661,28 @@ export function activate(context: vscode.ExtensionContext) {
                 clearTimeout(lintTimeout as NodeJS.Timeout);
             }
             lintTimeout = setTimeout(async () => {
-                await linter.lintDocument(event.document);
+                await processDocument(event.document);
             }, 500);
-        }
-        schedulePreviewUpdate();
-    });
-
-    // Update preview when active editor changes
-    const onDidChangeActiveTextEditor = vscode.window.onDidChangeActiveTextEditor(editor => {
-        if (editor && activePreviewPanel && 
-            (editor.document.languageId === 'calcpad' || editor.document.languageId === 'plaintext')) {
+            // Only schedule preview update for CalcPad files
             schedulePreviewUpdate();
         }
     });
 
-    // Lint all open calcpad documents on activation
-    vscode.workspace.textDocuments.forEach(async document => {
-        if (document.languageId === 'calcpad' || document.languageId === 'plaintext') {
-            await linter.lintDocument(document);
+    // Update preview and variables when active editor changes
+    const onDidChangeActiveTextEditor = vscode.window.onDidChangeActiveTextEditor(async editor => {
+        if (editor && (editor.document.languageId === 'calcpad' || editor.document.languageId === 'plaintext')) {
+            // Update preview if panel is open
+            if (activePreviewPanel) {
+                schedulePreviewUpdate();
+            }
+            // Update Variables tab
+            await processDocument(editor.document);
         }
+    });
+
+    // Process all open calcpad documents on activation
+    vscode.workspace.textDocuments.forEach(async document => {
+        await processDocument(document);
     });
 
     context.subscriptions.push(
