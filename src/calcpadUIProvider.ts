@@ -100,6 +100,15 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
             },
             undefined
         );
+
+        // Process current document immediately when webview is resolved
+        const activeEditor = vscode.window.activeTextEditor;
+        if (activeEditor && (activeEditor.document.languageId === 'calcpad' || activeEditor.document.languageId === 'plaintext')) {
+            this._outputChannel.appendLine(`[resolveWebviewView] Processing current document: ${activeEditor.document.fileName}`);
+            this.processCurrentDocument(activeEditor.document);
+        } else {
+            this._outputChannel.appendLine(`[resolveWebviewView] No active CalcPad document to process`);
+        }
     }
 
     private insertTextAtCursor(text: string) {
@@ -109,6 +118,30 @@ export class CalcpadUIProvider implements vscode.WebviewViewProvider {
             editor.edit(editBuilder => {
                 editBuilder.insert(position, text);
             });
+        }
+    }
+
+    private async processCurrentDocument(document: vscode.TextDocument) {
+        try {
+            this._outputChannel.appendLine(`[processCurrentDocument] Processing document: ${document.uri.fsPath}`);
+            
+            // Extract macros, variables, and functions
+            const text = document.getText();
+            const lines = text.split('\n');
+            
+            await this._contentResolver.preCacheContent(lines);
+            const resolvedContent = this._contentResolver.getCompiledContent(document);
+            
+            this._outputChannel.appendLine(`[processCurrentDocument] Found ${resolvedContent.allMacros.length} macros, ${resolvedContent.variablesWithDefinitions.length} variables, ${resolvedContent.functionsWithParams.length} functions`);
+            
+            // Send all user-defined content to UI
+            this.updateVariables({
+                macros: resolvedContent.allMacros,
+                variables: resolvedContent.variablesWithDefinitions,
+                functions: resolvedContent.functionsWithParams
+            });
+        } catch (error) {
+            this._outputChannel.appendLine(`[processCurrentDocument] Error: ${error}`);
         }
     }
 

@@ -27,6 +27,7 @@ export class CalcpadLinter {
     private diagnosticCollection: vscode.DiagnosticCollection;
     private outputChannel: vscode.OutputChannel;
     private contentResolver: CalcpadContentResolver;
+    
 
     // Common regex patterns used throughout the linter
     private static readonly IDENTIFIER_CHARS = 'a-zA-Zα-ωΑ-Ω°øØ∡0-9_,′″‴⁗⁰¹²³⁴⁵⁶⁷⁸⁹ⁿ⁺⁻$';
@@ -140,10 +141,29 @@ export class CalcpadLinter {
     // Mathematical operators from CalcPad documentation  
     private readonly operators = /[!^\/÷\\⦼*\-+<>≤≥≡≠=∧∨⊕]/;
     
-    // Commands from HighLighter.cs
+    // Commands from HighLighter.cs - categorized by type
+    private readonly plotCommands = new Set([
+        '$plot'  // Functions with exactly one parameter
+    ]);
+    
+    private readonly mapCommands = new Set([
+        '$map'   // Functions with exactly two parameters
+    ]);
+    
+    private readonly solverCommands = new Set([
+        '$find', '$root', '$sup', '$inf', '$area', '$integral', '$slope'
+    ]);
+    
+    private readonly otherCommands = new Set([
+        '$repeat', '$sum', '$product'
+    ]);
+    
+    // All commands combined
     private readonly commands = new Set([
-        '$find', '$root', '$sup', '$inf', '$area', '$integral', '$slope',
-        '$repeat', '$sum', '$product', '$plot', '$map'
+        ...this.plotCommands,
+        ...this.mapCommands,
+        ...this.solverCommands, 
+        ...this.otherCommands
     ]);
 
     constructor(settingsManager: CalcpadSettingsManager) {
@@ -203,7 +223,13 @@ export class CalcpadLinter {
     public createDefinitionCollector(lines: string[]): DefinitionCollector {
         const variables = this.collectDefinedVariables(lines);
         const functions = this.collectUserDefinedFunctions(lines);
-        const macros = this.collectUserDefinedMacros(lines);
+        const macrosWithLineNumbers = this.collectUserDefinedMacros(lines);
+        
+        // Convert to parameter count map for DefinitionCollector interface
+        const macros = new Map<string, number>();
+        for (const [name, info] of macrosWithLineNumbers) {
+            macros.set(name, info.paramCount);
+        }
 
         return {
             getAllVariables: () => variables,
@@ -373,7 +399,7 @@ export class CalcpadLinter {
         macroExpansionLines: Map<number, string>,
         lineContinuationMap: Map<number, number[]>,
         userDefinedFunctions: Map<string, number>,
-        userDefinedMacros: Map<string, number>,
+        userDefinedMacros: Map<string, {lineNumber: number, paramCount: number}>,
         definedVariables: Set<string>,
         definitions: DefinitionCollector
     } {
@@ -688,10 +714,11 @@ export class CalcpadLinter {
         return userFunctions;
     }
 
-    private collectUserDefinedMacros(lines: string[]): Map<string, number> {
-        const userMacros = new Map<string, number>();
+    private collectUserDefinedMacros(lines: string[]): Map<string, {lineNumber: number, paramCount: number}> {
+        const userMacros = new Map<string, {lineNumber: number, paramCount: number}>();
         
-        for (const line of lines) {
+        for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+            const line = lines[lineIndex];
             if (CalcpadLinter.isEmptyOrComment(line)) {
                 continue;
             }
@@ -703,7 +730,10 @@ export class CalcpadLinter {
 
             const macroDefinition = this.parseMacroDefinition(trimmedLine);
             if (macroDefinition) {
-                userMacros.set(macroDefinition.name, macroDefinition.params.length);
+                userMacros.set(macroDefinition.name, {
+                    lineNumber: lineIndex,
+                    paramCount: macroDefinition.params.length
+                });
             }
         }
         
@@ -723,6 +753,16 @@ export class CalcpadLinter {
 
         // Get compiled/resolved content
         const compiledContent = this.contentResolver.getCompiledContent(document);
+
+        // Report duplicate macro errors
+        for (const duplicate of compiledContent.duplicateMacros) {
+            const range = new vscode.Range(duplicate.duplicateLineNumber, 0, duplicate.duplicateLineNumber, 999);
+            diagnostics.push(new vscode.Diagnostic(
+                range,
+                `Duplicate macro definition: '${duplicate.name}' is already defined at line ${duplicate.originalLineNumber + 1}`,
+                vscode.DiagnosticSeverity.Error
+            ));
+        }
 
         // Check for unmatched control blocks first
         this.checkControlBlockBalance(lines, diagnostics);
@@ -794,11 +834,12 @@ export class CalcpadLinter {
                 this.checkFunctionDefinition(parsedLine, macroLineDiagnostics);
                 this.checkFunctionUsage(parsedLine, macroLineDiagnostics, compiledContent.userDefinedFunctions);
                 this.checkCommandUsage(parsedLine, macroLineDiagnostics);
+                this.validateCommandPatterns(parsedLine.originalLine, parsedLine.lineNumber, macroLineDiagnostics);
                 this.checkOperatorSyntax(parsedLine, macroLineDiagnostics);
                 this.checkControlStructures(parsedLine, macroLineDiagnostics);
                 this.checkKeywordValidation(parsedLine, macroLineDiagnostics);
                 this.checkAssignments(parsedLine, macroLineDiagnostics);
-                this.checkMacroSyntax(parsedLine, macroLineDiagnostics);
+                this.checkMacroSyntax(parsedLine, macroLineDiagnostics, compiledContent.userDefinedMacros);
                 this.checkUnits(parsedLine, macroLineDiagnostics);
                 const definitions = this.createDefinitionCollector(compiledContent.expandedLines);
                 this.checkUndefinedVariablesInCompiledLine(expandedLine, originalLineNumber, macroLineDiagnostics, definitions, lineMacroContext);
@@ -821,11 +862,12 @@ export class CalcpadLinter {
                 this.checkFunctionDefinition(parsedLine, diagnostics);
                 this.checkFunctionUsage(parsedLine, diagnostics, compiledContent.userDefinedFunctions);
                 this.checkCommandUsage(parsedLine, diagnostics);
+                this.validateCommandPatterns(parsedLine.originalLine, parsedLine.lineNumber, diagnostics);
                 this.checkOperatorSyntax(parsedLine, diagnostics);
                 this.checkControlStructures(parsedLine, diagnostics);
                 this.checkKeywordValidation(parsedLine, diagnostics);
                 this.checkAssignments(parsedLine, diagnostics);
-                this.checkMacroSyntax(parsedLine, diagnostics);
+                this.checkMacroSyntax(parsedLine, diagnostics, compiledContent.userDefinedMacros);
                 this.checkMacroUsage(expandedLine, originalLineNumber, diagnostics, compiledContent.userDefinedMacros);
                 this.checkUnits(parsedLine, diagnostics);
                 const definitions = this.createDefinitionCollector(compiledContent.expandedLines);
@@ -966,7 +1008,7 @@ export class CalcpadLinter {
         expandedLines: string[],
         sourceMap: Map<number, number>,
         userDefinedFunctions: Map<string, number>,
-        userDefinedMacros: Map<string, number>,
+        userDefinedMacros: Map<string, {lineNumber: number, paramCount: number}>,
         definedVariables: Set<string>,
         definitions: DefinitionCollector
     }, diagnostics: vscode.Diagnostic[]): void {
@@ -1067,6 +1109,328 @@ export class CalcpadLinter {
         };
     }
 
+    /**
+     * Extract variable scopes from special commands like $Plot{f(x) @ x = a : b}
+     * Returns array of scopes with the variables they define and their expression ranges
+     */
+    private extractCommandVariableScopes(line: string): Array<{
+        command: string;
+        variables: string[];
+        expressionStart: number;
+        expressionEnd: number;
+    }> {
+        const scopes: Array<{
+            command: string;
+            variables: string[];
+            expressionStart: number;
+            expressionEnd: number;
+        }> = [];
+
+        // Pattern: $Command{expression @ variable_definitions}  
+        // For $Plot{cos(θ) & y1(θ) & y2(θ) @ θ = 0:π} - extract θ from expression before @
+        // For $Map{f(x; y) @ x = -15:15 & y = -15:15} - extract x and y from expression before @
+        const commandPattern = /\$([a-zA-Z_][a-zA-Z0-9_]*)\s*\{\s*([^@]+)\s*@\s*(.+)\}/g;
+        
+        let match;
+        while ((match = commandPattern.exec(line)) !== null) {
+            const command = '$' + match[1].toLowerCase();
+            const expressionPart = match[2].trim();
+            const parameterDefinitions = match[3].trim();
+            
+            // Only process known commands
+            if (this.commands.has(command)) {
+                // Extract variables from parameter definitions AFTER @ symbol
+                // These define variables that are valid in the expression part BEFORE @ symbol
+                const variables = this.extractVariablesFromParameterDefinitions(parameterDefinitions);
+                
+                // Find the start and end positions of the expression part
+                const commandStart = match.index;
+                const openBrace = line.indexOf('{', commandStart);
+                const atSymbol = line.indexOf('@', openBrace);
+                
+                if (openBrace !== -1 && atSymbol !== -1) {
+                    const expressionStart = openBrace + 1;
+                    const expressionEnd = atSymbol;
+                    
+                    scopes.push({
+                        command: command,
+                        variables: variables,
+                        expressionStart: expressionStart,
+                        expressionEnd: expressionEnd
+                    });
+                    
+                    this.outputChannel.appendLine(`[COMMAND SCOPE] Found ${command} with variables [${variables.join(', ')}] in expression range ${expressionStart}-${expressionEnd}`);
+                }
+            }
+        }
+        
+        return scopes;
+    }
+
+    /**
+     * Validate special command patterns like $Plot{f(x) @ x = a:b} and $Map{f(x; y) @ x = -15:15 & y = -15:15}
+     * Ensures variables in expression match variables in parameter definitions
+     */
+    private validateCommandPatterns(line: string, lineNumber: number, diagnostics: vscode.Diagnostic[]): void {
+        // Pattern to match special commands
+        const commandPattern = /\$([a-zA-Z_][a-zA-Z0-9_]*)\s*\{\s*([^@]+)\s*@\s*(.+)\}/g;
+        
+        let match;
+        while ((match = commandPattern.exec(line)) !== null) {
+            const command = '$' + match[1].toLowerCase();
+            const expressionPart = match[2].trim();
+            const parameterDefinitions = match[3].trim();
+            const commandStart = match.index;
+            const commandEnd = match.index + match[0].length;
+            
+            // Only validate known commands
+            if (this.commands.has(command)) {
+                if (this.plotCommands.has(command)) {
+                    // Plot commands: $plot (one parameter)
+                    this.validatePlotCommandPattern(line, lineNumber, commandStart, commandEnd, expressionPart, parameterDefinitions, command, diagnostics);
+                } else if (this.mapCommands.has(command)) {
+                    // Map commands: $map (two parameters)
+                    this.validateMapPattern(line, lineNumber, commandStart, commandEnd, expressionPart, parameterDefinitions, diagnostics);
+                } else if (this.solverCommands.has(command)) {
+                    // Solver commands: $root, $find, $area, etc.
+                    this.validateSolverCommandPattern(line, lineNumber, commandStart, commandEnd, expressionPart, parameterDefinitions, command, diagnostics);
+                } else {
+                    // Other commands: $repeat, $sum, $product
+                    this.validateOtherCommandPattern(line, lineNumber, commandStart, commandEnd, expressionPart, parameterDefinitions, command, diagnostics);
+                }
+            }
+        }
+    }
+
+    /**
+     * Validate $Map{f(x; y) @ x = a : b & y = c : d} pattern
+     */
+    private validateMapPattern(line: string, lineNumber: number, commandStart: number, commandEnd: number, 
+                              _expressionPart: string, _parameterDefinitions: string, diagnostics: vscode.Diagnostic[]): void {
+        // Use regex to validate $Map{expression(param1; param2) @ param1 = range1 : range2 & param2 = range3 : range4} format
+        // Expression and ranges can contain operators, but assignment variables must be simple identifiers
+        const mapPattern = new RegExp(
+            `\\$map\\s*\\{\\s*([^@]+?)\\s*@\\s*([${CalcpadLinter.IDENTIFIER_START_CHARS}][${CalcpadLinter.IDENTIFIER_CHARS}]*)\\s*=\\s*([^:]+?)\\s*:\\s*([^&]+?)\\s*&\\s*([${CalcpadLinter.IDENTIFIER_START_CHARS}][${CalcpadLinter.IDENTIFIER_CHARS}]*)\\s*=\\s*([^:]+?)\\s*:\\s*([^}]+?)\\s*\\}`,
+            'i'
+        );
+        
+        // Extract just the command part of the line to match against
+        const commandPart = line.substring(commandStart, commandEnd);
+        const match = mapPattern.exec(commandPart);
+        if (!match) {
+            const range = new vscode.Range(lineNumber, commandStart, lineNumber, commandEnd);
+            diagnostics.push(new vscode.Diagnostic(
+                range,
+                `Invalid $Map syntax. Expected format: $Map{f(x; y) @ x = a : b & y = c : d}`,
+                vscode.DiagnosticSeverity.Error
+            ));
+            return;
+        }
+        
+        const [, expressionPart, param1, range1Start, range1End, param2, range2Start, range2End] = match;
+        
+        // Extract parameters from expression (look for function call like f(x; y))
+        const expressionParamPattern = new RegExp(`\\(([^)]+)\\)`);
+        const expressionParamMatch = expressionParamPattern.exec(expressionPart);
+        
+        if (!expressionParamMatch) {
+            const range = new vscode.Range(lineNumber, commandStart, lineNumber, commandEnd);
+            diagnostics.push(new vscode.Diagnostic(
+                range,
+                `$Map expression must contain a function call with two parameters, e.g., f(x; y)`,
+                vscode.DiagnosticSeverity.Error
+            ));
+            return;
+        }
+        
+        const expressionParams = expressionParamMatch[1].split(';').map(p => p.trim());
+        
+        if (expressionParams.length !== 2) {
+            const range = new vscode.Range(lineNumber, commandStart, lineNumber, commandEnd);
+            diagnostics.push(new vscode.Diagnostic(
+                range,
+                `$Map expression must have exactly two parameters separated by ';', found: ${expressionParams.join('; ')}`,
+                vscode.DiagnosticSeverity.Error
+            ));
+            return;
+        }
+        
+        // Check if parameter variables appear in the expression parameters
+        if (!expressionParams[0].includes(param1)) {
+            const range = new vscode.Range(lineNumber, commandStart, lineNumber, commandEnd);
+            diagnostics.push(new vscode.Diagnostic(
+                range,
+                `$Map first parameter mismatch: expression parameter '${expressionParams[0]}' does not contain variable '${param1}'`,
+                vscode.DiagnosticSeverity.Error
+            ));
+        }
+        
+        if (!expressionParams[1].includes(param2)) {
+            const range = new vscode.Range(lineNumber, commandStart, lineNumber, commandEnd);
+            diagnostics.push(new vscode.Diagnostic(
+                range,
+                `$Map second parameter mismatch: expression parameter '${expressionParams[1]}' does not contain variable '${param2}'`,
+                vscode.DiagnosticSeverity.Error
+            ));
+        }
+    }
+
+    /**
+     * Validate plot command patterns like $Plot{f(x) @ x = a:b} (exactly one parameter)
+     */
+    private validatePlotCommandPattern(line: string, lineNumber: number, commandStart: number, commandEnd: number,
+                                     _expressionPart: string, _parameterDefinitions: string, command: string, diagnostics: vscode.Diagnostic[]): void {
+        // Use regex to validate $Plot{expression(param) @ param = range1 : range2} format
+        // Expression and ranges can contain operators, but assignment variable must be simple identifier
+        const plotPattern = new RegExp(
+            `\\$plot\\s*\\{\\s*([^@]+?)\\s*@\\s*([${CalcpadLinter.IDENTIFIER_START_CHARS}][${CalcpadLinter.IDENTIFIER_CHARS}]*)\\s*=\\s*([^:]+?)\\s*:\\s*([^}]+?)\\s*\\}`,
+            'i'
+        );
+        
+        // Extract just the command part of the line to match against
+        const commandPart = line.substring(commandStart, commandEnd);
+        const match = plotPattern.exec(commandPart);
+        if (!match) {
+            const range = new vscode.Range(lineNumber, commandStart, lineNumber, commandEnd);
+            diagnostics.push(new vscode.Diagnostic(
+                range,
+                `Invalid $Plot syntax. Expected format: $Plot{f(x) @ x = a : b}`,
+                vscode.DiagnosticSeverity.Error
+            ));
+            return;
+        }
+        
+        const [, expressionPart, parameterVariable, range1, range2] = match;
+        
+        // Extract parameter from expression (look for function call like f(x) or g(z/d))
+        const expressionParamPattern = new RegExp(`\\(([^)]+)\\)`);
+        const expressionParamMatch = expressionParamPattern.exec(expressionPart);
+        
+        if (!expressionParamMatch) {
+            const range = new vscode.Range(lineNumber, commandStart, lineNumber, commandEnd);
+            diagnostics.push(new vscode.Diagnostic(
+                range,
+                `$Plot expression must contain a function call with parameter, e.g., f(x)`,
+                vscode.DiagnosticSeverity.Error
+            ));
+            return;
+        }
+        
+        const expressionParamContent = expressionParamMatch[1].trim();
+        
+        // For now, just check if the parameter variable appears in the expression
+        // This handles cases like g(z/d) where z is the parameter
+        if (!expressionParamContent.includes(parameterVariable)) {
+            const range = new vscode.Range(lineNumber, commandStart, lineNumber, commandEnd);
+            diagnostics.push(new vscode.Diagnostic(
+                range,
+                `$Plot parameter mismatch: expression parameter '${expressionParamContent}' does not contain variable '${parameterVariable}'`,
+                vscode.DiagnosticSeverity.Error
+            ));
+        }
+    }
+
+    /**
+     * Extract variables from expression part like "f(x)" or "f(x; y)" or "cos(θ) & y1(θ)"
+     */
+    private extractVariablesFromExpression(expressionPart: string): string[] {
+        const variables: string[] = [];
+        
+        // Look for variables in function calls like cos(θ), y1(θ), f(x; y)
+        const variablePattern = new RegExp(`\\(([${CalcpadLinter.IDENTIFIER_START_CHARS}][${CalcpadLinter.IDENTIFIER_CHARS}]*(?:\\s*;\\s*[${CalcpadLinter.IDENTIFIER_START_CHARS}][${CalcpadLinter.IDENTIFIER_CHARS}]*)*)\\)`, 'g');
+        
+        let varMatch;
+        while ((varMatch = variablePattern.exec(expressionPart)) !== null) {
+            // Split by semicolon for multiple parameters like f(x; y)
+            const params = varMatch[1].split(';').map(p => p.trim()).filter(p => p);
+            variables.push(...params);
+        }
+        
+        // Remove duplicates while preserving order
+        return [...new Set(variables)];
+    }
+
+    /**
+     * Extract variables from parameter definitions like "x = a:b" or "x = -15:15 & y = -15:15"
+     */
+    private extractVariablesFromParameterDefinitions(parameterDefinitions: string): string[] {
+        const variables: string[] = [];
+        
+        // Look for patterns like "variable = range"
+        const variablePattern = new RegExp(`([${CalcpadLinter.IDENTIFIER_START_CHARS}][${CalcpadLinter.IDENTIFIER_CHARS}]*)\\s*=`, 'g');
+        
+        let varMatch;
+        while ((varMatch = variablePattern.exec(parameterDefinitions)) !== null) {
+            variables.push(varMatch[1]);
+        }
+        
+        return variables;
+    }
+
+    /**
+     * Validate solver command patterns like $Root{x @ x = a : b} or other commands like $Product{f(x) @ x = a : b}
+     */
+    private validateSolverCommandPattern(line: string, lineNumber: number, commandStart: number, commandEnd: number,
+                                       _expressionPart: string, _parameterDefinitions: string, command: string, diagnostics: vscode.Diagnostic[]): void {
+        // Use regex to validate either $Product{f(x) @ x = a : b} or $Root{x @ x = a : b} format
+        // Expression and ranges can contain operators, but assignment variable must be simple identifier
+        const solverPattern = new RegExp(
+            `\\${command}\\s*\\{\\s*([^@]+?)\\s*@\\s*([${CalcpadLinter.IDENTIFIER_START_CHARS}][${CalcpadLinter.IDENTIFIER_CHARS}]*)\\s*=\\s*([^:]+?)\\s*:\\s*([^}]+?)\\s*\\}`,
+            'i'
+        );
+        
+        // Extract just the command part of the line to match against
+        const commandPart = line.substring(commandStart, commandEnd);
+        const match = solverPattern.exec(commandPart);
+        if (!match) {
+            const range = new vscode.Range(lineNumber, commandStart, lineNumber, commandEnd);
+            diagnostics.push(new vscode.Diagnostic(
+                range,
+                `Invalid ${command} syntax. Expected format: ${command}{f(x) @ x = a : b} or ${command}{x @ x = a : b}`,
+                vscode.DiagnosticSeverity.Error
+            ));
+            return;
+        }
+        
+        const [, expressionPart, parameterVariable, rangeStart, rangeEnd] = match;
+        
+        // Check if expression contains a function call with parameter
+        const functionCallPattern = new RegExp(`\\(([^)]+)\\)`);
+        const functionCallMatch = functionCallPattern.exec(expressionPart);
+        
+        if (functionCallMatch) {
+            // If there's a function call, check if parameter variable appears in it
+            const expressionParamContent = functionCallMatch[1].trim();
+            if (!expressionParamContent.includes(parameterVariable)) {
+                const range = new vscode.Range(lineNumber, commandStart, lineNumber, commandEnd);
+                diagnostics.push(new vscode.Diagnostic(
+                    range,
+                    `${command} parameter mismatch: expression parameter '${expressionParamContent}' does not contain variable '${parameterVariable}'`,
+                    vscode.DiagnosticSeverity.Error
+                ));
+            }
+        } else {
+            // If no function call, check if expression contains the parameter variable (for cases like $Root{x @ x = a : b})
+            if (!expressionPart.trim().includes(parameterVariable)) {
+                const range = new vscode.Range(lineNumber, commandStart, lineNumber, commandEnd);
+                diagnostics.push(new vscode.Diagnostic(
+                    range,
+                    `${command} expression '${expressionPart.trim()}' does not contain parameter variable '${parameterVariable}'`,
+                    vscode.DiagnosticSeverity.Error
+                ));
+            }
+        }
+    }
+
+    /**
+     * Validate other command patterns - same as solver commands for now
+     */
+    private validateOtherCommandPattern(line: string, lineNumber: number, commandStart: number, commandEnd: number,
+                                      _expressionPart: string, _parameterDefinitions: string, command: string, diagnostics: vscode.Diagnostic[]): void {
+        // Use same validation as solver commands
+        this.validateSolverCommandPattern(line, lineNumber, commandStart, commandEnd, _expressionPart, _parameterDefinitions, command, diagnostics);
+    }
+
     private checkUndefinedVariablesInCompiledLine(line: string, originalLineNumber: number, diagnostics: vscode.Diagnostic[], 
                                                  definitions: DefinitionCollector, macroContext?: {name: string, params: string[]}): void {
         if (CalcpadLinter.isEmptyCommentOrDirective(line)) {
@@ -1094,6 +1458,9 @@ export class CalcpadLinter {
             
             const equalSignPos = line.indexOf('=');
             if (equalSignPos !== -1) {
+                // Extract command scopes from the full line (including commands in RHS)
+                const lineCommandScopes = line.includes('$') ? this.extractCommandVariableScopes(line) : [];
+                
                 // Only check the expression after the = sign
                 const rhsLine = line.substring(equalSignPos + 1);
                 const parsed = this.extractCodeAndStrings(rhsLine, originalLineNumber);
@@ -1105,7 +1472,7 @@ export class CalcpadLinter {
                 }));
                 
                 for (const codeSegment of adjustedSegments) {
-                    this.lintCodeSegmentForUndefinedVariables(codeSegment, diagnostics, definitions, macroContext);
+                    this.lintCodeSegmentForUndefinedVariablesWithScopes(codeSegment, diagnostics, definitions, macroContext, lineCommandScopes);
                 }
             }
             return;
@@ -1128,6 +1495,9 @@ export class CalcpadLinter {
                     });
                 }
                 
+                // Extract command scopes from the full line (including commands in RHS)
+                const lineCommandScopes = line.includes('$') ? this.extractCommandVariableScopes(line) : [];
+                
                 // Check the expression after the = sign, but exclude function parameters
                 const rhsLine = line.substring(equalSignPos + 1);
                 const parsed = this.extractCodeAndStrings(rhsLine, originalLineNumber);
@@ -1141,7 +1511,7 @@ export class CalcpadLinter {
                 for (const codeSegment of adjustedSegments) {
                     // For function parameters, create a mock macro context to exclude them
                     const functionContext = { name: 'function', params: Array.from(paramNames) };
-                    this.lintCodeSegmentForUndefinedVariables(codeSegment, diagnostics, definitions, functionContext);
+                    this.lintCodeSegmentForUndefinedVariablesWithScopes(codeSegment, diagnostics, definitions, functionContext, lineCommandScopes);
                 }
             }
             return;
@@ -1150,9 +1520,16 @@ export class CalcpadLinter {
         // Extract code and string segments
         const parsed = this.extractCodeAndStrings(line, originalLineNumber);
         
+        // Extract command scopes for this specific line (don't store globally)
+        const lineCommandScopes = line.includes('$') ? this.extractCommandVariableScopes(line) : [];
+        if (lineCommandScopes.length > 0) {
+            this.outputChannel.appendLine(`[DEBUG] Processing line with $: "${line}"`);
+            this.outputChannel.appendLine(`[DEBUG] Found ${lineCommandScopes.length} command scopes for this line`);
+        }
+        
         // Only lint code segments for undefined variables
         for (const codeSegment of parsed.codeSegments) {
-            this.lintCodeSegmentForUndefinedVariables(codeSegment, diagnostics, definitions, macroContext);
+            this.lintCodeSegmentForUndefinedVariablesWithScopes(codeSegment, diagnostics, definitions, macroContext, lineCommandScopes);
         }
         
         // TODO: Lint string segments with different rules (for next task)
@@ -1161,11 +1538,12 @@ export class CalcpadLinter {
         // }
     }
 
-    private lintCodeSegmentForUndefinedVariables(
+    private lintCodeSegmentForUndefinedVariablesWithScopes(
         segment: {text: string, startPos: number, lineNumber: number}, 
         diagnostics: vscode.Diagnostic[], 
         definitions: DefinitionCollector,
-        macroContext?: {name: string, params: string[]}
+        macroContext?: {name: string, params: string[]},
+        commandScopes?: Array<{command: string, variables: string[], expressionStart: number, expressionEnd: number}>
     ): void {
         if (CalcpadLinter.isEmptyCommentOrDirective(segment.text)) {
             return;
@@ -1194,9 +1572,51 @@ export class CalcpadLinter {
                 continue;
             }
             
+            // Check if this identifier is in a command scope (expression part)
+            let inCommandScope = false;
+            if (commandScopes && commandScopes.length > 0) {
+                for (const scope of commandScopes) {
+                    if (actualPos >= scope.expressionStart && actualPos < scope.expressionEnd) {
+                        if (scope.variables.includes(identifier)) {
+                            this.outputChannel.appendLine(`[COMMAND SCOPE] Identifier "${identifier}" at pos ${actualPos} is valid in ${scope.command} scope`);
+                            inCommandScope = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Check if this identifier is a parameter declaration in a command (like z in "@ z = a : b")
+            let isParameterDeclaration = false;
+            if (commandScopes && commandScopes.length > 0) {
+                for (const scope of commandScopes) {
+                    // Check if this identifier is in the parameter definition part and is followed by =
+                    if (actualPos > scope.expressionEnd) {
+                        // We're in the parameter definitions part
+                        const parameterPattern = new RegExp(`\\b${identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*=`);
+                        const paramDefPart = segment.text.substring(scope.expressionEnd - segment.startPos);
+                        if (parameterPattern.test(paramDefPart)) {
+                            this.outputChannel.appendLine(`[PARAM DECLARATION] Identifier "${identifier}" at pos ${actualPos} is a parameter declaration in ${scope.command}`);
+                            isParameterDeclaration = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
             // Skip if this is a macro parameter (simplified approach - just check if it's in the parameter list)
             if (macroContext && macroContext.params.includes(identifier)) {
                 this.outputChannel.appendLine(`[DEBUG] Skipping macro parameter: ${identifier} (from macro ${macroContext.name})`);
+                continue;
+            }
+            
+            // Skip if this identifier is valid in a command scope
+            if (inCommandScope) {
+                continue;
+            }
+            
+            // Skip if this is a parameter declaration
+            if (isParameterDeclaration) {
                 continue;
             }
             
@@ -1682,6 +2102,18 @@ export class CalcpadLinter {
     private checkAssignments(parsedLine: ParsedLine, diagnostics: vscode.Diagnostic[]): void {
         const line = parsedLine.originalLine;
         const lineNumber = parsedLine.lineNumber;
+        
+        // Skip multiple assignment check if we're in a command context
+        if (line.trim().startsWith('$')) {
+            return;
+        }
+        
+        // Also skip if line contains command patterns (e.g., $plot{, $root{, etc.)
+        const commandPattern = /\$([a-zA-Z_][a-zA-Z0-9_]*)\s*\{/;
+        if (commandPattern.test(line)) {
+            return;
+        }
+        
         // Check for multiple assignment operators
         const assignmentCount = (line.match(/=/g) || []).length;
         if (assignmentCount > 1) {
@@ -1765,6 +2197,12 @@ export class CalcpadLinter {
             return;
         }
 
+        // Skip if line contains command patterns (e.g., $plot{, $root{, etc.)
+        const commandPattern = /\$([a-zA-Z_][a-zA-Z0-9_]*)\s*\{/;
+        if (commandPattern.test(line)) {
+            return;
+        }
+
         // Check if this is a function definition: functionName(param1; param2; ...) = expression
         const functionDefPattern = /([a-zA-Zα-ωΑ-Ω°øØ∡][a-zA-Zα-ωΑ-Ω°øØ∡0-9_,′″‴⁗⁰¹²³⁴⁵⁶⁷⁸⁹ⁿ⁺⁻]*)\s*\([^)]*\)\s*=\s*(.+)/;
         if (functionDefPattern.test(line)) {
@@ -1801,7 +2239,7 @@ export class CalcpadLinter {
     }
 
 
-    private checkMacroSyntax(parsedLine: ParsedLine, diagnostics: vscode.Diagnostic[]): void {
+    private checkMacroSyntax(parsedLine: ParsedLine, diagnostics: vscode.Diagnostic[], userDefinedMacros: Map<string, {lineNumber: number, paramCount: number}>): void {
         const line = parsedLine.originalLine;
         const lineNumber = parsedLine.lineNumber;
         const trimmedLine = line.trim();
@@ -1813,11 +2251,28 @@ export class CalcpadLinter {
 
         // Check for #def macro definitions
         if (trimmedLine.startsWith('#def ')) {
-            this.checkMacroDefinition(parsedLine, diagnostics);
+            this.checkMacroDefinition(parsedLine, diagnostics, userDefinedMacros);
         }
     }
 
-    private checkMacroDefinition(parsedLine: ParsedLine, diagnostics: vscode.Diagnostic[]): void {
+    private checkDuplicateMacroDefinition(macroName: string, line: string, lineNumber: number, diagnostics: vscode.Diagnostic[], userDefinedMacros: Map<string, {lineNumber: number, paramCount: number}>): void {
+        if (userDefinedMacros.has(macroName)) {
+            const macroInfo = userDefinedMacros.get(macroName)!;
+            const originalExpandedLineNumber = macroInfo.lineNumber;
+            
+            // Always report duplicates - this is a legitimate duplicate scenario
+            // The original definition was found in the expanded content at a different line
+            const macroStartPos = line.indexOf(macroName);
+            const range = new vscode.Range(lineNumber, macroStartPos, lineNumber, macroStartPos + macroName.length);
+            diagnostics.push(new vscode.Diagnostic(
+                range,
+                `Duplicate macro definition: '${macroName}' is already defined (first occurrence at expanded line ${originalExpandedLineNumber + 1})`,
+                vscode.DiagnosticSeverity.Error
+            ));
+        }
+    }
+
+    private checkMacroDefinition(parsedLine: ParsedLine, diagnostics: vscode.Diagnostic[], userDefinedMacros: Map<string, {lineNumber: number, paramCount: number}>): void {
         const line = parsedLine.originalLine;
         const lineNumber = parsedLine.lineNumber;
         const trimmedLine = line.trim();
@@ -1837,6 +2292,7 @@ export class CalcpadLinter {
                 // Inline macro with parameters
                 const macroName = paramMatch[1];
                 const params = paramMatch[2];
+                
                 
                 // Check macro name ends with $
                 if (!macroName.endsWith('$')) {
@@ -1875,6 +2331,8 @@ export class CalcpadLinter {
             } else {
                 // Simple inline macro without parameters
                 const macroName = macroDeclaration;
+                
+                
                 if (!macroName.endsWith('$')) {
                     const macroStartPos = line.indexOf(macroName);
                     const range = new vscode.Range(lineNumber, macroStartPos, lineNumber, macroStartPos + macroName.length);
@@ -1903,6 +2361,7 @@ export class CalcpadLinter {
                 // Macro with parameters
                 const macroName = paramMatch[1];
                 const params = paramMatch[2];
+                
                 
                 // Check macro name ends with $
                 if (!macroName.endsWith('$')) {
@@ -1941,6 +2400,8 @@ export class CalcpadLinter {
             } else {
                 // Simple macro without parameters
                 const macroName = macroDeclaration;
+                
+                
                 if (!macroName.endsWith('$')) {
                     const macroStartPos = line.indexOf(macroName);
                     const range = new vscode.Range(lineNumber, macroStartPos, lineNumber, macroStartPos + macroName.length);
@@ -1954,7 +2415,7 @@ export class CalcpadLinter {
         }
     }
 
-    private checkMacroUsage(line: string, lineNumber: number, diagnostics: vscode.Diagnostic[], userDefinedMacros: Map<string, number>): void {
+    private checkMacroUsage(line: string, lineNumber: number, diagnostics: vscode.Diagnostic[], userDefinedMacros: Map<string, {lineNumber: number, paramCount: number}>): void {
         // Skip macro definition lines
         if (line.trim().startsWith('#def ')) {
             return;
@@ -1970,7 +2431,8 @@ export class CalcpadLinter {
 
             // Check if this is a defined macro
             if (userDefinedMacros.has(macroName)) {
-                const expectedParams = userDefinedMacros.get(macroName)!;
+                const macroInfo = userDefinedMacros.get(macroName)!;
+                const expectedParams = macroInfo.paramCount;
                 const actualParams = paramsString.trim() === '' ? 0 : paramsString.split(';').filter(p => p.trim()).length;
                 
                 if (actualParams !== expectedParams) {
@@ -1993,7 +2455,7 @@ export class CalcpadLinter {
     private getSuggestionsForUndefinedVariable(identifier: string, 
                                              definedVariables: Set<string>, 
                                              userDefinedFunctions: Map<string, number>, 
-                                             userDefinedMacros: Map<string, number>): string[] {
+                                             userDefinedMacros: Map<string, {lineNumber: number, paramCount: number}>): string[] {
         const allSuggestions: string[] = [];
         
         // Check against defined variables

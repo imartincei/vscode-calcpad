@@ -21,10 +21,11 @@ export interface ResolvedContent {
     lineContinuationMap: Map<number, number[]>;
     userDefinedFunctions: Map<string, number>;
     functionsWithParams: Array<{name: string, params: string[]}>;
-    userDefinedMacros: Map<string, number>;
+    userDefinedMacros: Map<string, {lineNumber: number, paramCount: number}>;
     definedVariables: Set<string>;
     variablesWithDefinitions: Array<{name: string, definition: string}>;
     allMacros: MacroDefinition[];
+    duplicateMacros: Array<{name: string, duplicateLineNumber: number, originalLineNumber: number}>;
 }
 
 export class CalcpadContentResolver {
@@ -131,7 +132,8 @@ export class CalcpadContentResolver {
                 userDefinedMacros: this.collectUserDefinedMacros(processedLines),
                 definedVariables: this.collectDefinedVariables(processedLines),
                 variablesWithDefinitions: this.collectDefinedVariablesWithValues(processedLines),
-                allMacros: this.collectAllMacroDefinitions(processedLines, 'local')
+                allMacros: this.collectAllMacroDefinitions(processedLines, 'local'),
+                duplicateMacros: [] // No duplicates in simple case
             };
         }
 
@@ -210,6 +212,8 @@ export class CalcpadContentResolver {
         const macroExpansionLines = new Map<number, string>();
         const macros = new Map<string, { params: string[], content: string[] }>();
         const allMacros: MacroDefinition[] = [];
+        const duplicateMacros: Array<{name: string, duplicateLineNumber: number, originalLineNumber: number}> = [];
+        const macroFirstDefinitions = new Map<string, number>(); // Track first definition line numbers
 
         this.outputChannel.appendLine(`[DEBUG] Using complex resolution for ${lines.length} lines`);
 
@@ -223,13 +227,26 @@ export class CalcpadContentResolver {
                 this.outputChannel.appendLine(`[DEBUG] Processing macro definition: "${line}"`);
                 const macroDefinition = this.parseMacroDefinition(line.trim());
                 if (macroDefinition) {
-                    this.outputChannel.appendLine(`[DEBUG] Storing ${macroDefinition.isInline ? 'inline' : 'multiline'} macro: ${macroDefinition.name}`);
-                    macros.set(macroDefinition.name, {
-                        params: macroDefinition.params,
-                        content: macroDefinition.content
-                    });
+                    // Check for duplicate macro definition
+                    if (macroFirstDefinitions.has(macroDefinition.name)) {
+                        const originalLineNumber = macroFirstDefinitions.get(macroDefinition.name)!;
+                        duplicateMacros.push({
+                            name: macroDefinition.name,
+                            duplicateLineNumber: i,
+                            originalLineNumber: originalLineNumber
+                        });
+                        this.outputChannel.appendLine(`[DEBUG] Duplicate macro detected: ${macroDefinition.name} at line ${i}, originally defined at line ${originalLineNumber}`);
+                    } else {
+                        // First definition of this macro
+                        macroFirstDefinitions.set(macroDefinition.name, i);
+                        this.outputChannel.appendLine(`[DEBUG] Storing ${macroDefinition.isInline ? 'inline' : 'multiline'} macro: ${macroDefinition.name}`);
+                        macros.set(macroDefinition.name, {
+                            params: macroDefinition.params,
+                            content: macroDefinition.content
+                        });
+                    }
                     
-                    // Add to all macros collection
+                    // Add to all macros collection (including duplicates for tracking)
                     allMacros.push({
                         name: macroDefinition.name,
                         params: macroDefinition.params,
@@ -256,6 +273,9 @@ export class CalcpadContentResolver {
                 const includedLines = this.resolveInclude(line);
                 this.outputChannel.appendLine(`[DEBUG] Include resolved to ${includedLines.length} lines`);
                 
+                // Check for duplicate macros in included content
+                this.checkDuplicateMacros(includedLines, macroFirstDefinitions, duplicateMacros, expandedLines.length);
+                
                 // Collect macros from included content
                 const includedMacros = this.collectAllMacroDefinitions(includedLines, 'include', line.replace('#include ', '').trim());
                 allMacros.push(...includedMacros);
@@ -272,6 +292,9 @@ export class CalcpadContentResolver {
                 this.outputChannel.appendLine(`[DEBUG] Processing fetch: ${line}`);
                 const fetchedLines = this.resolveFetch(line);
                 this.outputChannel.appendLine(`[DEBUG] Fetch resolved to ${fetchedLines.length} lines`);
+                
+                // Check for duplicate macros in fetched content
+                this.checkDuplicateMacros(fetchedLines, macroFirstDefinitions, duplicateMacros, expandedLines.length);
                 
                 // Collect macros from fetched content
                 const fetchedMacros = this.collectAllMacroDefinitions(fetchedLines, 'fetch', line.replace('#fetch ', '').trim());
@@ -336,7 +359,8 @@ export class CalcpadContentResolver {
             userDefinedMacros,
             definedVariables,
             variablesWithDefinitions: this.collectDefinedVariablesWithValues(expandedLines),
-            allMacros
+            allMacros,
+            duplicateMacros
         };
     }
 
@@ -541,10 +565,11 @@ export class CalcpadContentResolver {
         return userFunctions;
     }
 
-    private collectUserDefinedMacros(lines: string[]): Map<string, number> {
-        const userMacros = new Map<string, number>();
+    private collectUserDefinedMacros(lines: string[]): Map<string, {lineNumber: number, paramCount: number}> {
+        const userMacros = new Map<string, {lineNumber: number, paramCount: number}>();
         
-        for (const line of lines) {
+        for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+            const line = lines[lineIndex];
             if (line.trim() === '' || line.trim().startsWith("'") || line.trim().startsWith('"')) {
                 continue;
             }
@@ -556,7 +581,10 @@ export class CalcpadContentResolver {
 
             const macroDefinition = this.parseMacroDefinition(trimmedLine);
             if (macroDefinition) {
-                userMacros.set(macroDefinition.name, macroDefinition.params.length);
+                userMacros.set(macroDefinition.name, {
+                    lineNumber: lineIndex,
+                    paramCount: macroDefinition.params.length
+                });
             }
         }
         
@@ -610,5 +638,27 @@ export class CalcpadContentResolver {
         }
         
         return variables;
+    }
+
+    // Helper function to check for duplicate macros in a set of lines
+    private checkDuplicateMacros(lines: string[], macroFirstDefinitions: Map<string, number>, duplicateMacros: Array<{name: string, duplicateLineNumber: number, originalLineNumber: number}>, baseLineNumber: number) {
+        for (let j = 0; j < lines.length; j++) {
+            const line = lines[j];
+            if (line.trim().startsWith('#def ')) {
+                const macroDefinition = this.parseMacroDefinition(line.trim());
+                if (macroDefinition) {
+                    if (macroFirstDefinitions.has(macroDefinition.name)) {
+                        const originalLineNumber = macroFirstDefinitions.get(macroDefinition.name)!;
+                        duplicateMacros.push({
+                            name: macroDefinition.name,
+                            duplicateLineNumber: baseLineNumber + j,
+                            originalLineNumber: originalLineNumber
+                        });
+                    } else {
+                        macroFirstDefinitions.set(macroDefinition.name, baseLineNumber + j);
+                    }
+                }
+            }
+        }
     }
 }

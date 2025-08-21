@@ -6,6 +6,8 @@ import * as os from 'os';
 import { CalcpadLinter } from './calcpadLinter';
 import { CalcpadUIProvider } from './calcpadUIProvider';
 import { CalcpadSettingsManager } from './calcpadSettings';
+import { OperatorReplacer } from './operatorReplacer';
+import { CalcpadCompletionProvider } from './calcpadCompletionProvider';
 
 let activePreviewPanel: vscode.WebviewPanel | unknown = undefined;
 let activePreviewType: 'regular' | 'unwrapped' | undefined = undefined;
@@ -554,15 +556,28 @@ function schedulePreviewUpdate() {
 export function activate(context: vscode.ExtensionContext) {
     console.log('VS Code CalcPad extension is now active!');
     
-    // Store extension context for global access
-    extensionContext = context;
-    
-    // Create output channel for debugging
-    outputChannel = vscode.window.createOutputChannel('CalcPad Extension');
-    outputChannel.appendLine('CalcPad extension activated');
-    
-    const settingsManager = CalcpadSettingsManager.getInstance(context);
-    linter = new CalcpadLinter(settingsManager);
+    try {
+        // Store extension context for global access
+        extensionContext = context;
+        
+        // Create output channel for debugging
+        outputChannel = vscode.window.createOutputChannel('CalcPad Extension');
+        outputChannel.appendLine('CalcPad extension activated');
+        
+        outputChannel.appendLine('Initializing settings manager...');
+        const settingsManager = CalcpadSettingsManager.getInstance(context);
+        
+        outputChannel.appendLine('Initializing linter...');
+        linter = new CalcpadLinter(settingsManager);
+
+        // Initialize operator replacer
+        outputChannel.appendLine('Initializing operator replacer...');
+        const operatorReplacer = new OperatorReplacer(outputChannel);
+        const operatorReplacerDisposable = operatorReplacer.registerDocumentChangeListener(context);
+
+        // Initialize autocomplete provider
+        outputChannel.appendLine('Initializing autocomplete provider...');
+        const completionProviderDisposable = CalcpadCompletionProvider.register(settingsManager, outputChannel);
 
     // Unified document processing function
     async function processDocument(document: vscode.TextDocument) {
@@ -685,21 +700,36 @@ export function activate(context: vscode.ExtensionContext) {
         await processDocument(document);
     });
 
-    context.subscriptions.push(
-        disposable, 
-        previewCommand, 
-        previewUnwrappedCommand,
-        showInsertCommand,
-        printToPdfCommand,
-        exportToPdfCommand,
-        uiProviderDisposable,
-        linter, 
-        outputChannel,
-        onDidChangeTextDocument, 
-        onDidOpenTextDocument, 
-        onDidSaveTextDocument,
-        onDidChangeActiveTextEditor
-    );
+        outputChannel.appendLine('Registering subscriptions...');
+        context.subscriptions.push(
+            disposable, 
+            previewCommand, 
+            previewUnwrappedCommand,
+            showInsertCommand,
+            printToPdfCommand,
+            exportToPdfCommand,
+            uiProviderDisposable,
+            linter, 
+            outputChannel,
+            onDidChangeTextDocument, 
+            onDidOpenTextDocument, 
+            onDidSaveTextDocument,
+            onDidChangeActiveTextEditor,
+            operatorReplacerDisposable,
+            completionProviderDisposable
+        );
+        
+        outputChannel.appendLine('CalcPad extension activation completed successfully');
+        
+    } catch (error) {
+        console.error('CalcPad extension activation failed:', error);
+        if (outputChannel) {
+            outputChannel.appendLine(`FATAL ERROR during activation: ${error}`);
+        }
+        // Still try to show the error to user
+        vscode.window.showErrorMessage(`CalcPad extension failed to activate: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        throw error; // Re-throw to mark extension as failed
+    }
 }
 
 export function deactivate() {

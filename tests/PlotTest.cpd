@@ -1,0 +1,9 @@
+g(z) = 2*z
+f(x; y) = 2*x*y
+a = 0
+b = 10
+c = 0
+d = 5
+
+$Plot{g(z) @ z = a : b}
+$Map{f(x; y) @ x = a : b & y = c : d}
