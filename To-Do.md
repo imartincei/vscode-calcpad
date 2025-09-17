@@ -8,3 +8,4 @@
 - Implement custom units
 - Add duplicate macro definitions to linter
 - Test linter for advanced issues
+- Make the webview always available, but the preview and export buttons only available in .cpd files

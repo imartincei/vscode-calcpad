@@ -75,7 +75,7 @@ export class CalcpadContentResolver {
             auth: { jwt: string; url: string }
         };
         const jwt = apiSettings.auth.jwt;
-        const baseUrl = fullSettings.auth.loginUrl;
+        const baseUrl = apiSettings.auth.url;
         
         if (!jwt) {
             throw new Error('No JWT token available for S3 authentication');

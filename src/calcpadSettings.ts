@@ -32,12 +32,6 @@ export interface CalcpadSettings {
     server: {
         url: string;
     };
-    auth: {
-        loginUrl: string;
-        storageUrl: string;
-        username: string;
-        password: string;
-    };
     units: string;
     output: {
         format: string;
@@ -93,12 +87,6 @@ export class CalcpadSettingsManager {
             server: {
                 url: "http://localhost:9420"
             },
-            auth: {
-                loginUrl: "http://localhost:5000",
-                storageUrl: "http://calcpad-api:5000",
-                username: "admin",
-                password: "admin"
-            },
             units: "m",
             output: {
                 format: "html",
@@ -117,6 +105,7 @@ export class CalcpadSettingsManager {
         this._onDidChangeSettings.fire(this._settings);
     }
 
+
     public resetSettings(): void {
         this._settings = this.getDefaultSettings();
         this.saveSettings();
@@ -133,41 +122,79 @@ export class CalcpadSettingsManager {
 
     private saveSettings(): void {
         const config = vscode.workspace.getConfiguration('calcpad');
+        const outputChannel = getOutputChannel();
+        outputChannel.appendLine(`[Settings] Saving settings: ${JSON.stringify(this._settings, null, 2)}`);
         config.update('settings', this._settings, vscode.ConfigurationTarget.Workspace);
+        outputChannel.appendLine(`[Settings] Settings saved to workspace configuration`);
     }
 
-    public async getStoredJWT(): Promise<string> {
+    public async getStoredS3JWT(): Promise<string> {
         if (!this._context) {
             const outputChannel = getOutputChannel();
-            outputChannel.appendLine('Warning: Extension context not available for JWT retrieval');
+            outputChannel.appendLine('Warning: Extension context not available for S3 JWT retrieval');
             return '';
         }
         
-        const jwt = await this._context.secrets.get('calcpad.auth.jwt') || '';
+        const jwt = await this._context.secrets.get('calcpad.s3.jwt') || '';
         
         const outputChannel = getOutputChannel();
-        outputChannel.appendLine(`Getting stored JWT: ${jwt ? `${jwt.substring(0, 20)}...` : 'EMPTY'}`);
-        outputChannel.appendLine(`JWT length: ${jwt ? jwt.length : 0}`);
+        outputChannel.appendLine(`Getting stored S3 JWT: ${jwt ? `${jwt.substring(0, 20)}...` : 'EMPTY'}`);
+        outputChannel.appendLine(`S3 JWT length: ${jwt ? jwt.length : 0}`);
         
         return jwt;
     }
 
-    public async setStoredJWT(jwt: string): Promise<void> {
-        if (!this._context) {
-            const outputChannel = getOutputChannel();
-            outputChannel.appendLine('Warning: Extension context not available for JWT storage');
-            return;
-        }
-        
-        await this._context.secrets.store('calcpad.auth.jwt', jwt);
-        
-        const outputChannel = getOutputChannel();
-        outputChannel.appendLine(`JWT stored securely: ${jwt ? `${jwt.substring(0, 20)}...` : 'EMPTY'}`);
-        outputChannel.appendLine(`JWT length: ${jwt ? jwt.length : 0}`);
+    private static getColorScaleEnumValue(colorScale: string): number {
+        const colorScaleMap: Record<string, number> = {
+            "None": 0,
+            "Gray": 1,
+            "Rainbow": 2,
+            "Terrain": 3,
+            "VioletToYellow": 4,
+            "GreenToYellow": 5,
+            "Blues": 6,
+            "BlueToYellow": 7,
+            "BlueToRed": 8,
+            "PurpleToYellow": 9
+        };
+        return colorScaleMap[colorScale] !== undefined ? colorScaleMap[colorScale] : 2; // Default to Rainbow
+    }
+
+    private static getLightDirectionEnumValue(lightDirection: string): number {
+        const lightDirectionMap: Record<string, number> = {
+            "North": 0,
+            "NorthEast": 1,
+            "East": 2,
+            "SouthEast": 3,
+            "South": 4,
+            "SouthWest": 5,
+            "West": 6,
+            "NorthWest": 7
+        };
+        return lightDirectionMap[lightDirection] !== undefined ? lightDirectionMap[lightDirection] : 7; // Default to NorthWest
+    }
+
+    private static getS3ConfigPath(): string {
+        const path = require('path');
+        return path.join(__dirname, 's3-config.json');
     }
 
     public async getApiSettings(): Promise<unknown> {
-        const storedJWT = await this.getStoredJWT();
+        const storedS3JWT = await this.getStoredS3JWT();
+
+        // Read S3 URL from centralized config
+        const path = require('path');
+        const fs = require('fs');
+        const configPath = CalcpadSettingsManager.getS3ConfigPath();
+        const configContent = fs.readFileSync(configPath, 'utf8');
+        const configData = JSON.parse(configContent);
+
+        if (!configData.apiBaseUrl) {
+            throw new Error('apiBaseUrl not found in s3-config.json');
+        }
+
+        const s3ApiUrl = configData.apiBaseUrl;
+
         const apiSettings = {
             math: {
                 decimals: this._settings.math.decimals,
@@ -177,28 +204,36 @@ export class CalcpadSettingsManager {
                 formatEquations: this._settings.math.formatEquations
             },
             plot: {
-                colorScale: this._settings.plot.colorScale,
-                lightDirection: this._settings.plot.lightDirection,
+                isAdaptive: this._settings.plot.isAdaptive,
+                screenScaleFactor: this._settings.plot.screenScaleFactor,
+                imagePath: this._settings.plot.imagePath,
+                imageUri: this._settings.plot.imageUri,
+                vectorGraphics: this._settings.plot.vectorGraphics,
+                colorScale: CalcpadSettingsManager.getColorScaleEnumValue(this._settings.plot.colorScale),
+                smoothScale: this._settings.plot.smoothScale,
                 shadows: this._settings.plot.shadows,
-                vectorGraphics: this._settings.plot.vectorGraphics
+                lightDirection: CalcpadSettingsManager.getLightDirectionEnumValue(this._settings.plot.lightDirection)
             },
             auth: {
-                url: this._settings.auth.storageUrl,
-                jwt: storedJWT
+                url: s3ApiUrl,
+                jwt: storedS3JWT
             },
             units: this._settings.units,
             output: {
-                format: this._settings.output.format
+                format: this._settings.output.format,
+                silent: this._settings.output.silent
             }
         };
-        
+
         // Debug logging
         const outputChannel = getOutputChannel();
-        outputChannel.appendLine('Auth settings being sent:');
-        outputChannel.appendLine(`  Storage URL: ${this._settings.auth.storageUrl}`);
-        outputChannel.appendLine(`  JWT: ${storedJWT ? `${storedJWT.substring(0, 20)}...` : 'EMPTY'}`);
-        outputChannel.appendLine(`  JWT Length: ${storedJWT ? storedJWT.length : 0}`);
-        
+        outputChannel.appendLine('API settings being sent:');
+        outputChannel.appendLine(`  S3 Storage URL: ${s3ApiUrl}`);
+        outputChannel.appendLine(`  S3 JWT: ${storedS3JWT ? `${storedS3JWT.substring(0, 20)}...` : 'EMPTY'}`);
+        outputChannel.appendLine(`  S3 JWT Length: ${storedS3JWT ? storedS3JWT.length : 0}`);
+        outputChannel.appendLine(`  ColorScale: "${this._settings.plot.colorScale}" -> ${CalcpadSettingsManager.getColorScaleEnumValue(this._settings.plot.colorScale)}`);
+        outputChannel.appendLine(`  LightDirection: "${this._settings.plot.lightDirection}" -> ${CalcpadSettingsManager.getLightDirectionEnumValue(this._settings.plot.lightDirection)}`);
+
         return apiSettings;
     }
 }

@@ -8,6 +8,7 @@ import { CalcpadUIProvider } from './calcpadUIProvider';
 import { CalcpadSettingsManager } from './calcpadSettings';
 import { OperatorReplacer } from './operatorReplacer';
 import { CalcpadCompletionProvider } from './calcpadCompletionProvider';
+import { CalcpadInsertManager } from './calcpadInsertManager';
 
 let activePreviewPanel: vscode.WebviewPanel | unknown = undefined;
 let activePreviewType: 'regular' | 'unwrapped' | undefined = undefined;
@@ -152,15 +153,6 @@ function getPreviewHtml(): string {
 async function updatePreviewContent(panel: vscode.WebviewPanel, content: string) {
     outputChannel.appendLine('Starting updatePreviewContent...');
     
-    const settingsManager = CalcpadSettingsManager.getInstance();
-    const settings = settingsManager.getSettings();
-    const apiBaseUrl = settings.server.url;
-    if (!apiBaseUrl) {
-        outputChannel.appendLine('ERROR: Server URL not configured');
-        throw new Error('Server URL not configured');
-    }
-    outputChannel.appendLine(`Server URL: ${apiBaseUrl}`);
-
     // Update panel title with current file name
     const activeEditor = vscode.window.activeTextEditor;
     if (activeEditor) {
@@ -172,6 +164,14 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string)
         outputChannel.appendLine('Getting settings...');
         const settingsManager = CalcpadSettingsManager.getInstance(extensionContext);
         const settings = await settingsManager.getApiSettings();
+        const calcpadSettings = settingsManager.getSettings();
+        const apiBaseUrl = calcpadSettings.server.url;
+        
+        if (!apiBaseUrl) {
+            outputChannel.appendLine('ERROR: Server URL not configured');
+            throw new Error('Server URL not configured');
+        }
+        outputChannel.appendLine(`Server URL: ${apiBaseUrl}`);
         outputChannel.appendLine(`Settings retrieved: ${JSON.stringify(settings)}`);
         
         outputChannel.appendLine('Making API call...');
@@ -201,6 +201,9 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string)
         
     } catch (error) {
         outputChannel.appendLine(`ERROR in updatePreviewContent: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        const settingsManager = CalcpadSettingsManager.getInstance(extensionContext);
+        const calcpadSettings = settingsManager.getSettings();
+        const errorApiBaseUrl = calcpadSettings.server.url;
         const errorHtml = `
             <!DOCTYPE html>
             <html>
@@ -212,7 +215,7 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string)
                 <div style="color: #d32f2f; background: #ffebee; padding: 15px; border-radius: 4px; margin: 20px;">
                     <h3>Preview Error</h3>
                     <p>${error instanceof Error ? error.message : 'Unknown error'}</p>
-                    <p>Server URL: ${apiBaseUrl}/api/calcpad/convert</p>
+                    <p>Server URL: ${errorApiBaseUrl}/api/calcpad/convert</p>
                 </div>
             </body>
             </html>
@@ -225,15 +228,6 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string)
 async function updatePreviewContentUnwrapped(panel: vscode.WebviewPanel, content: string) {
     outputChannel.appendLine('Starting updatePreviewContentUnwrapped...');
     
-    const settingsManager = CalcpadSettingsManager.getInstance();
-    const settings = settingsManager.getSettings();
-    const apiBaseUrl = settings.server.url;
-    if (!apiBaseUrl) {
-        outputChannel.appendLine('ERROR: Server URL not configured');
-        throw new Error('Server URL not configured');
-    }
-    outputChannel.appendLine(`Server URL: ${apiBaseUrl}`);
-
     // Update panel title with current file name
     const activeEditor = vscode.window.activeTextEditor;
     if (activeEditor) {
@@ -245,6 +239,14 @@ async function updatePreviewContentUnwrapped(panel: vscode.WebviewPanel, content
         outputChannel.appendLine('Getting settings...');
         const settingsManager = CalcpadSettingsManager.getInstance(extensionContext);
         const settings = await settingsManager.getApiSettings();
+        const calcpadSettings = settingsManager.getSettings();
+        const apiBaseUrl = calcpadSettings.server.url;
+        
+        if (!apiBaseUrl) {
+            outputChannel.appendLine('ERROR: Server URL not configured');
+            throw new Error('Server URL not configured');
+        }
+        outputChannel.appendLine(`Server URL: ${apiBaseUrl}`);
         outputChannel.appendLine(`Settings retrieved: ${JSON.stringify(settings)}`);
         
         outputChannel.appendLine('Making API call to convert-unwrapped...');
@@ -274,6 +276,9 @@ async function updatePreviewContentUnwrapped(panel: vscode.WebviewPanel, content
         
     } catch (error) {
         outputChannel.appendLine(`ERROR in updatePreviewContentUnwrapped: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        const settingsManager = CalcpadSettingsManager.getInstance(extensionContext);
+        const calcpadSettings = settingsManager.getSettings();
+        const errorApiBaseUrl = calcpadSettings.server.url;
         const errorHtml = `
             <!DOCTYPE html>
             <html>
@@ -285,7 +290,7 @@ async function updatePreviewContentUnwrapped(panel: vscode.WebviewPanel, content
                 <div style="color: #d32f2f; background: #ffebee; padding: 15px; border-radius: 4px; margin: 20px;">
                     <h3>Preview Error (Unwrapped)</h3>
                     <p>${error instanceof Error ? error.message : 'Unknown error'}</p>
-                    <p>Server URL: ${apiBaseUrl}/api/calcpad/convert-unwrapped</p>
+                    <p>Server URL: ${errorApiBaseUrl}/api/calcpad/convert-unwrapped</p>
                 </div>
             </body>
             </html>
@@ -416,7 +421,7 @@ async function printToPdf() {
             progress.report({ increment: 0, message: "Starting PDF generation..." });
 
             const settingsManager = CalcpadSettingsManager.getInstance(extensionContext);
-            const calcpadSettings = settingsManager.getSettings();
+                const calcpadSettings = settingsManager.getSettings();
             const apiBaseUrl = calcpadSettings.server.url;
             if (!apiBaseUrl) {
                 throw new Error('Server URL not configured');
@@ -613,11 +618,13 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     // Register webview provider for CalcPad UI panel
-    const uiProvider = new CalcpadUIProvider(context.extensionUri, context);
+    const insertManager = CalcpadInsertManager.getInstance();
+    const uiProvider = new CalcpadUIProvider(context.extensionUri, context, settingsManager, insertManager);
     const uiProviderDisposable = vscode.window.registerWebviewViewProvider(
         CalcpadUIProvider.viewType, 
         uiProvider
     );
+
 
 
     const disposable = vscode.commands.registerCommand('vscode-calcpad.activate', () => {
@@ -657,6 +664,7 @@ export function activate(context: vscode.ExtensionContext) {
             tempPanel.dispose();
         }
     });
+
 
     // Process document on open
     const onDidOpenTextDocument = vscode.workspace.onDidOpenTextDocument(async document => {
