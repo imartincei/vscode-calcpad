@@ -34,9 +34,13 @@
       <div v-else-if="activeTab === 'files'" class="tab-placeholder">
         Files tab - Coming soon!
       </div>
-      <div v-else-if="activeTab === 'pdf'" class="tab-placeholder">
-        PDF tab - Coming soon!
-      </div>
+      <CalcpadPdfTab
+        v-else-if="activeTab === 'pdf'"
+        :pdf-settings="pdfSettings"
+        @update-pdf-settings="handleUpdatePdfSettings"
+        @reset-pdf-settings="handleResetPdfSettings"
+        @generate-pdf="handleGeneratePdf"
+      />
     </div>
   </div>
 </template>
@@ -46,7 +50,9 @@ import { ref, onMounted } from 'vue'
 import CalcpadInsertTab from './components/CalcpadInsertTab.vue'
 import CalcpadSettingsTab from './components/CalcpadSettingsTab.vue'
 import CalcpadVariablesTab from './components/CalcpadVariablesTab.vue'
-import type { Tab, InsertData, Settings, VariablesData } from './types'
+import CalcpadPdfTab from './components/CalcpadPdfTab.vue'
+import { postMessage } from './services/vscode'
+import type { Tab, InsertData, Settings, VariablesData, PdfSettings } from './types'
 
 // State
 const activeTab = ref('insert')
@@ -59,6 +65,26 @@ const variablesData = ref<VariablesData>({
   functions: []
 })
 const variablesLoading = ref(false)
+const pdfSettings = ref<PdfSettings>({
+  enableHeader: true,
+  documentTitle: '',
+  documentSubtitle: '',
+  headerCenter: '',
+  author: '',
+  enableFooter: true,
+  footerCenter: '',
+  company: '',
+  project: '',
+  showPageNumbers: true,
+  format: 'A4',
+  orientation: 'portrait',
+  marginTop: '2cm',
+  marginBottom: '2cm',
+  marginLeft: '1.5cm',
+  marginRight: '1.5cm',
+  printBackground: true,
+  scale: 1.0
+})
 
 const tabs: Tab[] = [
   { id: 'insert', label: 'Insert' },
@@ -71,32 +97,57 @@ const tabs: Tab[] = [
 // Methods
 const switchTab = (tabId: string) => {
   activeTab.value = tabId
+
+  // Request fresh data when switching to variables tab
+  if (tabId === 'variables') {
+    variablesLoading.value = true
+    postMessage({ type: 'getVariables' })
+  }
 }
 
 const handleInsertText = (text: string) => {
-  window.vscode.postMessage({
+  postMessage({
     type: 'insertText',
     text
   })
 }
 
 const handleUpdateSettings = (newSettings: Settings) => {
-  window.vscode.postMessage({
+  postMessage({
     type: 'updateSettings',
     settings: newSettings
   })
 }
 
 const handleUpdatePreviewTheme = (theme: string) => {
-  window.vscode.postMessage({
+  postMessage({
     type: 'updatePreviewTheme',
     theme
   })
 }
 
 const handleResetSettings = () => {
-  window.vscode.postMessage({
+  postMessage({
     type: 'resetSettings'
+  })
+}
+
+const handleUpdatePdfSettings = (settings: PdfSettings) => {
+  postMessage({
+    type: 'updatePdfSettings',
+    settings
+  })
+}
+
+const handleResetPdfSettings = () => {
+  postMessage({
+    type: 'resetPdfSettings'
+  })
+}
+
+const handleGeneratePdf = () => {
+  postMessage({
+    type: 'generatePdf'
   })
 }
 
@@ -119,6 +170,12 @@ const handleMessage = (event: MessageEvent) => {
       variablesData.value = message.data
       variablesLoading.value = false
       break
+    case 'pdfSettingsResponse':
+      pdfSettings.value = message.settings
+      break
+    case 'pdfSettingsReset':
+      pdfSettings.value = message.settings
+      break
     default:
       console.log('Unhandled message:', message)
   }
@@ -130,11 +187,12 @@ onMounted(() => {
   window.addEventListener('message', handleMessage)
 
   // Request initial data
-  window.vscode.postMessage({ type: 'getInsertData' })
-  window.vscode.postMessage({ type: 'getSettings' })
+  postMessage({ type: 'getInsertData' })
+  postMessage({ type: 'getSettings' })
+  postMessage({ type: 'getPdfSettings' })
 
   // Debug message
-  window.vscode.postMessage({
+  postMessage({
     type: 'debug',
     message: 'CalcpadVueApp mounted successfully'
   })

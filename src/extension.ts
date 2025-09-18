@@ -661,6 +661,13 @@ export function activate(context: vscode.ExtensionContext) {
         printToPdf();
     });
 
+    const refreshVariablesCommand = vscode.commands.registerCommand('calcpad.refreshVariables', async () => {
+        const activeEditor = vscode.window.activeTextEditor;
+        if (activeEditor) {
+            await processDocument(activeEditor.document);
+        }
+    });
+
     const exportToPdfCommand = vscode.commands.registerCommand('vscode-calcpad.exportToPdf', () => {
         const activeEditor = vscode.window.activeTextEditor;
         if (activeEditor && activePreviewPanel) {
@@ -723,11 +730,12 @@ export function activate(context: vscode.ExtensionContext) {
 
         outputChannel.appendLine('Registering subscriptions...');
         context.subscriptions.push(
-            disposable, 
-            previewCommand, 
+            disposable,
+            previewCommand,
             previewUnwrappedCommand,
             showInsertCommand,
             printToPdfCommand,
+            refreshVariablesCommand,
             exportToPdfCommand,
             // uiProviderDisposable, // OLD UI commented out
             vueUiProviderDisposable,

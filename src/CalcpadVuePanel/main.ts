@@ -1,12 +1,16 @@
 import { createApp } from 'vue'
 import CalcpadApp from './CalcpadApp.vue'
 import './styles/base.css'
+import { initVscodeApi } from './services/vscode'
 
 // Initialize VS Code API
-const vscode = acquireVsCodeApi()
+const vscode = (window as any).acquireVsCodeApi()
 
 // Make vscode available globally
-window.vscode = vscode
+;(window as any).vscode = vscode
+
+// Initialize our VSCode service
+initVscodeApi()
 
 // Create and mount the Vue app
 const app = createApp(CalcpadApp)

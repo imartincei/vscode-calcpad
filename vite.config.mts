@@ -28,6 +28,7 @@ export default defineConfig({
         assetFileNames: '[name].[ext]'
       }
     },
+    cssCodeSplit: false, // Bundle all CSS into one file
     minify: 'terser',
     sourcemap: true,
     target: 'es2020' // Compatible with modern VS Code webview

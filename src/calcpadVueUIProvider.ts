@@ -43,10 +43,10 @@ export class CalcpadVueUIProvider implements vscode.WebviewViewProvider {
             this._outputChannel.appendLine(`Received message: ${data.type}`);
             switch (data.type) {
                 case 'insertText':
-                    const editor = vscode.window.activeTextEditor;
-                    if (editor) {
-                        const position = editor.selection.active;
-                        await editor.edit(editBuilder => {
+                    const insertEditor = vscode.window.activeTextEditor;
+                    if (insertEditor) {
+                        const position = insertEditor.selection.active;
+                        await insertEditor.edit(editBuilder => {
                             editBuilder.insert(position, data.text);
                         });
                     }
@@ -101,6 +101,33 @@ export class CalcpadVueUIProvider implements vscode.WebviewViewProvider {
                     for (const key of pdfKeys) {
                         await pdfConfigReset.update(`pdf.${key}`, undefined, vscode.ConfigurationTarget.Global);
                     }
+
+                    // Send back the reset settings
+                    const resetPdfSettings = {
+                        enableHeader: true,
+                        documentTitle: '',
+                        documentSubtitle: '',
+                        headerCenter: '',
+                        author: '',
+                        enableFooter: true,
+                        footerCenter: '',
+                        company: '',
+                        project: '',
+                        showPageNumbers: true,
+                        format: 'A4',
+                        orientation: 'portrait',
+                        marginTop: '2cm',
+                        marginBottom: '2cm',
+                        marginLeft: '1.5cm',
+                        marginRight: '1.5cm',
+                        printBackground: true,
+                        scale: 1.0
+                    };
+
+                    webviewView.webview.postMessage({
+                        type: 'pdfSettingsReset',
+                        settings: resetPdfSettings
+                    });
                     break;
 
                 case 'openS3Config':
@@ -116,8 +143,49 @@ export class CalcpadVueUIProvider implements vscode.WebviewViewProvider {
                     });
                     break;
 
+                case 'getPdfSettings':
+                    const pdfConfigGet = vscode.workspace.getConfiguration('calcpad');
+                    const pdfSettings = {
+                        enableHeader: pdfConfigGet.get<boolean>('pdf.enableHeader', true),
+                        documentTitle: pdfConfigGet.get<string>('pdf.documentTitle', ''),
+                        documentSubtitle: pdfConfigGet.get<string>('pdf.documentSubtitle', ''),
+                        headerCenter: pdfConfigGet.get<string>('pdf.headerCenter', ''),
+                        author: pdfConfigGet.get<string>('pdf.author', ''),
+                        enableFooter: pdfConfigGet.get<boolean>('pdf.enableFooter', true),
+                        footerCenter: pdfConfigGet.get<string>('pdf.footerCenter', ''),
+                        company: pdfConfigGet.get<string>('pdf.company', ''),
+                        project: pdfConfigGet.get<string>('pdf.project', ''),
+                        showPageNumbers: pdfConfigGet.get<boolean>('pdf.showPageNumbers', true),
+                        format: pdfConfigGet.get<string>('pdf.format', 'A4'),
+                        orientation: pdfConfigGet.get<string>('pdf.orientation', 'portrait'),
+                        marginTop: pdfConfigGet.get<string>('pdf.marginTop', '2cm'),
+                        marginBottom: pdfConfigGet.get<string>('pdf.marginBottom', '2cm'),
+                        marginLeft: pdfConfigGet.get<string>('pdf.marginLeft', '1.5cm'),
+                        marginRight: pdfConfigGet.get<string>('pdf.marginRight', '1.5cm'),
+                        printBackground: pdfConfigGet.get<boolean>('pdf.printBackground', true),
+                        scale: pdfConfigGet.get<number>('pdf.scale', 1.0)
+                    };
+
+                    webviewView.webview.postMessage({
+                        type: 'pdfSettingsResponse',
+                        settings: pdfSettings
+                    });
+                    break;
+
+                case 'generatePdf':
+                    vscode.commands.executeCommand('calcpad.printToPdf');
+                    break;
+
                 case 'getInsertData':
                     this._sendInitialData();
+                    break;
+
+                case 'getVariables':
+                    // Trigger a refresh of variables from the current document
+                    const editor = vscode.window.activeTextEditor;
+                    if (editor && (editor.document.languageId === 'calcpad' || editor.document.languageId === 'plaintext')) {
+                        vscode.commands.executeCommand('calcpad.refreshVariables');
+                    }
                     break;
 
                 case 'debug':

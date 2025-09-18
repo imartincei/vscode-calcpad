@@ -204,10 +204,17 @@ const createTreeSection = (title: string, level: number) => {
   const checkbox = document.createElement('input')
   checkbox.type = 'checkbox'
   checkbox.id = checkboxId
+  checkbox.checked = false // Default to collapsed
 
   const label = document.createElement('label')
   label.setAttribute('for', checkboxId)
   label.textContent = title
+
+  // Add click handler to label to toggle checkbox
+  label.addEventListener('click', (e) => {
+    e.preventDefault()
+    checkbox.checked = !checkbox.checked
+  })
 
   const ul = document.createElement('ul')
 
@@ -409,26 +416,27 @@ watch(
 }
 
 :deep(.tree-section > label:before) {
-  content: '▼';
+  content: '▶';
   margin-right: 6px;
   transition: transform 0.2s ease;
+  display: inline-block;
 }
 
-:deep(.tree-section > input[type="checkbox"]:not(:checked) + label:before) {
-  transform: rotate(-90deg);
+:deep(.tree-section > input[type="checkbox"]:checked + label:before) {
+  transform: rotate(90deg);
 }
 
 :deep(.tree-section > ul) {
   list-style: none;
   padding-left: 16px;
   margin: 4px 0 0 0;
-  max-height: 1000px;
+  max-height: 0;
   overflow: hidden;
   transition: max-height 0.3s ease;
 }
 
-:deep(.tree-section > input[type="checkbox"]:not(:checked) + label + ul) {
-  max-height: 0;
+:deep(.tree-section > input[type="checkbox"]:checked + label + ul) {
+  max-height: 1000px;
 }
 
 :deep(.tree-item) {
