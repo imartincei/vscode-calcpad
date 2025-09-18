@@ -114,3 +114,33 @@ export interface PdfSettings {
   printBackground: boolean
   scale: number
 }
+
+// S3 File Management Types
+export interface S3File {
+  fileName: string
+  size: number
+  lastModified: string
+  tags?: string[]
+}
+
+export interface S3User {
+  id: string
+  username: string
+  email: string
+  role: number
+}
+
+export interface S3Config {
+  apiBaseUrl: string
+  minio: {
+    endpoint: string
+    useSSL: boolean
+  }
+  fileUpload: {
+    maxFileSize: number
+  }
+  ui: {
+    defaultTab: string
+    filesPerPage: number
+  }
+}

@@ -2,12 +2,30 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { copyFileSync } from 'node:fs'
 
 // Get directory name in ESM context
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 
+// Plugin to copy s3-config.json
+const copyS3Config = () => {
+  return {
+    name: 'copy-s3-config',
+    writeBundle() {
+      try {
+        copyFileSync(
+          resolve(__dirname, 's3-config.json'),
+          resolve(__dirname, 'out/CalcpadVuePanel/s3-config.json')
+        )
+      } catch (err) {
+        console.warn('Could not copy s3-config.json:', err)
+      }
+    }
+  }
+}
+
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [vue(), copyS3Config()],
   // Suppress CJS deprecation warning for VS Code extension context
   logLevel: 'warn',
   build: {

@@ -31,9 +31,9 @@
         :loading="variablesLoading"
         @insert-text="handleInsertText"
       />
-      <div v-else-if="activeTab === 'files'" class="tab-placeholder">
-        Files tab - Coming soon!
-      </div>
+      <CalcpadFilesTab
+        v-else-if="activeTab === 'files'"
+      />
       <CalcpadPdfTab
         v-else-if="activeTab === 'pdf'"
         :pdf-settings="pdfSettings"
@@ -50,6 +50,7 @@ import { ref, onMounted } from 'vue'
 import CalcpadInsertTab from './components/CalcpadInsertTab.vue'
 import CalcpadSettingsTab from './components/CalcpadSettingsTab.vue'
 import CalcpadVariablesTab from './components/CalcpadVariablesTab.vue'
+import CalcpadFilesTab from './components/CalcpadFilesTab.vue'
 import CalcpadPdfTab from './components/CalcpadPdfTab.vue'
 import { postMessage } from './services/vscode'
 import type { Tab, InsertData, Settings, VariablesData, PdfSettings } from './types'
