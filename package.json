@@ -229,10 +229,9 @@
     "views": {
       "calcpad-ui": [
         {
-          "id": "calcpadUI",
+          "id": "calcpadVueUI",
           "name": "CalcPad",
-          "type": "webview",
-          "when": "resourceLangId == calcpad || resourceLangId == plaintext || activeWebviewPanelId == 'htmlPreview'"
+          "type": "webview"
         }
       ]
     },
@@ -248,16 +247,27 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./"
+    "compile": "npm run build:vue && tsc -p ./",
+    "watch": "concurrently \"npm run watch:vue\" \"tsc -watch -p ./\"",
+    "build:vue": "vite build",
+    "watch:vue": "vite build --watch",
+    "dev:vue": "vite build --watch --mode development",
+    "type-check:vue": "vue-tsc --noEmit --project tsconfig.vue.json"
   },
   "devDependencies": {
-    "@types/node": "16.x",
+    "@types/node": "^20.19.16",
     "@types/vscode": "^1.74.0",
-    "typescript": "^4.9.4"
+    "@vitejs/plugin-vue": "^5.2.4",
+    "@vue/compiler-sfc": "^3.5.21",
+    "concurrently": "^9.2.1",
+    "terser": "^5.44.0",
+    "typescript": "^5.9.2",
+    "vite": "^5.4.20",
+    "vue-tsc": "^2.2.12"
   },
   "dependencies": {
     "axios": "^1.11.0",
-    "package.json": "^0.0.0"
+    "package.json": "^0.0.0",
+    "vue": "^3.5.21"
   }
 }

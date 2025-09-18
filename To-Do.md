@@ -9,3 +9,4 @@
 - Add duplicate macro definitions to linter
 - Test linter for advanced issues
 - Make the webview always available, but the preview and export buttons only available in .cpd files
+- Remove the S3 provider for now, and get everything else cleaned up before trying to add that back

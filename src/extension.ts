@@ -5,6 +5,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import { CalcpadLinter } from './calcpadLinter';
 import { CalcpadUIProvider } from './calcpadUIProvider';
+import { CalcpadVueUIProvider } from './calcpadVueUIProvider';
 import { CalcpadSettingsManager } from './calcpadSettings';
 import { OperatorReplacer } from './operatorReplacer';
 import { CalcpadCompletionProvider } from './calcpadCompletionProvider';
@@ -606,8 +607,13 @@ export function activate(context: vscode.ExtensionContext) {
             
             outputChannel.appendLine(`[processDocument] Found ${resolvedContent.allMacros.length} macros, ${resolvedContent.variablesWithDefinitions.length} variables, ${resolvedContent.functionsWithParams.length} functions`);
             
-            // Send all user-defined content to UI provider
-            uiProvider.updateVariables({
+            // Send all user-defined content to UI providers
+            // uiProvider.updateVariables({
+            //     macros: resolvedContent.allMacros,
+            //     variables: resolvedContent.variablesWithDefinitions,
+            //     functions: resolvedContent.functionsWithParams
+            // });
+            vueUiProvider.updateVariables({
                 macros: resolvedContent.allMacros,
                 variables: resolvedContent.variablesWithDefinitions,
                 functions: resolvedContent.functionsWithParams
@@ -617,12 +623,19 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }
 
-    // Register webview provider for CalcPad UI panel
+    // Register webview provider for CalcPad UI panel (OLD - COMMENTED OUT)
     const insertManager = CalcpadInsertManager.getInstance();
-    const uiProvider = new CalcpadUIProvider(context.extensionUri, context, settingsManager, insertManager);
-    const uiProviderDisposable = vscode.window.registerWebviewViewProvider(
-        CalcpadUIProvider.viewType, 
-        uiProvider
+    // const uiProvider = new CalcpadUIProvider(context.extensionUri, context, settingsManager, insertManager);
+    // const uiProviderDisposable = vscode.window.registerWebviewViewProvider(
+    //     CalcpadUIProvider.viewType,
+    //     uiProvider
+    // );
+
+    // Register webview provider for CalcPad Vue UI panel (NEW)
+    const vueUiProvider = new CalcpadVueUIProvider(context.extensionUri, context, settingsManager, insertManager);
+    const vueUiProviderDisposable = vscode.window.registerWebviewViewProvider(
+        CalcpadVueUIProvider.viewType,
+        vueUiProvider
     );
 
 
@@ -716,7 +729,9 @@ export function activate(context: vscode.ExtensionContext) {
             showInsertCommand,
             printToPdfCommand,
             exportToPdfCommand,
-            uiProviderDisposable,
+            // uiProviderDisposable, // OLD UI commented out
+            vueUiProviderDisposable,
+            vueUiProvider, // Add the provider itself for disposal
             linter, 
             outputChannel,
             onDidChangeTextDocument, 

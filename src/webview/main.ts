@@ -1,36 +1,22 @@
 // Main UI functionality for CalcPad webview
 
+// Type definitions
 interface InsertItem {
-    label?;
-    tag;
-    description?;
-    categoryPath?;
-    category?;
+    label?: string;
+    tag: string;
+    description?: string;
+    categoryPath?: string;
+    category?: string;
 }
-
-declare const acquireVsCodeApi: () => {
-    postMessage(message: unknown);
-};
-
-declare const Vue: {
-    createApp(config: unknown): {
-        mount(selector): unknown;
-    };
-    defineComponent(config: unknown): unknown;
-};
 
 interface InsertCategory {
     direct?: InsertItem[];
-    [key]: InsertItem[] | InsertCategory | undefined;
+    [key: string]: InsertItem[] | InsertCategory | undefined;
 }
 
 interface InsertData {
-    [key]: InsertCategory;
+    [key: string]: InsertCategory;
 }
-
-declare let insertData: InsertData;
-
-const vscode = acquireVsCodeApi();
 
 interface Settings {
     math: {
@@ -43,30 +29,30 @@ interface Settings {
     plot: {
         isAdaptive: boolean;
         screenScaleFactor: number;
-        imagePath;
-        imageUri;
+        imagePath: string;
+        imageUri: string;
         vectorGraphics: boolean;
-        colorScale;
+        colorScale: string;
         smoothScale: boolean;
         shadows: boolean;
-        lightDirection;
+        lightDirection: string;
     };
     server: {
-        url;
+        url: string;
     };
-    units;
+    units: string;
     output: {
-        format;
+        format: string;
         silent: boolean;
     };
 }
 
 interface VariableItem {
-    name;
-    definition?;
-    content?;
-    source?;
-    params?;
+    name: string;
+    definition?: string;
+    content?: string;
+    source?: string;
+    params?: string;
 }
 
 interface VariablesData {
@@ -75,90 +61,88 @@ interface VariablesData {
     functions: VariableItem[];
 }
 
-interface S3Manager {
-    setApiUrl(url);
-    initialize();
+interface S3User {
+    username: string;
+    id: string;
 }
 
+interface S3File {
+    fileName: string;
+    size: number;
+    lastModified: string;
+}
 
-interface VueComponentContext {
+interface S3State {
+    isAuthenticated: boolean;
+    authToken: string | null;
+    currentUser: S3User | null;
+    apiUrl: string;
+    files: S3File[];
+    loading: boolean;
+    error: string | null;
+    searchQuery: string;
+}
+
+interface VueComponentData {
     insertData: InsertData;
     allItems: InsertItem[];
-    searchTerm;
+    searchTerm: string;
     filteredItems: InsertItem[];
-    displayItems: InsertItem[];
-    s3State: {
-        isAuthenticated: boolean;
-        authToken | null;
-        currentUser: unknown;
-        apiUrl;
-        files: unknown[];
-        loading: boolean;
-        error | null;
-        searchQuery;
-    };
-    $nextTick: (callback: () => void) => void;
-    initializeItems();
-    flattenItems(data: InsertData, currentPath[], result: InsertItem[]);
-    setupSearch();
-    filterItems();
-    insertItem(item: InsertItem);
-    buildTreeStructure();
-    buildTreeStructureRecursive(data: InsertData, parentUl: HTMLUListElement, level: number);
-    groupMenuData(data: InsertItem[]): { [key]: InsertItem[] };
-    createTreeSection(title, level: number): { li; ul: HTMLUListElement };
-    createTreeItem(item: InsertItem, level: number);
-    collapseAll();
+    s3State: S3State;
 }
 
-interface VueAppConfig {
-    data(): {
-        insertData: InsertData;
-        allItems: InsertItem[];
-        searchTerm;
-        filteredItems: InsertItem[];
-    };
-    computed: {
-        displayItems(): InsertItem[];
-    };
-    mounted();
-    methods: {
-        initializeItems();
-        flattenItems(data: InsertData, currentPath[], result: InsertItem[]);
-        setupSearch();
-        filterItems();
-        insertItem(item: InsertItem);
-        buildTreeStructure();
-        buildTreeStructureRecursive(data: InsertData, parentUl: HTMLUListElement, level: number);
-        groupMenuData(data: InsertItem[]): { [key]: InsertItem[] };
-        createTreeSection(title, level: number): { li; ul: HTMLUListElement };
-        createTreeItem(item: InsertItem, level: number);
-        collapseAll();
-    };
+interface VueComponentMethods {
+    initializeItems(): void;
+    flattenItems(data: InsertData, currentPath: string[], result: InsertItem[]): void;
+    setupSearch(): void;
+    filterItems(): void;
+    insertItem(item: InsertItem): void;
+    buildTreeStructure(): void;
+    buildTreeStructureRecursive(data: InsertData, parentUl: HTMLUListElement, level: number): void;
+    groupMenuData(data: InsertItem[]): { [key: string]: InsertItem[] };
+    createTreeSection(title: string, level: number): { li: HTMLLIElement; ul: HTMLUListElement };
+    createTreeItem(item: InsertItem, level: number): HTMLLIElement;
+    collapseAll(): void;
+    s3Login(): Promise<void>;
+    s3Logout(): void;
+    s3RefreshFiles(): Promise<void>;
+    s3FormatFileSize(bytes: number): string;
+    s3SelectFile(file: S3File): void;
+}
+
+interface VueComponentComputed {
+    displayItems(): InsertItem[];
+    s3FilteredFiles(): S3File[];
 }
 
 interface ExtendedWindow extends Window {
-    S3Manager?: new () => S3Manager;
-    s3Manager?: S3Manager;
-    unifiedVueApp?: {
-        s3State: {
-            apiUrl;
-            isAuthenticated: boolean;
-            authToken | null;
-            currentUser: unknown;
-            files: unknown[];
-            loading: boolean;
-            error | null;
-            searchQuery;
-        };
-    };
-    switchTab: (tabId) => void;
+    switchTab: (tabId: string) => void;
     toggleSection: (header: HTMLElement) => void;
-    insertTextAtCursor: (text) => void;
+    insertTextAtCursor: (text: string) => void;
+    unifiedVueApp?: {
+        s3State: S3State;
+    };
 }
 
+// Global declarations
+declare const acquireVsCodeApi: () => {
+    postMessage(message: unknown): void;
+};
+
+declare const Vue: {
+    createApp(config: unknown): {
+        mount(selector: string): unknown;
+    };
+    defineComponent(config: unknown): unknown;
+};
+
+declare let insertData: InsertData;
+
+// Initialize VS Code API
+const vscode = acquireVsCodeApi();
+
 // Tab switching functionality
-function switchTab(tabId) {
+function switchTab(tabId: string): void {
     // Hide all tab contents
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.remove('active');
@@ -176,14 +160,14 @@ function switchTab(tabId) {
     }
 
     // Add active class to clicked tab
-    const activeTab = document.querySelector("button[onclick*=\"'" + tabId + "'\"]") as HTMLElement;
+    const activeTab = document.querySelector(`button[onclick*='${tabId}']`) as HTMLElement;
     if (activeTab) {
         activeTab.classList.add('active');
     }
 }
 
 // Settings management
-const defaultSettings = {
+const defaultSettings: Settings = {
     math: {
         decimals: 6,
         degrees: 0,
@@ -202,6 +186,9 @@ const defaultSettings = {
         shadows: true,
         lightDirection: "NorthWest"
     },
+    server: {
+        url: ""
+    },
     units: "m",
     output: {
         format: "html",
@@ -210,7 +197,7 @@ const defaultSettings = {
 };
 
 function getSettings(): Settings {
-    const getElement = (id) => document.getElementById(id) as HTMLInputElement | HTMLSelectElement;
+    const getElement = (id: string) => document.getElementById(id) as HTMLInputElement | HTMLSelectElement;
 
     return {
         math: {
@@ -242,8 +229,8 @@ function getSettings(): Settings {
     };
 }
 
-function loadSettings(settings: Settings) {
-    const getElement = (id) => document.getElementById(id) as HTMLInputElement | HTMLSelectElement;
+function loadSettings(settings: Settings): void {
+    const getElement = (id: string) => document.getElementById(id) as HTMLInputElement | HTMLSelectElement;
 
     getElement('decimals').value = settings.math.decimals.toString();
     getElement('degrees').value = settings.math.degrees.toString();
@@ -265,13 +252,13 @@ function loadSettings(settings: Settings) {
     (getElement('silent') as HTMLInputElement).checked = settings.output.silent;
 }
 
-function resetSettings() {
+function resetSettings(): void {
     vscode.postMessage({
         type: 'resetSettings'
     });
 }
 
-function saveSettings() {
+function saveSettings(): void {
     const settings = getSettings();
     vscode.postMessage({
         type: 'updateSettings',
@@ -279,7 +266,7 @@ function saveSettings() {
     });
 }
 
-function setupSettingsEvents() {
+function setupSettingsEvents(): void {
     // Auto-save settings when they change
     const inputs = document.querySelectorAll('#settings-tab input, #settings-tab select:not(#previewTheme)');
     inputs.forEach(input => {
@@ -315,13 +302,13 @@ function setupSettingsEvents() {
     }
 }
 
-function initializeSettings() {
+function initializeSettings(): void {
     // Request current settings from extension
     vscode.postMessage({ type: 'getSettings' });
 }
 
 // Variables tab functionality
-function updateVariablesTab(data: VariablesData) {
+function updateVariablesTab(data: VariablesData): void {
     const container = document.getElementById('variables-container');
     const searchInput = document.getElementById('variables-search-input');
 
@@ -428,10 +415,9 @@ function updateVariablesTab(data: VariablesData) {
             });
         });
     }
-
 }
 
-function toggleSection(header: HTMLElement) {
+function toggleSection(header: HTMLElement): void {
     const content = header.nextElementSibling as HTMLElement;
     const icon = header.querySelector('.expand-icon') as HTMLElement;
 
@@ -447,7 +433,7 @@ function toggleSection(header: HTMLElement) {
     }
 }
 
-function insertTextAtCursor(text) {
+function insertTextAtCursor(text: string): void {
     vscode.postMessage({
         type: 'insertText',
         text: text
@@ -455,12 +441,12 @@ function insertTextAtCursor(text) {
 }
 
 // PDF Settings
-function setupPdfSettings() {
+function setupPdfSettings(): void {
     const pdfInputs = document.querySelectorAll('#pdf-tab input, #pdf-tab select');
 
     pdfInputs.forEach(input => {
         input.addEventListener('change', function() {
-            const getElement = (id) => document.getElementById(id) as HTMLInputElement | HTMLSelectElement;
+            const getElement = (id: string) => document.getElementById(id) as HTMLInputElement | HTMLSelectElement;
 
             const pdfSettings = {
                 enableHeader: (getElement('enableHeader') as HTMLInputElement).checked,
@@ -502,17 +488,16 @@ function setupPdfSettings() {
 }
 
 // Initialize unified Vue app for entire webview
-function initializeUnifiedVueApp() {
+function initializeUnifiedVueApp(): void {
     const { createApp, defineComponent } = Vue;
 
     const componentConfig = defineComponent({
         data() {
             return {
                 insertData: insertData,
-                allItems: [] as InsertItem[],
+                allItems: [],
                 searchTerm: '',
-                filteredItems: [] as InsertItem[],
-                // S3 state
+                filteredItems: [],
                 s3State: {
                     isAuthenticated: false,
                     authToken: null,
@@ -526,18 +511,18 @@ function initializeUnifiedVueApp() {
             };
         },
         computed: {
-            displayItems(): InsertItem[] {
+            displayItems() {
                 if (this.searchTerm.trim()) {
                     return this.filteredItems;
                 }
                 return this.allItems;
             },
-            s3FilteredFiles(): unknown[] {
+            s3FilteredFiles() {
                 if (!this.s3State.searchQuery.trim()) {
                     return this.s3State.files;
                 }
                 const query = this.s3State.searchQuery.toLowerCase();
-                return this.s3State.files.filter((file: { fileName }) =>
+                return this.s3State.files.filter((file: S3File) =>
                     file.fileName.toLowerCase().includes(query)
                 );
             }
@@ -555,7 +540,7 @@ function initializeUnifiedVueApp() {
                 this.allItems = [];
                 this.flattenItems(this.insertData, [], this.allItems);
             },
-            flattenItems(data: InsertData, currentPath[], result: InsertItem[]) {
+            flattenItems(data: InsertData, currentPath: string[], result: InsertItem[]) {
                 Object.keys(data).forEach(categoryKey => {
                     const categoryData = data[categoryKey];
                     const newPath = [...currentPath, categoryKey];
@@ -683,13 +668,13 @@ function initializeUnifiedVueApp() {
                     }
                 });
             },
-            groupMenuData(data: InsertItem[]): { [key]: InsertItem[] } {
+            groupMenuData(data: InsertItem[]) {
                 if (!Array.isArray(data)) return { direct: [data] };
 
                 const hasCategories = data.some(item => item.category);
 
                 if (hasCategories) {
-                    const grouped: { [key]: InsertItem[] } = {};
+                    const grouped: { [key: string]: InsertItem[] } = {};
                     data.forEach(item => {
                         const category = item.category || 'Other';
                         if (!grouped[category]) grouped[category] = [];
@@ -700,7 +685,7 @@ function initializeUnifiedVueApp() {
                     return { direct: data };
                 }
             },
-            createTreeSection(title, level: number): { li; ul: HTMLUListElement } {
+            createTreeSection(title: string, level: number) {
                 const checkboxId = 'checkbox-' + Date.now() + '-' + Math.random();
                 const levelClass = level > 0 ? ' level-' + level : '';
 
@@ -785,17 +770,17 @@ function initializeUnifiedVueApp() {
                         throw new Error('Login failed with status: ' + response.status);
                     }
 
-                    const data = await response.json();
+                    const loginData = await response.json();
 
-                    this.s3State.authToken = data.token;
-                    this.s3State.currentUser = data.user;
+                    this.s3State.authToken = loginData.token;
+                    this.s3State.currentUser = loginData.user;
                     this.s3State.isAuthenticated = true;
 
-                    vscode.postMessage({ type: 'debug', message: '[S3Login] Login successful for user: ' + data.user.username });
+                    vscode.postMessage({ type: 'debug', message: '[S3Login] Login successful for user: ' + loginData.user.username });
 
                     vscode.postMessage({
                         type: 'storeS3JWT',
-                        jwt: data.token
+                        jwt: loginData.token
                     });
 
                     await this.s3RefreshFiles();
@@ -844,9 +829,9 @@ function initializeUnifiedVueApp() {
                         throw new Error('Failed to fetch files: ' + response.status);
                     }
 
-                    const data = await response.json();
-                    this.s3State.files = data;
-                    vscode.postMessage({ type: 'debug', message: '[S3Files] Loaded ' + data.length + ' files' });
+                    const filesData = await response.json();
+                    this.s3State.files = filesData;
+                    vscode.postMessage({ type: 'debug', message: '[S3Files] Loaded ' + filesData.length + ' files' });
 
                 } catch (error) {
                     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -865,7 +850,7 @@ function initializeUnifiedVueApp() {
                 return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
             },
 
-            s3SelectFile(file: { fileName }) {
+            s3SelectFile(file: S3File) {
                 vscode.postMessage({ type: 'debug', message: '[S3Files] Selected file: ' + file.fileName });
             }
         }
@@ -873,18 +858,18 @@ function initializeUnifiedVueApp() {
 
     const app = createApp(componentConfig);
     const mountedApp = app.mount('.calcpad-ui');
-    (window as unknown as ExtendedWindow).unifiedVueApp = mountedApp as unknown as ExtendedWindow['unifiedVueApp'];
+    (window as unknown as ExtendedWindow).unifiedVueApp = mountedApp as ExtendedWindow['unifiedVueApp'];
 }
 
 // Message handling
-function handleMessage(event: MessageEvent) {
+function handleMessage(event: MessageEvent): void {
     const message = event.data as {
-        type;
+        type: string;
         settings?: Settings;
-        previewTheme?;
+        previewTheme?: string;
         data?: VariablesData;
-        apiUrl?;
-        [key]: unknown;
+        apiUrl?: string;
+        [key: string]: unknown;
     };
 
     switch (message.type) {
@@ -926,7 +911,7 @@ function handleMessage(event: MessageEvent) {
 }
 
 // Initialize everything when DOM is loaded
-function initialize() {
+function initialize(): void {
     // Make functions available globally
     const globalWindow = window as unknown as ExtendedWindow;
     globalWindow.switchTab = switchTab;
@@ -959,7 +944,7 @@ if (document.readyState === 'loading') {
 }
 
 // Set up tab switching with event listeners
-function setupTabSwitching() {
+function setupTabSwitching(): void {
     const tabButtons = document.querySelectorAll('.tab');
 
     tabButtons.forEach((button) => {
@@ -979,5 +964,3 @@ function setupTabSwitching() {
         }
     });
 }
-
-// Functions are exposed globally in the initialize() function
