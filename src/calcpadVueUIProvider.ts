@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { CalcpadSettingsManager } from './calcpadSettings';
 import { CalcpadInsertManager } from './calcpadInsertManager';
+import axios from 'axios';
 
 export class CalcpadVueUIProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'calcpadVueUI';
@@ -188,6 +189,22 @@ export class CalcpadVueUIProvider implements vscode.WebviewViewProvider {
                     }
                     break;
 
+                case 's3Login':
+                    this.handleS3Login(data.credentials, webviewView.webview);
+                    break;
+
+                case 's3ListFiles':
+                    this.handleS3ListFiles(data.token, webviewView.webview);
+                    break;
+
+                case 's3DownloadFile':
+                    this.handleS3DownloadFile(data.fileName, data.token, webviewView.webview);
+                    break;
+
+                case 's3UploadFile':
+                    this.handleS3UploadFile(data.fileName, data.fileData, data.tags, data.token, webviewView.webview);
+                    break;
+
                 case 'debug':
                     this._outputChannel.appendLine(`[Vue Debug] ${data.message}`);
                     break;
@@ -222,6 +239,177 @@ export class CalcpadVueUIProvider implements vscode.WebviewViewProvider {
 
     public dispose() {
         this._outputChannel.dispose();
+    }
+
+    private async handleS3Login(credentials: { username: string, password: string }, webview: vscode.Webview) {
+        try {
+            const config = vscode.workspace.getConfiguration('calcpad');
+            const apiUrl = config.get<string>('s3.apiUrl', 'http://localhost:5000');
+
+            this._outputChannel.appendLine(`[S3] Attempting login to: ${apiUrl}/api/auth/login`);
+            this._outputChannel.appendLine(`[S3] Username: ${credentials.username}`);
+
+            const response = await axios.post(`${apiUrl}/api/auth/login`, credentials);
+
+            this._outputChannel.appendLine(`[S3] Login response status: ${response.status}`);
+            this._outputChannel.appendLine(`[S3] Login response data: ${JSON.stringify(response.data, null, 2)}`);
+
+            const jwt = response.data.token;
+            this._outputChannel.appendLine(`[S3] Extracted JWT: ${jwt ? `${jwt.substring(0, 20)}...` : 'EMPTY'}`);
+
+            webview.postMessage({
+                type: 's3LoginResponse',
+                success: true,
+                token: response.data.token,
+                user: response.data.user
+            });
+        } catch (error: unknown) {
+            this._outputChannel.appendLine(`[S3] Login error: ${error}`);
+            if (error instanceof Error) {
+                this._outputChannel.appendLine(`[S3] Login error message: ${error.message}`);
+                this._outputChannel.appendLine(`[S3] Login error stack: ${error.stack}`);
+            }
+            const errorMessage = axios.isAxiosError(error)
+                ? error.response?.data?.message || 'Connection error. Make sure the S3 API is running.'
+                : 'Connection error. Make sure the S3 API is running.';
+            webview.postMessage({
+                type: 's3LoginResponse',
+                success: false,
+                error: errorMessage
+            });
+        }
+    }
+
+    private async handleS3ListFiles(token: string, webview: vscode.Webview) {
+        try {
+            const config = vscode.workspace.getConfiguration('calcpad');
+            const apiUrl = config.get<string>('s3.apiUrl', 'http://localhost:5000');
+
+            this._outputChannel.appendLine(`[S3] Requesting file list from: ${apiUrl}/api/blobstorage/list-with-metadata`);
+            this._outputChannel.appendLine(`[S3] Using token: ${token ? `${token.substring(0, 20)}...` : 'EMPTY'}`);
+
+            const response = await axios.get(`${apiUrl}/api/blobstorage/list-with-metadata`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            this._outputChannel.appendLine(`[S3] Response status: ${response.status}`);
+            this._outputChannel.appendLine(`[S3] Response data: ${JSON.stringify(response.data, null, 2)}`);
+
+            const files = response.data.files || response.data || [];
+            this._outputChannel.appendLine(`[S3] Extracted files array: ${JSON.stringify(files, null, 2)}`);
+            this._outputChannel.appendLine(`[S3] Number of files found: ${Array.isArray(files) ? files.length : 'Not an array'}`);
+
+            webview.postMessage({
+                type: 's3FilesResponse',
+                success: true,
+                files: files
+            });
+        } catch (error: unknown) {
+            this._outputChannel.appendLine(`[S3] List Files error: ${error}`);
+            if (error instanceof Error) {
+                this._outputChannel.appendLine(`[S3] Error message: ${error.message}`);
+                this._outputChannel.appendLine(`[S3] Error stack: ${error.stack}`);
+            }
+            webview.postMessage({
+                type: 's3FilesResponse',
+                success: false,
+                error: 'Failed to connect to S3 API'
+            });
+        }
+    }
+
+    private async handleS3DownloadFile(fileName: string, token: string, webview: vscode.Webview) {
+        try {
+            const config = vscode.workspace.getConfiguration('calcpad');
+            const apiUrl = config.get<string>('s3.apiUrl', 'http://localhost:5000');
+
+            this._outputChannel.appendLine(`[S3] Downloading file: ${fileName}`);
+            this._outputChannel.appendLine(`[S3] Download URL: ${apiUrl}/api/blobstorage/download/${fileName}`);
+
+            const response = await axios.get(`${apiUrl}/api/blobstorage/download/${fileName}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                responseType: 'arraybuffer'
+            });
+
+            this._outputChannel.appendLine(`[S3] Download response status: ${response.status}`);
+            this._outputChannel.appendLine(`[S3] Download response size: ${response.data.byteLength} bytes`);
+
+            const base64 = Buffer.from(response.data).toString('base64');
+
+            webview.postMessage({
+                type: 's3DownloadResponse',
+                success: true,
+                fileName: fileName,
+                fileData: `data:application/octet-stream;base64,${base64}`
+            });
+        } catch (error: unknown) {
+            this._outputChannel.appendLine(`[S3] Download error: ${error}`);
+            if (error instanceof Error) {
+                this._outputChannel.appendLine(`[S3] Download error message: ${error.message}`);
+            }
+            webview.postMessage({
+                type: 's3DownloadResponse',
+                success: false,
+                error: 'Download failed'
+            });
+        }
+    }
+
+    private async handleS3UploadFile(fileName: string, fileData: string, tags: string[], token: string, webview: vscode.Webview) {
+        try {
+            const config = vscode.workspace.getConfiguration('calcpad');
+            const apiUrl = config.get<string>('s3.apiUrl', 'http://localhost:5000');
+
+            this._outputChannel.appendLine(`[S3] Uploading file: ${fileName}`);
+            this._outputChannel.appendLine(`[S3] Upload URL: ${apiUrl}/api/blobstorage/upload`);
+            this._outputChannel.appendLine(`[S3] Tags: ${JSON.stringify(tags)}`);
+
+            // Convert base64 data URL to buffer
+            const base64Data = fileData.split(',')[1];
+            const buffer = Buffer.from(base64Data, 'base64');
+
+            this._outputChannel.appendLine(`[S3] File size: ${buffer.length} bytes`);
+
+            // Use native FormData (available in Node.js 18+)
+            const formData = new (globalThis as typeof globalThis & { FormData: typeof FormData }).FormData();
+
+            // Create a Blob for the file
+            const fileBlob = new Blob([buffer], { type: 'application/octet-stream' });
+            formData.append('file', fileBlob, fileName);
+
+            if (tags.length > 0) {
+                formData.append('tags', JSON.stringify(tags));
+            }
+
+            const response = await axios.post(`${apiUrl}/api/blobstorage/upload`, formData, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                    // Let axios handle Content-Type with boundary automatically
+                }
+            });
+
+            this._outputChannel.appendLine(`[S3] Upload response status: ${response.status}`);
+            this._outputChannel.appendLine(`[S3] Upload successful for: ${fileName}`);
+
+            webview.postMessage({
+                type: 's3UploadResponse',
+                success: true
+            });
+        } catch (error: unknown) {
+            this._outputChannel.appendLine(`[S3] Upload error: ${error}`);
+            if (error instanceof Error) {
+                this._outputChannel.appendLine(`[S3] Upload error message: ${error.message}`);
+            }
+            webview.postMessage({
+                type: 's3UploadResponse',
+                success: false,
+                error: 'Upload failed'
+            });
+        }
     }
 
     private _getHtmlForWebview(webview: vscode.Webview) {

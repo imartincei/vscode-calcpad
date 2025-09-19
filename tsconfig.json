@@ -17,7 +17,6 @@
         ".vscode-test",
         "helper",
         "vite.config.mts",
-        "src/CalcpadVuePanel",
-        "src/webview"
+        "src/CalcpadVuePanel"
     ]
 }

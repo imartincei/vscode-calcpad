@@ -174,26 +174,16 @@ export class CalcpadSettingsManager {
         return lightDirectionMap[lightDirection] !== undefined ? lightDirectionMap[lightDirection] : 7; // Default to NorthWest
     }
 
-    private static getS3ConfigPath(): string {
-        const path = require('path');
-        return path.join(__dirname, 's3-config.json');
-    }
-
     public async getApiSettings(): Promise<unknown> {
         const storedS3JWT = await this.getStoredS3JWT();
 
-        // Read S3 URL from centralized config
-        const path = require('path');
-        const fs = require('fs');
-        const configPath = CalcpadSettingsManager.getS3ConfigPath();
-        const configContent = fs.readFileSync(configPath, 'utf8');
-        const configData = JSON.parse(configContent);
+        // Read S3 URL from VS Code settings
+        const config = vscode.workspace.getConfiguration('calcpad');
+        const s3ApiUrl = config.get<string>('s3.apiUrl');
 
-        if (!configData.apiBaseUrl) {
-            throw new Error('apiBaseUrl not found in s3-config.json');
+        if (!s3ApiUrl) {
+            throw new Error('calcpad.s3.apiUrl not found in VS Code settings');
         }
-
-        const s3ApiUrl = configData.apiBaseUrl;
 
         const apiSettings = {
             math: {

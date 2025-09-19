@@ -1,7 +1,7 @@
 // VSCode API service for Vue components
 
 export interface VscodeApi {
-  postMessage(message: any): void
+  postMessage(message: unknown): void
 }
 
 let vscodeApi: VscodeApi | null = null
@@ -20,6 +20,32 @@ export function getVscodeApi(): VscodeApi {
   return vscodeApi
 }
 
-export function postMessage(message: any): void {
-  getVscodeApi().postMessage(message)
+// Helper function to serialize Vue reactive objects safely
+function serializeForPostMessage(obj: unknown): unknown {
+  if (obj === null || obj === undefined) {
+    return obj
+  }
+
+  if (typeof obj === 'string' || typeof obj === 'number' || typeof obj === 'boolean') {
+    return obj
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(item => serializeForPostMessage(item))
+  }
+
+  if (typeof obj === 'object') {
+    const serialized: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(obj)) {
+      serialized[key] = serializeForPostMessage(value)
+    }
+    return serialized
+  }
+
+  return obj
+}
+
+export function postMessage(message: unknown): void {
+  const serializedMessage = serializeForPostMessage(message)
+  getVscodeApi().postMessage(serializedMessage)
 }

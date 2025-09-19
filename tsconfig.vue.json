@@ -13,7 +13,8 @@
     "paths": {
       "@/*": ["src/CalcpadVuePanel/*"]
     },
-    "types": ["vite/client", "node"]
+    "types": ["vite/client", "node"],
+    "typeRoots": ["./node_modules/@types", "./node_modules"]
   },
   "include": [
     "src/CalcpadVuePanel/**/*.ts",
@@ -23,7 +24,6 @@
   "exclude": [
     "node_modules",
     "out",
-    "src/webview",
     "src/extension.ts",
     "src/calcpad*.ts"
   ]

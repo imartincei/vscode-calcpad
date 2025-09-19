@@ -223,6 +223,11 @@
               }
             }
           }
+        },
+        "calcpad.s3.apiUrl": {
+          "type": "string",
+          "default": "http://localhost:5000",
+          "description": "Base URL for the CalcPad S3 API server"
         }
       }
     },

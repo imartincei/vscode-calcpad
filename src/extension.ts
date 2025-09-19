@@ -4,7 +4,6 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
 import { CalcpadLinter } from './calcpadLinter';
-import { CalcpadUIProvider } from './calcpadUIProvider';
 import { CalcpadVueUIProvider } from './calcpadVueUIProvider';
 import { CalcpadSettingsManager } from './calcpadSettings';
 import { OperatorReplacer } from './operatorReplacer';
@@ -623,13 +622,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }
 
-    // Register webview provider for CalcPad UI panel (OLD - COMMENTED OUT)
     const insertManager = CalcpadInsertManager.getInstance();
-    // const uiProvider = new CalcpadUIProvider(context.extensionUri, context, settingsManager, insertManager);
-    // const uiProviderDisposable = vscode.window.registerWebviewViewProvider(
-    //     CalcpadUIProvider.viewType,
-    //     uiProvider
-    // );
 
     // Register webview provider for CalcPad Vue UI panel (NEW)
     const vueUiProvider = new CalcpadVueUIProvider(context.extensionUri, context, settingsManager, insertManager);
@@ -737,7 +730,6 @@ export function activate(context: vscode.ExtensionContext) {
             printToPdfCommand,
             refreshVariablesCommand,
             exportToPdfCommand,
-            // uiProviderDisposable, // OLD UI commented out
             vueUiProviderDisposable,
             vueUiProvider, // Add the provider itself for disposal
             linter, 

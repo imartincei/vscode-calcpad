@@ -38,7 +38,7 @@
         <div class="files-header mb-3">
           <div class="user-info">
             <span>Welcome, {{ currentUser?.username }}</span>
-            <span class="role-badge">{{ getRoleName(currentUser?.role) }}</span>
+            <span class="role-badge">{{ getRoleName(currentUser?.role ?? 0) }}</span>
           </div>
           <div class="header-actions">
             <button v-if="canUpload" @click="showUploadModal = true" class="btn">
@@ -178,7 +178,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { postMessage } from '../services/vscode'
-import type { S3File, S3User, S3Config } from '../types'
+import type { S3File, S3User } from '../types'
 
 // State
 const isAuthenticated = ref(false)
@@ -209,11 +209,10 @@ const uploadTagsInput = ref('')
 
 // API configuration
 const apiBaseUrl = ref('')
-const s3Config = ref<S3Config | null>(null)
 
 // Computed
-const canUpload = computed(() => currentUser.value?.role >= 2)
-const isAdmin = computed(() => currentUser.value?.role === 3)
+const canUpload = computed(() => (currentUser.value?.role ?? 0) >= 2)
+const isAdmin = computed(() => (currentUser.value?.role ?? 0) === 3)
 
 const filteredFiles = computed(() => {
   let filtered = files.value
@@ -230,7 +229,7 @@ const filteredFiles = computed(() => {
   if (selectedTagFilters.value.length > 0) {
     filtered = filtered.filter(file => {
       if (!file.tags || file.tags.length === 0) return false
-      return selectedTagFilters.value.some(tag => file.tags.includes(tag))
+      return selectedTagFilters.value.some(tag => file.tags?.includes(tag) ?? false)
     })
   }
 
@@ -252,31 +251,11 @@ const login = async () => {
   loading.value = true
   error.value = null
 
-  try {
-    const response = await fetch(`${apiBaseUrl.value}/api/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(loginForm.value)
-    })
-
-    const data = await response.json()
-
-    if (response.ok) {
-      authToken.value = data.token
-      currentUser.value = data.user
-      isAuthenticated.value = true
-      localStorage.setItem('calcpad_s3_token', data.token)
-      await loadFiles()
-    } else {
-      error.value = data.message || 'Login failed'
-    }
-  } catch (err) {
-    error.value = 'Connection error. Make sure the S3 API is running.'
-  } finally {
-    loading.value = false
-  }
+  // Send login request to VS Code extension
+  postMessage({
+    type: 's3Login',
+    credentials: loginForm.value
+  })
 }
 
 const logout = () => {
@@ -291,52 +270,28 @@ const loadFiles = async () => {
   if (!authToken.value) return
 
   loading.value = true
-  try {
-    const response = await fetch(`${apiBaseUrl.value}/api/blobstorage/list-with-metadata`, {
-      headers: {
-        'Authorization': `Bearer ${authToken.value}`
-      }
-    })
-
-    if (response.ok) {
-      const data = await response.json()
-      files.value = data.files || []
-    } else {
-      error.value = 'Failed to load files'
-    }
-  } catch (err) {
-    error.value = 'Failed to connect to S3 API'
-  } finally {
-    loading.value = false
-  }
+  postMessage({
+    type: 'debug',
+    message: `[Vue] Loading files with token: ${authToken.value ? `${authToken.value.substring(0, 20)}...` : 'EMPTY'}`
+  })
+  postMessage({
+    type: 's3ListFiles',
+    token: authToken.value
+  })
 }
 
 const refreshFiles = () => {
   loadFiles()
 }
 
-const downloadFile = async (file: any) => {
+const downloadFile = async (file: S3File) => {
   if (!authToken.value) return
 
-  try {
-    const response = await fetch(`${apiBaseUrl.value}/api/blobstorage/download/${file.fileName}`, {
-      headers: {
-        'Authorization': `Bearer ${authToken.value}`
-      }
-    })
-
-    if (response.ok) {
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = file.fileName
-      a.click()
-      window.URL.revokeObjectURL(url)
-    }
-  } catch (err) {
-    error.value = 'Download failed'
-  }
+  postMessage({
+    type: 's3DownloadFile',
+    fileName: file.fileName,
+    token: authToken.value
+  })
 }
 
 const handleFileSelect = (event: Event) => {
@@ -348,34 +303,23 @@ const uploadFile = async () => {
   if (!selectedUploadFile.value || !authToken.value) return
 
   uploading.value = true
-  try {
-    const formData = new FormData()
-    formData.append('file', selectedUploadFile.value)
 
-    if (uploadTagsInput.value.trim()) {
-      const tags = uploadTagsInput.value.split(',').map(t => t.trim()).filter(t => t)
-      formData.append('tags', JSON.stringify(tags))
-    }
+  // Convert file to base64 for message passing
+  const reader = new FileReader()
+  reader.onload = () => {
+    const base64Data = reader.result as string
+    const tags = uploadTagsInput.value.trim() ?
+      uploadTagsInput.value.split(',').map(t => t.trim()).filter(t => t) : []
 
-    const response = await fetch(`${apiBaseUrl.value}/api/blobstorage/upload`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${authToken.value}`
-      },
-      body: formData
+    postMessage({
+      type: 's3UploadFile',
+      fileName: selectedUploadFile.value!.name,
+      fileData: base64Data,
+      tags: tags,
+      token: authToken.value
     })
-
-    if (response.ok) {
-      closeModals()
-      await loadFiles()
-    } else {
-      error.value = 'Upload failed'
-    }
-  } catch (err) {
-    error.value = 'Upload failed'
-  } finally {
-    uploading.value = false
   }
+  reader.readAsDataURL(selectedUploadFile.value)
 }
 
 const selectFile = (file: any) => {
@@ -423,24 +367,8 @@ const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString()
 }
 
-const loadS3Config = async () => {
-  try {
-    const response = await fetch('./s3-config.json')
-    if (response.ok) {
-      s3Config.value = await response.json()
-      apiBaseUrl.value = s3Config.value.apiBaseUrl || 'http://localhost:5000'
-    }
-  } catch (err) {
-    console.warn('Could not load s3-config.json, using defaults')
-    apiBaseUrl.value = 'http://localhost:5000'
-  }
-}
-
 // Initialize
-onMounted(async () => {
-  // Load S3 configuration
-  await loadS3Config()
-
+onMounted(() => {
   // Check for stored token
   const storedToken = localStorage.getItem('calcpad_s3_token')
   if (storedToken) {
@@ -448,17 +376,96 @@ onMounted(async () => {
     // TODO: Verify token and load user info
   }
 
-  // Request S3 config from VS Code as fallback
+  // Request S3 config from VS Code settings
   postMessage({ type: 'getS3Config' })
 })
 
-// Listen for S3 config from VS Code
+// Listen for messages from VS Code
 window.addEventListener('message', (event) => {
   const message = event.data
-  if (message.type === 's3ConfigResponse') {
-    if (message.apiUrl) {
-      apiBaseUrl.value = message.apiUrl
-    }
+
+  switch (message.type) {
+    case 's3ConfigResponse':
+      if (message.apiUrl) {
+        apiBaseUrl.value = message.apiUrl
+      } else {
+        error.value = 'S3 API URL not configured. Please set calcpad.s3.apiUrl in VS Code settings.'
+      }
+      break
+
+    case 's3LoginResponse':
+      loading.value = false
+      if (message.success) {
+        authToken.value = message.token
+        currentUser.value = message.user
+        isAuthenticated.value = true
+        localStorage.setItem('calcpad_s3_token', message.token)
+        loadFiles()
+      } else {
+        error.value = message.error || 'Login failed'
+      }
+      break
+
+    case 's3FilesResponse':
+      loading.value = false
+      postMessage({
+        type: 'debug',
+        message: `[Vue] Received s3FilesResponse: success=${message.success}, files=${JSON.stringify(message.files)}`
+      })
+      if (message.success) {
+        files.value = message.files || []
+        postMessage({
+          type: 'debug',
+          message: `[Vue] Updated files array with ${files.value.length} files`
+        })
+        error.value = null
+      } else {
+        error.value = message.error || 'Failed to load files'
+        postMessage({
+          type: 'debug',
+          message: `[Vue] Files load failed: ${error.value}`
+        })
+      }
+      break
+
+    case 's3UploadResponse':
+      uploading.value = false
+      if (message.success) {
+        closeModals()
+        loadFiles()
+        error.value = null
+      } else {
+        error.value = message.error || 'Upload failed'
+      }
+      break
+
+    case 's3DownloadResponse':
+      if (message.success && message.fileData) {
+        // Create blob and trigger download
+        const byteCharacters = atob(message.fileData.split(',')[1])
+        const byteNumbers = new Array(byteCharacters.length)
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i)
+        }
+        const byteArray = new Uint8Array(byteNumbers)
+        const blob = new Blob([byteArray])
+
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = message.fileName
+        a.click()
+        window.URL.revokeObjectURL(url)
+      } else {
+        error.value = message.error || 'Download failed'
+      }
+      break
+
+    case 's3Error':
+      loading.value = false
+      uploading.value = false
+      error.value = message.error || 'S3 operation failed'
+      break
   }
 })
 </script>

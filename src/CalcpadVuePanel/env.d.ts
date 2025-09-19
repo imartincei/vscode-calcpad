@@ -1,8 +1,7 @@
 /// <reference types="vite/client" />
 
 declare module '*.vue' {
-  import type { DefineComponent } from 'vue'
-  const component: DefineComponent<{}, {}, any>
+  const component: any
   export default component
 }
 
@@ -10,13 +9,13 @@ declare module '*.vue' {
 declare global {
   interface Window {
     vscode: {
-      postMessage(message: any): void
+      postMessage(message: unknown): void
     }
-    insertData?: any
+    insertData?: unknown
   }
 
   const acquireVsCodeApi: () => {
-    postMessage(message: any): void
+    postMessage(message: unknown): void
   }
 }
 
