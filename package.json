@@ -228,6 +228,45 @@
           "type": "string",
           "default": "http://localhost:5000",
           "description": "Base URL for the CalcPad S3 API server"
+        },
+        "calcpad.routing.config": {
+          "type": "object",
+          "description": "Routing configuration for different API endpoints",
+          "default": {
+            "s3": {
+              "BaseUrl": "http://localhost:5000",
+              "Auth": "jwt",
+              "Endpoints": {
+                "download": "/api/blobstorage/download/:fileName",
+                "upload": "/api/blobstorage/upload/:fileName",
+                "list": "/api/blobstorage/list"
+              }
+            },
+            "github": {
+              "BaseUrl": "https://api.github.com",
+              "Auth": "jwt",
+              "Endpoints": {
+                "raw_file": "/repos/:owner/:repo/contents/:fileName",
+                "download": "/repos/:owner/:repo/zipball/:ref"
+              }
+            },
+            "public_api": {
+              "BaseUrl": "https://api.example.com",
+              "Auth": "public",
+              "Endpoints": {
+                "data": "/v1/data/:fileName",
+                "export": "/v1/export/:fileName.csv"
+              }
+            },
+            "internal": {
+              "BaseUrl": "https://internal-api.company.com",
+              "Auth": "jwt",
+              "Endpoints": {
+                "reports": "/api/reports/:fileName",
+                "templates": "/api/templates/:fileName.cpd"
+              }
+            }
+          }
         }
       }
     },

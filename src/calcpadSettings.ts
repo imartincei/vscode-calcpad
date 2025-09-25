@@ -17,6 +17,9 @@ export interface CalcpadSettings {
         isComplex: boolean;
         substitute: boolean;
         formatEquations: boolean;
+        zeroSmallMatrixElements: boolean;
+        maxOutputCount: number;
+        formatString: string;
     };
     plot: {
         isAdaptive: boolean;
@@ -67,11 +70,14 @@ export class CalcpadSettingsManager {
     public getDefaultSettings(): CalcpadSettings {
         return {
             math: {
-                decimals: 6,
+                decimals: 2,
                 degrees: 0,
                 isComplex: false,
                 substitute: true,
-                formatEquations: true
+                formatEquations: true,
+                zeroSmallMatrixElements: true,
+                maxOutputCount: 20,
+                formatString: ""
             },
             plot: {
                 isAdaptive: true,
@@ -177,42 +183,43 @@ export class CalcpadSettingsManager {
     public async getApiSettings(): Promise<unknown> {
         const storedS3JWT = await this.getStoredS3JWT();
 
-        // Read S3 URL from VS Code settings
+        // Read S3 URL and routing config from VS Code settings
         const config = vscode.workspace.getConfiguration('calcpad');
         const s3ApiUrl = config.get<string>('s3.apiUrl');
+        const routingConfig = config.get<unknown>('routing.config');
 
         if (!s3ApiUrl) {
             throw new Error('calcpad.s3.apiUrl not found in VS Code settings');
         }
 
         const apiSettings = {
-            math: {
-                decimals: this._settings.math.decimals,
-                degrees: this._settings.math.degrees,
-                isComplex: this._settings.math.isComplex,
-                substitute: this._settings.math.substitute,
-                formatEquations: this._settings.math.formatEquations
+            Math: {
+                Decimals: this._settings.math.decimals,
+                Degrees: this._settings.math.degrees,
+                IsComplex: this._settings.math.isComplex,
+                Substitute: this._settings.math.substitute,
+                FormatEquations: this._settings.math.formatEquations,
+                ZeroSmallMatrixElements: this._settings.math.zeroSmallMatrixElements,
+                MaxOutputCount: this._settings.math.maxOutputCount,
+                FormatString: this._settings.math.formatString
             },
-            plot: {
-                isAdaptive: this._settings.plot.isAdaptive,
-                screenScaleFactor: this._settings.plot.screenScaleFactor,
-                imagePath: this._settings.plot.imagePath,
-                imageUri: this._settings.plot.imageUri,
-                vectorGraphics: this._settings.plot.vectorGraphics,
-                colorScale: CalcpadSettingsManager.getColorScaleEnumValue(this._settings.plot.colorScale),
-                smoothScale: this._settings.plot.smoothScale,
-                shadows: this._settings.plot.shadows,
-                lightDirection: CalcpadSettingsManager.getLightDirectionEnumValue(this._settings.plot.lightDirection)
+            Plot: {
+                IsAdaptive: this._settings.plot.isAdaptive,
+                ScreenScaleFactor: this._settings.plot.screenScaleFactor,
+                ImagePath: this._settings.plot.imagePath,
+                ImageUri: this._settings.plot.imageUri,
+                VectorGraphics: this._settings.plot.vectorGraphics,
+                ColorScale: CalcpadSettingsManager.getColorScaleEnumValue(this._settings.plot.colorScale),
+                SmoothScale: this._settings.plot.smoothScale,
+                Shadows: this._settings.plot.shadows,
+                LightDirection: CalcpadSettingsManager.getLightDirectionEnumValue(this._settings.plot.lightDirection)
             },
-            auth: {
-                url: s3ApiUrl,
-                jwt: storedS3JWT
+            Auth: {
+                Url: s3ApiUrl,
+                JWT: storedS3JWT,
+                RoutingConfig: routingConfig || null
             },
-            units: this._settings.units,
-            output: {
-                format: this._settings.output.format,
-                silent: this._settings.output.silent
-            }
+            Units: this._settings.units
         };
 
         // Debug logging

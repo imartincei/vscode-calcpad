@@ -13,6 +13,7 @@ import { CalcpadInsertManager } from './calcpadInsertManager';
 let activePreviewPanel: vscode.WebviewPanel | unknown = undefined;
 let activePreviewType: 'regular' | 'unwrapped' | undefined = undefined;
 let previewUpdateTimeout: NodeJS.Timeout | unknown = undefined;
+let previewSourceEditor: vscode.TextEditor | undefined = undefined;
 let linter: CalcpadLinter;
 let outputChannel: vscode.OutputChannel;
 let extensionContext: vscode.ExtensionContext;
@@ -176,11 +177,13 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string)
         
         outputChannel.appendLine('Making API call...');
         const theme = getEffectivePreviewTheme();
-        const response = await axios.post(`${apiBaseUrl}/api/calcpad/convert`, 
-            { 
-                content,
-                settings,
-                theme
+        const response = await axios.post(`${apiBaseUrl}/api/calcpad/convert`,
+            {
+                Content: content,
+                Settings: settings,
+                Theme: theme,
+                ForceUnwrappedCode: false,
+                OutputFormat: "html"
             },
             { 
                 headers: { 'Content-Type': 'application/json' },
@@ -191,11 +194,42 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string)
 
         // Use the entire API response as the webview HTML
         const apiResponse = response.data;
-        
+
         outputChannel.appendLine('Setting webview HTML directly...');
         outputChannel.appendLine(`API response length: ${apiResponse.length} characters`);
-        
-        panel.webview.html = apiResponse;
+
+        // Inject JavaScript for error link navigation
+        const errorNavigationScript = `
+            <script>
+                // VS Code webview API
+                const vscode = acquireVsCodeApi();
+
+                // Handle error link clicks
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Find all error links with data-text attributes
+                    const errorLinks = document.querySelectorAll('span.err a[data-text]');
+
+                    errorLinks.forEach(link => {
+                        link.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            const lineNumber = this.getAttribute('data-text');
+                            if (lineNumber) {
+                                // Send message to VS Code to navigate to line
+                                vscode.postMessage({
+                                    type: 'navigateToLine',
+                                    line: parseInt(lineNumber, 10)
+                                });
+                            }
+                        });
+                    });
+                });
+            </script>
+        `;
+
+        // Inject the script before closing body tag
+        const htmlWithScript = apiResponse.replace('</body>', errorNavigationScript + '</body>');
+
+        panel.webview.html = htmlWithScript;
         
         outputChannel.appendLine('Webview HTML set directly from API response');
         
@@ -251,11 +285,13 @@ async function updatePreviewContentUnwrapped(panel: vscode.WebviewPanel, content
         
         outputChannel.appendLine('Making API call to convert-unwrapped...');
         const theme = getEffectivePreviewTheme();
-        const response = await axios.post(`${apiBaseUrl}/api/calcpad/convert-unwrapped`, 
-            { 
-                content,
-                settings,
-                theme
+        const response = await axios.post(`${apiBaseUrl}/api/calcpad/convert-unwrapped`,
+            {
+                Content: content,
+                Settings: settings,
+                Theme: theme,
+                ForceUnwrappedCode: true,
+                OutputFormat: "html"
             },
             { 
                 headers: { 'Content-Type': 'application/json' },
@@ -266,11 +302,42 @@ async function updatePreviewContentUnwrapped(panel: vscode.WebviewPanel, content
 
         // Use the entire API response as the webview HTML
         const apiResponse = response.data;
-        
+
         outputChannel.appendLine('Setting webview HTML directly...');
         outputChannel.appendLine(`API response length: ${apiResponse.length} characters`);
-        
-        panel.webview.html = apiResponse;
+
+        // Inject JavaScript for error link navigation
+        const errorNavigationScript = `
+            <script>
+                // VS Code webview API
+                const vscode = acquireVsCodeApi();
+
+                // Handle error link clicks
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Find all error links with data-text attributes
+                    const errorLinks = document.querySelectorAll('span.err a[data-text]');
+
+                    errorLinks.forEach(link => {
+                        link.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            const lineNumber = this.getAttribute('data-text');
+                            if (lineNumber) {
+                                // Send message to VS Code to navigate to line
+                                vscode.postMessage({
+                                    type: 'navigateToLine',
+                                    line: parseInt(lineNumber, 10)
+                                });
+                            }
+                        });
+                    });
+                });
+            </script>
+        `;
+
+        // Inject the script before closing body tag
+        const htmlWithScript = apiResponse.replace('</body>', errorNavigationScript + '</body>');
+
+        panel.webview.html = htmlWithScript;
         
         outputChannel.appendLine('Webview HTML set directly from API response');
         
@@ -482,6 +549,9 @@ async function createHtmlPreview(context: vscode.ExtensionContext) {
         return;
     }
 
+    // Store the source editor for navigation
+    previewSourceEditor = activeEditor;
+
     if (activePreviewPanel) {
         (activePreviewPanel as vscode.WebviewPanel).reveal(vscode.ViewColumn.Beside);
         await updatePreviewContent(activePreviewPanel as vscode.WebviewPanel, activeEditor.document.getText());
@@ -499,11 +569,33 @@ async function createHtmlPreview(context: vscode.ExtensionContext) {
 
     activePreviewPanel = panel;
     activePreviewType = 'regular';
-    
+
     panel.onDidDispose(() => {
         activePreviewPanel = undefined;
         activePreviewType = undefined;
+        previewSourceEditor = undefined;
     });
+
+    // Handle messages from webview
+    panel.webview.onDidReceiveMessage(
+        message => {
+            switch (message.type) {
+                case 'navigateToLine':
+                    const sourceEditor = previewSourceEditor;
+                    if (sourceEditor && message.line) {
+                        const line = Math.max(0, message.line - 1); // Convert to 0-based index
+                        const position = new vscode.Position(line, 0);
+                        const selection = new vscode.Selection(position, position);
+                        sourceEditor.selection = selection;
+                        sourceEditor.revealRange(selection, vscode.TextEditorRevealType.InCenter);
+                        vscode.window.showTextDocument(sourceEditor.document, vscode.ViewColumn.One);
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+    );
 
     await updatePreviewContent(panel, activeEditor.document.getText());
 }
@@ -514,6 +606,9 @@ async function createHtmlPreviewUnwrapped(context: vscode.ExtensionContext) {
         vscode.window.showErrorMessage('No active editor found');
         return;
     }
+
+    // Store the source editor for navigation
+    previewSourceEditor = activeEditor;
 
     const panel = vscode.window.createWebviewPanel(
         'htmlPreviewUnwrapped',
@@ -527,11 +622,33 @@ async function createHtmlPreviewUnwrapped(context: vscode.ExtensionContext) {
     // Update global references for unwrapped preview
     activePreviewPanel = panel;
     activePreviewType = 'unwrapped';
-    
+
     panel.onDidDispose(() => {
         activePreviewPanel = undefined;
         activePreviewType = undefined;
+        previewSourceEditor = undefined;
     });
+
+    // Handle messages from webview
+    panel.webview.onDidReceiveMessage(
+        message => {
+            switch (message.type) {
+                case 'navigateToLine':
+                    const sourceEditor = previewSourceEditor;
+                    if (sourceEditor && message.line) {
+                        const line = Math.max(0, message.line - 1); // Convert to 0-based index
+                        const position = new vscode.Position(line, 0);
+                        const selection = new vscode.Selection(position, position);
+                        sourceEditor.selection = selection;
+                        sourceEditor.revealRange(selection, vscode.TextEditorRevealType.InCenter);
+                        vscode.window.showTextDocument(sourceEditor.document, vscode.ViewColumn.One);
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+    );
 
     await updatePreviewContentUnwrapped(panel, activeEditor.document.getText());
 }

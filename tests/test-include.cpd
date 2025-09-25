@@ -1,0 +1,24 @@
+"API Routing Test - New Syntax
+'<hr/>
+'This example demonstrates the new API routing syntax
+'Uses the configured S3 service at http://localhost:5000
+'
+'Local setup:
+base_value = 50
+scale_factor = 1.5
+
+'Test API routing with #include (processed by MacroParser):
+#include <s3:download>shared-constants.cpd
+
+'Test API routing with #read (processed by ExpressionParser):
+#read data_matrix from <s3:download>sample-data.csv@R1C1:R5C3 TYPE=R SEP=','
+
+'Display the loaded data:
+'Matrix dimensions and sample values:
+rows = length(data_matrix)
+cols = length(data_matrix[1])
+first_value = data_matrix[1,1]
+last_value = data_matrix[rows,cols]
+
+'Continue with calculations using loaded data:
+result = base_value * scale_factor + first_value

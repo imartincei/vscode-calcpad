@@ -1,0 +1,61 @@
+"API Routing Test - Complete Example
+'<hr/>
+'This file demonstrates both #include and #read directives using API routing syntax
+'Make sure to configure S3 authentication in the client before running this test
+
+'Local setup variables:
+base_multiplier = 2.5
+safety_factor = 1.2
+
+'Load shared constants using #include with API routing:
+#include <s3:download>shared-constants.cpd
+
+'Now we can use the constants loaded from the shared file:
+'Calculate some basic engineering values using loaded constants
+steel_weight_per_volume = steel_density * gravity
+aluminum_weight_per_volume = aluminum_density * gravity
+concrete_weight_per_volume = concrete_density * gravity
+
+'Load experimental data using #read with API routing:
+#read experiment_data from <s3:download>sample-data.csv@R2C1:R6C5 TYPE=R SEP=','
+
+'Process the loaded data:
+'Get data dimensions
+data_rows = length(experiment_data)
+data_cols = length(experiment_data[1])
+
+'Extract specific columns (assuming Temperature, Pressure, Velocity, Force, Energy)
+avg_temperature = sum(experiment_data[,1]) / data_rows
+avg_pressure = sum(experiment_data[,2]) / data_rows
+avg_velocity = sum(experiment_data[,3]) / data_rows
+avg_force = sum(experiment_data[,4]) / data_rows
+avg_energy = sum(experiment_data[,5]) / data_rows
+
+'Engineering calculations combining loaded constants and data:
+'Calculate average kinetic energy and compare with data
+'Assuming mass of 10 kg for demonstration
+test_mass = 10'kg
+calculated_kinetic_energy = 0.5 * test_mass * avg_velocity^2
+
+'Convert pressure units using loaded conversion factors
+avg_pressure_psi = avg_pressure / psi_to_pascal
+
+'Calculate material properties using loaded densities
+steel_volume_for_avg_force = avg_force / steel_weight_per_volume
+aluminum_volume_for_avg_force = avg_force / aluminum_weight_per_volume
+
+'Apply safety factors
+design_force = avg_force * safety_factor * base_multiplier
+design_energy = avg_energy * safety_factor
+
+'Summary of results:
+'Data Statistics:
+result_summary = "API Routing Test Results"
+data_points_processed = data_rows
+average_values_calculated = 5
+
+'Engineering Results (using loaded constants):
+recommended_steel_volume = steel_volume_for_avg_force
+recommended_aluminum_volume = aluminum_volume_for_avg_force
+design_load_capacity = design_force
+design_energy_requirement = design_energy
