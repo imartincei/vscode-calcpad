@@ -24,6 +24,9 @@ export interface Settings {
     isComplex: boolean
     substitute: boolean
     formatEquations: boolean
+    zeroSmallMatrixElements: boolean
+    maxOutputCount: number
+    formatString: string
   }
   plot: {
     isAdaptive: boolean
@@ -40,10 +43,6 @@ export interface Settings {
     url: string
   }
   units: string
-  output: {
-    format: string
-    silent: boolean
-  }
 }
 
 export interface VariableItem {

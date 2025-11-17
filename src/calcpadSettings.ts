@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import * as settingsSchema from './calcpad-settings-schema.json';
 
 let _outputChannel: vscode.OutputChannel | undefined;
 
@@ -36,10 +35,6 @@ export interface CalcpadSettings {
         url: string;
     };
     units: string;
-    output: {
-        format: string;
-        silent: boolean;
-    };
 }
 
 export class CalcpadSettingsManager {
@@ -93,11 +88,7 @@ export class CalcpadSettingsManager {
             server: {
                 url: "http://localhost:9420"
             },
-            units: "m",
-            output: {
-                format: "html",
-                silent: true
-            }
+            units: "m"
         };
     }
 
@@ -150,36 +141,6 @@ export class CalcpadSettingsManager {
         return jwt;
     }
 
-    private static getColorScaleEnumValue(colorScale: string): number {
-        const colorScaleMap: Record<string, number> = {
-            "None": 0,
-            "Gray": 1,
-            "Rainbow": 2,
-            "Terrain": 3,
-            "VioletToYellow": 4,
-            "GreenToYellow": 5,
-            "Blues": 6,
-            "BlueToYellow": 7,
-            "BlueToRed": 8,
-            "PurpleToYellow": 9
-        };
-        return colorScaleMap[colorScale] !== undefined ? colorScaleMap[colorScale] : 2; // Default to Rainbow
-    }
-
-    private static getLightDirectionEnumValue(lightDirection: string): number {
-        const lightDirectionMap: Record<string, number> = {
-            "North": 0,
-            "NorthEast": 1,
-            "East": 2,
-            "SouthEast": 3,
-            "South": 4,
-            "SouthWest": 5,
-            "West": 6,
-            "NorthWest": 7
-        };
-        return lightDirectionMap[lightDirection] !== undefined ? lightDirectionMap[lightDirection] : 7; // Default to NorthWest
-    }
-
     public async getApiSettings(): Promise<unknown> {
         const storedS3JWT = await this.getStoredS3JWT();
 
@@ -193,33 +154,33 @@ export class CalcpadSettingsManager {
         }
 
         const apiSettings = {
-            Math: {
-                Decimals: this._settings.math.decimals,
-                Degrees: this._settings.math.degrees,
-                IsComplex: this._settings.math.isComplex,
-                Substitute: this._settings.math.substitute,
-                FormatEquations: this._settings.math.formatEquations,
-                ZeroSmallMatrixElements: this._settings.math.zeroSmallMatrixElements,
-                MaxOutputCount: this._settings.math.maxOutputCount,
-                FormatString: this._settings.math.formatString
+            math: {
+                decimals: this._settings.math.decimals,
+                degrees: this._settings.math.degrees,
+                isComplex: this._settings.math.isComplex,
+                substitute: this._settings.math.substitute,
+                formatEquations: this._settings.math.formatEquations,
+                zeroSmallMatrixElements: this._settings.math.zeroSmallMatrixElements,
+                maxOutputCount: this._settings.math.maxOutputCount,
+                formatString: this._settings.math.formatString
             },
-            Plot: {
-                IsAdaptive: this._settings.plot.isAdaptive,
-                ScreenScaleFactor: this._settings.plot.screenScaleFactor,
-                ImagePath: this._settings.plot.imagePath,
-                ImageUri: this._settings.plot.imageUri,
-                VectorGraphics: this._settings.plot.vectorGraphics,
-                ColorScale: CalcpadSettingsManager.getColorScaleEnumValue(this._settings.plot.colorScale),
-                SmoothScale: this._settings.plot.smoothScale,
-                Shadows: this._settings.plot.shadows,
-                LightDirection: CalcpadSettingsManager.getLightDirectionEnumValue(this._settings.plot.lightDirection)
+            plot: {
+                isAdaptive: this._settings.plot.isAdaptive,
+                screenScaleFactor: this._settings.plot.screenScaleFactor,
+                imagePath: this._settings.plot.imagePath,
+                imageUri: this._settings.plot.imageUri,
+                vectorGraphics: this._settings.plot.vectorGraphics,
+                colorScale: this._settings.plot.colorScale,
+                smoothScale: this._settings.plot.smoothScale,
+                shadows: this._settings.plot.shadows,
+                lightDirection: this._settings.plot.lightDirection
             },
-            Auth: {
-                Url: s3ApiUrl,
-                JWT: storedS3JWT,
-                RoutingConfig: routingConfig || null
+            auth: {
+                url: s3ApiUrl,
+                jwt: storedS3JWT,
+                routingConfig: routingConfig || null
             },
-            Units: this._settings.units
+            units: this._settings.units
         };
 
         // Debug logging
@@ -228,8 +189,8 @@ export class CalcpadSettingsManager {
         outputChannel.appendLine(`  S3 Storage URL: ${s3ApiUrl}`);
         outputChannel.appendLine(`  S3 JWT: ${storedS3JWT ? `${storedS3JWT.substring(0, 20)}...` : 'EMPTY'}`);
         outputChannel.appendLine(`  S3 JWT Length: ${storedS3JWT ? storedS3JWT.length : 0}`);
-        outputChannel.appendLine(`  ColorScale: "${this._settings.plot.colorScale}" -> ${CalcpadSettingsManager.getColorScaleEnumValue(this._settings.plot.colorScale)}`);
-        outputChannel.appendLine(`  LightDirection: "${this._settings.plot.lightDirection}" -> ${CalcpadSettingsManager.getLightDirectionEnumValue(this._settings.plot.lightDirection)}`);
+        outputChannel.appendLine(`  ColorScale: "${this._settings.plot.colorScale}"`);
+        outputChannel.appendLine(`  LightDirection: "${this._settings.plot.lightDirection}"`);
 
         return apiSettings;
     }

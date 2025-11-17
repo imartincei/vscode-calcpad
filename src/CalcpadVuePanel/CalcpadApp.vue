@@ -1,9 +1,11 @@
 <template>
   <div class="calcpad-vue-ui">
     <div class="tab-container">
+      <!-- TODO: Remove v-show condition after PDF and Files features are fully developed -->
       <button
         v-for="tab in tabs"
         :key="tab.id"
+        v-show="tab.id !== 'pdf' && tab.id !== 'files'"
         :class="['tab', { active: activeTab === tab.id }]"
         @click="switchTab(tab.id)"
       >

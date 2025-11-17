@@ -176,31 +176,6 @@
         </select>
       </div>
 
-      <h3>Output Settings</h3>
-      <div class="setting-group">
-        <label for="outputFormat">Output Format:</label>
-        <select
-          id="outputFormat"
-          v-model="localSettings.output.format"
-          @change="updateSettings"
-        >
-          <option value="html">HTML</option>
-          <option value="text">Text</option>
-          <option value="latex">LaTeX</option>
-        </select>
-      </div>
-
-      <div class="setting-group">
-        <label>
-          <input
-            v-model="localSettings.output.silent"
-            type="checkbox"
-            @change="updateSettings"
-          />
-          Silent Output
-        </label>
-      </div>
-
       <h3>Preview Theme</h3>
       <div class="setting-group">
         <label for="previewTheme">Theme:</label>
@@ -239,27 +214,26 @@ const props = withDefaults(defineProps<Props>(), {
       degrees: 0,
       isComplex: false,
       substitute: true,
-      formatEquations: true
+      formatEquations: true,
+      zeroSmallMatrixElements: true,
+      maxOutputCount: 20,
+      formatString: ''
     },
     plot: {
       isAdaptive: true,
-      screenScaleFactor: 1.0,
+      screenScaleFactor: 2.0,
       imagePath: '',
       imageUri: '',
       vectorGraphics: false,
-      colorScale: 'rainbow',
-      smoothScale: true,
+      colorScale: 'Rainbow',
+      smoothScale: false,
       shadows: true,
-      lightDirection: '1,1,1'
+      lightDirection: 'NorthWest'
     },
     server: {
-      url: 'http://localhost:5000'
+      url: 'http://localhost:9420'
     },
-    units: 'SI',
-    output: {
-      format: 'html',
-      silent: false
-    }
+    units: 'm'
   }),
   initialPreviewTheme: 'system'
 })

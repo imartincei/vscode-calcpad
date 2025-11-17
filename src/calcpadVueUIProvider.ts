@@ -174,7 +174,7 @@ export class CalcpadVueUIProvider implements vscode.WebviewViewProvider {
                     break;
 
                 case 'generatePdf':
-                    vscode.commands.executeCommand('calcpad.printToPdf');
+                    vscode.commands.executeCommand('vscode-calcpad.printToPdf');
                     break;
 
                 case 'getInsertData':

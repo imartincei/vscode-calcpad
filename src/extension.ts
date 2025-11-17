@@ -179,13 +179,12 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string)
         const theme = getEffectivePreviewTheme();
         const response = await axios.post(`${apiBaseUrl}/api/calcpad/convert`,
             {
-                Content: content,
-                Settings: settings,
-                Theme: theme,
-                ForceUnwrappedCode: false,
-                OutputFormat: "html"
+                content: content,
+                settings: settings,
+                theme: theme,
+                forceUnwrappedCode: false
             },
-            { 
+            {
                 headers: { 'Content-Type': 'application/json' },
                 timeout: 10000
             }
@@ -235,6 +234,10 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string)
         
     } catch (error) {
         outputChannel.appendLine(`ERROR in updatePreviewContent: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        if (axios.isAxiosError(error) && error.response) {
+            outputChannel.appendLine(`Response status: ${error.response.status}`);
+            outputChannel.appendLine(`Response data: ${JSON.stringify(error.response.data)}`);
+        }
         const settingsManager = CalcpadSettingsManager.getInstance(extensionContext);
         const calcpadSettings = settingsManager.getSettings();
         const errorApiBaseUrl = calcpadSettings.server.url;
@@ -287,13 +290,12 @@ async function updatePreviewContentUnwrapped(panel: vscode.WebviewPanel, content
         const theme = getEffectivePreviewTheme();
         const response = await axios.post(`${apiBaseUrl}/api/calcpad/convert-unwrapped`,
             {
-                Content: content,
-                Settings: settings,
-                Theme: theme,
-                ForceUnwrappedCode: true,
-                OutputFormat: "html"
+                content: content,
+                settings: settings,
+                theme: theme,
+                forceUnwrappedCode: true
             },
-            { 
+            {
                 headers: { 'Content-Type': 'application/json' },
                 timeout: 10000
             }
@@ -343,6 +345,10 @@ async function updatePreviewContentUnwrapped(panel: vscode.WebviewPanel, content
         
     } catch (error) {
         outputChannel.appendLine(`ERROR in updatePreviewContentUnwrapped: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        if (axios.isAxiosError(error) && error.response) {
+            outputChannel.appendLine(`Response status: ${error.response.status}`);
+            outputChannel.appendLine(`Response data: ${JSON.stringify(error.response.data)}`);
+        }
         const settingsManager = CalcpadSettingsManager.getInstance(extensionContext);
         const calcpadSettings = settingsManager.getSettings();
         const errorApiBaseUrl = calcpadSettings.server.url;
@@ -379,26 +385,22 @@ async function generatePdf(panel: vscode.WebviewPanel, content: string) {
     try {
         const settingsManager = CalcpadSettingsManager.getInstance(extensionContext);
         const settings = await settingsManager.getApiSettings();
-        
-        // Override the output format to PDF
-        const baseSettings = settings as Record<string, unknown>;
-        const outputSettings = (baseSettings.output as Record<string, unknown>) || {};
-        
+
+        // Add hardcoded output format for PDF
         const pdfSettings = {
-            ...baseSettings,
+            ...(settings as Record<string, unknown>),
             output: {
-                ...outputSettings,
                 format: 'pdf',
-                silent: false // Don't use silent mode for PDF generation
+                silent: false
             }
         };
-        
-        const response = await axios.post(`${apiBaseUrl}/api/calcpad/convert`, 
-            { 
+
+        const response = await axios.post(`${apiBaseUrl}/api/calcpad/convert`,
+            {
                 content,
                 settings: pdfSettings
             },
-            { 
+            {
                 headers: { 'Content-Type': 'application/json' },
                 responseType: 'arraybuffer' // Important for binary PDF data
             }
@@ -464,9 +466,7 @@ async function printToPdf() {
             const homeDir = os.homedir();
             defaultPath = path.join(homeDir, 'calcpad-preview.pdf');
         }
-        
-        outputChannel.appendLine(`Default save path: ${defaultPath}`);
-        
+
         // Show save dialog
         const saveUri = await vscode.window.showSaveDialog({
             defaultUri: vscode.Uri.file(defaultPath),
@@ -479,63 +479,83 @@ async function printToPdf() {
             return;
         }
 
-        // Show progress notification
-        await vscode.window.withProgress({
-            location: vscode.ProgressLocation.Notification,
-            title: "Generating PDF...",
-            cancellable: false
-        }, async (progress) => {
-            progress.report({ increment: 0, message: "Starting PDF generation..." });
+        try {
+            // Show progress notification
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: "Generating PDF...",
+                cancellable: false
+            }, async (progress) => {
+                progress.report({ increment: 0, message: "Starting PDF generation..." });
 
-            const settingsManager = CalcpadSettingsManager.getInstance(extensionContext);
+                const settingsManager = CalcpadSettingsManager.getInstance(extensionContext);
                 const calcpadSettings = settingsManager.getSettings();
-            const apiBaseUrl = calcpadSettings.server.url;
-            if (!apiBaseUrl) {
-                throw new Error('Server URL not configured');
-            }
-            const settings = await settingsManager.getApiSettings();
-            const documentContent = activeEditor.document.getText();
-            
-            if (!documentContent || documentContent.trim().length === 0) {
-                throw new Error('Document is empty. Please add some CalcPad content first.');
-            }
-
-            progress.report({ increment: 20, message: "Calling PDF generation API..." });
-
-            // Call the server's PDF generation API
-            const response = await axios.post(`${apiBaseUrl}/api/calcpad/convert-pdf`, 
-                { 
-                    content: documentContent,
-                    settings,
-                    pdfSettings: pdfSettings
-                },
-                { 
-                    headers: { 'Content-Type': 'application/json' },
-                    responseType: 'arraybuffer', // Important for binary PDF data
-                    timeout: 60000 // PDF generation can take longer
+                const apiBaseUrl = calcpadSettings.server.url;
+                if (!apiBaseUrl) {
+                    throw new Error('Server URL not configured');
                 }
-            );
-            
-            progress.report({ increment: 80, message: "Saving PDF file..." });
-            
-            // Write the PDF file
-            await vscode.workspace.fs.writeFile(saveUri, new Uint8Array(response.data));
-            
-            progress.report({ increment: 100, message: "PDF generation complete!" });
-        });
+                const settings = await settingsManager.getApiSettings();
+                const documentContent = activeEditor.document.getText();
 
-        // Show success message with option to open
-        const openChoice = await vscode.window.showInformationMessage(
-            `PDF saved to ${saveUri.fsPath}`,
-            'Open PDF'
-        );
-        
-        if (openChoice === 'Open PDF') {
-            vscode.env.openExternal(saveUri);
+                if (!documentContent || documentContent.trim().length === 0) {
+                    throw new Error('Document is empty. Please add some CalcPad content first.');
+                }
+
+                progress.report({ increment: 20, message: "Calling PDF generation API..." });
+
+                // Add hardcoded output format for PDF and merge with PDF-specific settings
+                const settingsWithPdf = {
+                    ...(settings as Record<string, unknown>),
+                    output: {
+                        format: 'pdf',
+                        silent: false
+                    }
+                };
+
+                // Call the server's PDF generation API
+                const response = await axios.post(`${apiBaseUrl}/api/calcpad/convert`,
+                    {
+                        content: documentContent,
+                        settings: settingsWithPdf,
+                        pdfSettings: pdfSettings
+                    },
+                    {
+                        headers: { 'Content-Type': 'application/json' },
+                        responseType: 'arraybuffer', // Important for binary PDF data
+                        timeout: 60000 // PDF generation can take longer
+                    }
+                );
+
+                progress.report({ increment: 80, message: "Saving PDF file..." });
+
+                // Write the PDF file
+                await vscode.workspace.fs.writeFile(saveUri, new Uint8Array(response.data));
+
+                progress.report({ increment: 100, message: "PDF generation complete!" });
+            });
+
+            // Show success message with option to open
+            const openChoice = await vscode.window.showInformationMessage(
+                `PDF saved to ${saveUri.fsPath}`,
+                'Open PDF'
+            );
+
+            if (openChoice === 'Open PDF') {
+                vscode.env.openExternal(saveUri);
+            }
+        } catch (error) {
+            outputChannel.appendLine(`ERROR in printToPdf: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            if (axios.isAxiosError(error) && error.response) {
+                outputChannel.appendLine(`Response status: ${error.response.status}`);
+                outputChannel.appendLine(`Response data: ${JSON.stringify(error.response.data)}`);
+            }
+            vscode.window.showErrorMessage(
+                `Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`
+            );
         }
-        
+
     } catch (error) {
-        outputChannel.appendLine(`ERROR in printToPdf: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        outputChannel.appendLine(`ERROR in printToPdf (outer): ${error instanceof Error ? error.message : 'Unknown error'}`);
         vscode.window.showErrorMessage(
             `Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`
         );
