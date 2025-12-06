@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { CalcpadSettingsManager } from './calcpadSettings';
+import { VariableDefinition, FunctionDefinition } from './types/calcpad';
 
 // Interface for macro definition
 export interface MacroDefinition {
@@ -9,7 +10,7 @@ export interface MacroDefinition {
     params: string[];
     content: string[];
     lineNumber: number;
-    source: 'local' | 'include' | 'fetch';
+    source: 'local' | 'include';
     sourceFile?: string;
 }
 
@@ -20,10 +21,10 @@ export interface ResolvedContent {
     macroExpansionLines: Map<number, string>;
     lineContinuationMap: Map<number, number[]>;
     userDefinedFunctions: Map<string, number>;
-    functionsWithParams: Array<{name: string, params: string[]}>;
+    functionsWithParams: Array<{name: string, params: string[]}> | FunctionDefinition[];
     userDefinedMacros: Map<string, {lineNumber: number, paramCount: number}>;
     definedVariables: Set<string>;
-    variablesWithDefinitions: Array<{name: string, definition: string}>;
+    variablesWithDefinitions: Array<{name: string, definition: string}> | VariableDefinition[];
     allMacros: MacroDefinition[];
     duplicateMacros: Array<{name: string, duplicateLineNumber: number, originalLineNumber: number}>;
 }
@@ -121,17 +122,27 @@ export class CalcpadContentResolver {
             // Simple case: no includes, fetch, or complex macros
             const sourceMap = new Map<number, number>();
             processedLines.forEach((_, index) => sourceMap.set(index, index));
-            
+
+            // Create lineSourceMap for simple case (all lines are local)
+            const lineSourceMap = new Map<number, {source: 'local' | 'include', sourceFile?: string}>();
+            for (let i = 0; i < processedLines.length; i++) {
+                lineSourceMap.set(i, {source: 'local'});
+            }
+
+            // Collect with source tracking (single pass for both simple and rich data)
+            const variablesWithSourceInfo = this.collectDefinedVariablesWithValues(processedLines, lineSourceMap) as VariableDefinition[];
+            const functionsWithDefinitions = this.collectUserDefinedFunctionsWithParams(processedLines, lineSourceMap) as FunctionDefinition[];
+
             return {
                 expandedLines: processedLines,
                 sourceMap,
                 macroExpansionLines: new Map(),
                 lineContinuationMap,
                 userDefinedFunctions: this.collectUserDefinedFunctions(processedLines),
-                functionsWithParams: this.collectUserDefinedFunctionsWithParams(processedLines),
+                functionsWithParams: functionsWithDefinitions.map(f => ({name: f.name, params: f.params})),
                 userDefinedMacros: this.collectUserDefinedMacros(processedLines),
                 definedVariables: this.collectDefinedVariables(processedLines),
-                variablesWithDefinitions: this.collectDefinedVariablesWithValues(processedLines),
+                variablesWithDefinitions: variablesWithSourceInfo.map(v => ({name: v.name, definition: v.definition})),
                 allMacros: this.collectAllMacroDefinitions(processedLines, 'local'),
                 duplicateMacros: [] // No duplicates in simple case
             };
@@ -210,6 +221,7 @@ export class CalcpadContentResolver {
         const expandedLines: string[] = [];
         const sourceMap = new Map<number, number>();
         const macroExpansionLines = new Map<number, string>();
+        const lineSourceMap = new Map<number, {source: 'local' | 'include', sourceFile?: string}>();
         const macros = new Map<string, { params: string[], content: string[] }>();
         const allMacros: MacroDefinition[] = [];
         const duplicateMacros: Array<{name: string, duplicateLineNumber: number, originalLineNumber: number}> = [];
@@ -271,38 +283,48 @@ export class CalcpadContentResolver {
             if (line.startsWith('#include ')) {
                 this.outputChannel.appendLine(`[DEBUG] Processing include: ${line}`);
                 const includedLines = this.resolveInclude(line);
+                const includeFile = line.replace('#include ', '').trim().replace(/['"]/g, '');
                 this.outputChannel.appendLine(`[DEBUG] Include resolved to ${includedLines.length} lines`);
-                
+
                 // Check for duplicate macros in included content
                 this.checkDuplicateMacros(includedLines, macroFirstDefinitions, duplicateMacros, expandedLines.length);
-                
+
                 // Collect macros from included content
-                const includedMacros = this.collectAllMacroDefinitions(includedLines, 'include', line.replace('#include ', '').trim());
+                const includedMacros = this.collectAllMacroDefinitions(includedLines, 'include', includeFile);
                 allMacros.push(...includedMacros);
-                
+
                 for (const includedLine of includedLines) {
                     expandedLines.push(includedLine);
                     sourceMap.set(expandedLines.length - 1, originalLineNumber);
+                    lineSourceMap.set(expandedLines.length - 1, {
+                        source: 'include',
+                        sourceFile: includeFile
+                    });
                 }
                 continue;
             }
 
-            // Handle fetch operations
+            // Handle fetch operations (obsolete but keep for compatibility)
             if (line.startsWith('#fetch ')) {
                 this.outputChannel.appendLine(`[DEBUG] Processing fetch: ${line}`);
                 const fetchedLines = this.resolveFetch(line);
+                const fetchFile = line.replace('#fetch ', '').trim().replace(/['"]/g, '');
                 this.outputChannel.appendLine(`[DEBUG] Fetch resolved to ${fetchedLines.length} lines`);
-                
+
                 // Check for duplicate macros in fetched content
                 this.checkDuplicateMacros(fetchedLines, macroFirstDefinitions, duplicateMacros, expandedLines.length);
-                
-                // Collect macros from fetched content
-                const fetchedMacros = this.collectAllMacroDefinitions(fetchedLines, 'fetch', line.replace('#fetch ', '').trim());
+
+                // Collect macros from fetched content (treat as include for source tracking)
+                const fetchedMacros = this.collectAllMacroDefinitions(fetchedLines, 'include', fetchFile);
                 allMacros.push(...fetchedMacros);
-                
+
                 for (const fetchedLine of fetchedLines) {
                     expandedLines.push(fetchedLine);
                     sourceMap.set(expandedLines.length - 1, originalLineNumber);
+                    lineSourceMap.set(expandedLines.length - 1, {
+                        source: 'include',
+                        sourceFile: fetchFile
+                    });
                 }
                 continue;
             }
@@ -316,13 +338,14 @@ export class CalcpadContentResolver {
             }
             let expandedLine = this.expandMacros(lines[i], macros);
             const isFromMacroExpansion = expandedLine !== lines[i];
-            
+
             // Handle multiline expansions
             if (expandedLine.includes('\n')) {
                 const expandedSubLines = expandedLine.split('\n');
                 for (const subLine of expandedSubLines) {
                     expandedLines.push(subLine);
                     sourceMap.set(expandedLines.length - 1, originalLineNumber);
+                    lineSourceMap.set(expandedLines.length - 1, {source: 'local'});
                     // Mark lines that came from macro expansions
                     if (isFromMacroExpansion) {
                         macroExpansionLines.set(expandedLines.length - 1, lines[i]);
@@ -331,6 +354,7 @@ export class CalcpadContentResolver {
             } else {
                 expandedLines.push(expandedLine);
                 sourceMap.set(expandedLines.length - 1, originalLineNumber);
+                lineSourceMap.set(expandedLines.length - 1, {source: 'local'});
                 // Mark lines that came from macro expansions
                 if (isFromMacroExpansion) {
                     macroExpansionLines.set(expandedLines.length - 1, lines[i]);
@@ -349,23 +373,27 @@ export class CalcpadContentResolver {
         const userDefinedMacros = this.collectUserDefinedMacros(expandedLines);
         const definedVariables = this.collectDefinedVariables(expandedLines);
 
+        // Collect with source tracking (single pass for both simple and rich data)
+        const variablesWithSourceInfo = this.collectDefinedVariablesWithValues(expandedLines, lineSourceMap) as VariableDefinition[];
+        const functionsWithDefinitions = this.collectUserDefinedFunctionsWithParams(expandedLines, lineSourceMap) as FunctionDefinition[];
+
         return {
             expandedLines,
             sourceMap,
             macroExpansionLines,
             lineContinuationMap,
             userDefinedFunctions,
-            functionsWithParams: this.collectUserDefinedFunctionsWithParams(expandedLines),
+            functionsWithParams: functionsWithDefinitions.map(f => ({name: f.name, params: f.params})),
             userDefinedMacros,
             definedVariables,
-            variablesWithDefinitions: this.collectDefinedVariablesWithValues(expandedLines),
+            variablesWithDefinitions: variablesWithSourceInfo.map(v => ({name: v.name, definition: v.definition})),
             allMacros,
             duplicateMacros
         };
     }
 
     // Collect all macro definitions with source information
-    private collectAllMacroDefinitions(lines: string[], source: 'local' | 'include' | 'fetch', sourceFile?: string): MacroDefinition[] {
+    private collectAllMacroDefinitions(lines: string[], source: 'local' | 'include', sourceFile?: string): MacroDefinition[] {
         const macros: MacroDefinition[] = [];
         
         for (let i = 0; i < lines.length; i++) {
@@ -543,14 +571,18 @@ export class CalcpadContentResolver {
         return userFunctions;
     }
 
-    private collectUserDefinedFunctionsWithParams(lines: string[]): Array<{name: string, params: string[]}> {
-        const userFunctions: Array<{name: string, params: string[]}> = [];
-        
-        for (const line of lines) {
+    private collectUserDefinedFunctionsWithParams(
+        lines: string[],
+        lineSourceMap?: Map<number, {source: 'local' | 'include', sourceFile?: string}>
+    ): Array<{name: string, params: string[]}> | FunctionDefinition[] {
+        const userFunctions: unknown[] = [];
+
+        for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+            const line = lines[lineIndex];
             if (line.trim() === '' || line.trim().startsWith("'") || line.trim().startsWith('"')) {
                 continue;
             }
-            
+
             // Check for function definitions: functionName(params) = expression
             const functionPattern = /^([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(\s*([^)]*)\s*\)\s*=\s*(.+)/;
             const match = functionPattern.exec(line.trim());
@@ -558,11 +590,25 @@ export class CalcpadContentResolver {
                 const funcName = match[1];
                 const paramsStr = match[2];
                 const params = paramsStr.trim() === '' ? [] : paramsStr.split(';').map(p => p.trim());
-                userFunctions.push({name: funcName, params: params});
+
+                if (lineSourceMap) {
+                    // Return with source info
+                    const sourceInfo = lineSourceMap.get(lineIndex) || {source: 'local' as const};
+                    userFunctions.push({
+                        name: funcName,
+                        params: params,
+                        lineNumber: lineIndex,
+                        source: sourceInfo.source,
+                        sourceFile: sourceInfo.sourceFile
+                    });
+                } else {
+                    // Return simple object (backward compatible)
+                    userFunctions.push({name: funcName, params: params});
+                }
             }
         }
-        
-        return userFunctions;
+
+        return userFunctions as Array<{name: string, params: string[]}> | FunctionDefinition[];
     }
 
     private collectUserDefinedMacros(lines: string[]): Map<string, {lineNumber: number, paramCount: number}> {
@@ -616,14 +662,18 @@ export class CalcpadContentResolver {
         return variables;
     }
 
-    private collectDefinedVariablesWithValues(lines: string[]): Array<{name: string, definition: string}> {
-        const variables: Array<{name: string, definition: string}> = [];
-        
-        for (const line of lines) {
+    private collectDefinedVariablesWithValues(
+        lines: string[],
+        lineSourceMap?: Map<number, {source: 'local' | 'include', sourceFile?: string}>
+    ): Array<{name: string, definition: string}> | VariableDefinition[] {
+        const variables: unknown[] = [];
+
+        for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+            const line = lines[lineIndex];
             if (line.trim() === '' || line.trim().startsWith("'") || line.trim().startsWith('"') || line.trim().startsWith('#')) {
                 continue;
             }
-            
+
             // Check for variable assignments: variableName = expression
             const variablePattern = /^([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*(.+)/;
             const match = variablePattern.exec(line.trim());
@@ -632,12 +682,25 @@ export class CalcpadContentResolver {
                 const definition = match[2].replace(/\s*'.*$/, '').trim(); // Remove comments
                 // Skip if it's a function definition (has parentheses)
                 if (!line.includes('(') || line.indexOf('(') > line.indexOf('=')) {
-                    variables.push({name: varName, definition: definition});
+                    if (lineSourceMap) {
+                        // Return with source info
+                        const sourceInfo = lineSourceMap.get(lineIndex) || {source: 'local' as const};
+                        variables.push({
+                            name: varName,
+                            definition: definition,
+                            lineNumber: lineIndex,
+                            source: sourceInfo.source,
+                            sourceFile: sourceInfo.sourceFile
+                        });
+                    } else {
+                        // Return simple object (backward compatible)
+                        variables.push({name: varName, definition: definition});
+                    }
                 }
             }
         }
-        
-        return variables;
+
+        return variables as Array<{name: string, definition: string}> | VariableDefinition[];
     }
 
     // Helper function to check for duplicate macros in a set of lines

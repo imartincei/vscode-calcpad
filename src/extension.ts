@@ -749,10 +749,24 @@ export function activate(context: vscode.ExtensionContext) {
             //     variables: resolvedContent.variablesWithDefinitions,
             //     functions: resolvedContent.functionsWithParams
             // });
+            // Cast to rich types with source info for Vue UI
+            const variables = resolvedContent.variablesWithDefinitions as import('./types/calcpad').VariableDefinition[];
+            const functions = resolvedContent.functionsWithParams as import('./types/calcpad').FunctionDefinition[];
+
             vueUiProvider.updateVariables({
                 macros: resolvedContent.allMacros,
-                variables: resolvedContent.variablesWithDefinitions,
-                functions: resolvedContent.functionsWithParams
+                variables: variables.map(v => ({
+                    name: v.name,
+                    definition: v.definition,
+                    source: v.source,
+                    sourceFile: v.sourceFile
+                })),
+                functions: functions.map(f => ({
+                    name: f.name,
+                    params: f.params.join('; '),
+                    source: f.source,
+                    sourceFile: f.sourceFile
+                }))
             });
         } catch (error) {
             outputChannel.appendLine(`Error extracting macros: ${error}`);

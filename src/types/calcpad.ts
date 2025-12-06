@@ -32,3 +32,21 @@ export enum InsertType {
   UNITS = 'units',
   TEMPLATES = 'templates'
 }
+
+// Variable definition with source tracking
+export interface VariableDefinition {
+  name: string;
+  definition: string;
+  lineNumber: number;
+  source: 'local' | 'include';
+  sourceFile?: string;
+}
+
+// Function definition with source tracking
+export interface FunctionDefinition {
+  name: string;
+  params: string[];
+  lineNumber: number;
+  source: 'local' | 'include';
+  sourceFile?: string;
+}
