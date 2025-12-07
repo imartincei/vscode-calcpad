@@ -141,6 +141,32 @@ export class CalcpadSettingsManager {
         return jwt;
     }
 
+    private colorScaleToEnum(colorScale: string): number {
+        const colorScaleMap: Record<string, number> = {
+            'Rainbow': 0,
+            'Grayscale': 1,
+            'Hot': 2,
+            'Cool': 3,
+            'Jet': 4,
+            'Parula': 5
+        };
+        return colorScaleMap[colorScale] ?? 0;
+    }
+
+    private lightDirectionToEnum(direction: string): number {
+        const directionMap: Record<string, number> = {
+            'NorthWest': 0,
+            'North': 1,
+            'NorthEast': 2,
+            'West': 3,
+            'East': 4,
+            'SouthWest': 5,
+            'South': 6,
+            'SouthEast': 7
+        };
+        return directionMap[direction] ?? 0;
+    }
+
     public async getApiSettings(): Promise<unknown> {
         const storedS3JWT = await this.getStoredS3JWT();
 
@@ -170,10 +196,10 @@ export class CalcpadSettingsManager {
                 imagePath: this._settings.plot.imagePath,
                 imageUri: this._settings.plot.imageUri,
                 vectorGraphics: this._settings.plot.vectorGraphics,
-                colorScale: this._settings.plot.colorScale,
+                colorScale: this.colorScaleToEnum(this._settings.plot.colorScale),
                 smoothScale: this._settings.plot.smoothScale,
                 shadows: this._settings.plot.shadows,
-                lightDirection: this._settings.plot.lightDirection
+                lightDirection: this.lightDirectionToEnum(this._settings.plot.lightDirection)
             },
             auth: {
                 url: s3ApiUrl,
@@ -189,8 +215,8 @@ export class CalcpadSettingsManager {
         outputChannel.appendLine(`  S3 Storage URL: ${s3ApiUrl}`);
         outputChannel.appendLine(`  S3 JWT: ${storedS3JWT ? `${storedS3JWT.substring(0, 20)}...` : 'EMPTY'}`);
         outputChannel.appendLine(`  S3 JWT Length: ${storedS3JWT ? storedS3JWT.length : 0}`);
-        outputChannel.appendLine(`  ColorScale: "${this._settings.plot.colorScale}"`);
-        outputChannel.appendLine(`  LightDirection: "${this._settings.plot.lightDirection}"`);
+        outputChannel.appendLine(`  ColorScale: "${this._settings.plot.colorScale}" -> ${apiSettings.plot.colorScale}`);
+        outputChannel.appendLine(`  LightDirection: "${this._settings.plot.lightDirection}" -> ${apiSettings.plot.lightDirection}`);
 
         return apiSettings;
     }

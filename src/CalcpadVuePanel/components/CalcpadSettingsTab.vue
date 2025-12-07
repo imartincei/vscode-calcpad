@@ -112,10 +112,12 @@
           v-model="localSettings.plot.colorScale"
           @change="updateSettings"
         >
-          <option value="rainbow">Rainbow</option>
-          <option value="grayscale">Grayscale</option>
-          <option value="hot">Hot</option>
-          <option value="cool">Cool</option>
+          <option value="Rainbow">Rainbow</option>
+          <option value="Grayscale">Grayscale</option>
+          <option value="Hot">Hot</option>
+          <option value="Cool">Cool</option>
+          <option value="Jet">Jet</option>
+          <option value="Parula">Parula</option>
         </select>
       </div>
 

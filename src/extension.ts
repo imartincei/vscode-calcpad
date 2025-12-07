@@ -16,6 +16,9 @@ let previewUpdateTimeout: NodeJS.Timeout | unknown = undefined;
 let previewSourceEditor: vscode.TextEditor | undefined = undefined;
 let linter: CalcpadLinter;
 let outputChannel: vscode.OutputChannel;
+let calcpadOutputHtmlChannel: vscode.OutputChannel;
+let calcpadWebviewHtmlChannel: vscode.OutputChannel;
+let calcpadWebviewConsoleChannel: vscode.OutputChannel;
 let extensionContext: vscode.ExtensionContext;
 
 interface PdfSettings {
@@ -101,7 +104,7 @@ function getPdfSettings(): PdfSettings {
 function getEffectivePreviewTheme(): 'light' | 'dark' {
     const config = vscode.workspace.getConfiguration('calcpad');
     const previewTheme = config.get<string>('previewTheme', 'system');
-    
+
     if (previewTheme === 'light') {
         return 'light';
     } else if (previewTheme === 'dark') {
@@ -109,7 +112,7 @@ function getEffectivePreviewTheme(): 'light' | 'dark' {
     } else {
         // System - follow VS Code theme
         const colorTheme = vscode.window.activeColorTheme;
-        return colorTheme.kind === vscode.ColorThemeKind.Dark || 
+        return colorTheme.kind === vscode.ColorThemeKind.Dark ||
                colorTheme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light';
     }
 }
@@ -153,7 +156,8 @@ function getPreviewHtml(): string {
 
 async function updatePreviewContent(panel: vscode.WebviewPanel, content: string) {
     outputChannel.appendLine('Starting updatePreviewContent...');
-    
+    outputChannel.appendLine(`Content length: ${content.length} characters`);
+
     // Update panel title with current file name
     const activeEditor = vscode.window.activeTextEditor;
     if (activeEditor) {
@@ -161,9 +165,31 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string)
         panel.title = `CalcPad Preview - ${fileName}`;
     }
 
+    // Check if content is empty
+    if (!content || content.trim().length === 0) {
+        outputChannel.appendLine('Content is empty - showing empty state');
+        panel.webview.html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>CalcPad Preview</title>
+            </head>
+            <body>
+                <div style="color: #858585; background: var(--vscode-editor-background); padding: 20px; text-align: center; font-family: var(--vscode-font-family);">
+                    <h3>Empty Document</h3>
+                    <p>Start typing CalcPad code to see the preview.</p>
+                </div>
+            </body>
+            </html>
+        `;
+        return;
+    }
+
     try {
         outputChannel.appendLine('Getting settings...');
         const settingsManager = CalcpadSettingsManager.getInstance(extensionContext);
+
         const settings = await settingsManager.getApiSettings();
         const calcpadSettings = settingsManager.getSettings();
         const apiBaseUrl = calcpadSettings.server.url;
@@ -194,26 +220,87 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string)
         // Use the entire API response as the webview HTML
         const apiResponse = response.data;
 
-        outputChannel.appendLine('Setting webview HTML directly...');
-        outputChannel.appendLine(`API response length: ${apiResponse.length} characters`);
+        // Log to dedicated HTML output channel
+        calcpadOutputHtmlChannel.clear();
+        calcpadOutputHtmlChannel.appendLine(apiResponse);
+        calcpadOutputHtmlChannel.show(true);
 
-        // Inject JavaScript for error link navigation
+        outputChannel.appendLine(`HTML Length: ${apiResponse.length} characters`);
+
+        // Inject JavaScript for error link navigation and console interception
         const errorNavigationScript = `
             <script>
-                // VS Code webview API
+                // Acquire VS Code API
                 const vscode = acquireVsCodeApi();
+
+                // Intercept console methods and send to VS Code
+                (function() {
+                    const originalConsole = {
+                        log: console.log,
+                        warn: console.warn,
+                        error: console.error,
+                        info: console.info,
+                        debug: console.debug
+                    };
+
+                    function sendConsoleMessage(level, args) {
+                        const message = Array.from(args).map(arg => {
+                            if (typeof arg === 'object') {
+                                try {
+                                    return JSON.stringify(arg, null, 2);
+                                } catch (e) {
+                                    return String(arg);
+                                }
+                            }
+                            return String(arg);
+                        }).join(' ');
+
+                        vscode.postMessage({
+                            type: 'consoleMessage',
+                            level: level,
+                            message: message
+                        });
+                    }
+
+                    console.log = function() {
+                        originalConsole.log.apply(console, arguments);
+                        sendConsoleMessage('log', arguments);
+                    };
+
+                    console.warn = function() {
+                        originalConsole.warn.apply(console, arguments);
+                        sendConsoleMessage('warn', arguments);
+                    };
+
+                    console.error = function() {
+                        originalConsole.error.apply(console, arguments);
+                        sendConsoleMessage('error', arguments);
+                    };
+
+                    console.info = function() {
+                        originalConsole.info.apply(console, arguments);
+                        sendConsoleMessage('info', arguments);
+                    };
+
+                    console.debug = function() {
+                        originalConsole.debug.apply(console, arguments);
+                        sendConsoleMessage('debug', arguments);
+                    };
+                })();
+
+                // Test console interception
+                console.log('CalcPad webview console interception initialized');
 
                 // Handle error link clicks
                 document.addEventListener('DOMContentLoaded', function() {
                     // Find all error links with data-text attributes
-                    const errorLinks = document.querySelectorAll('span.err a[data-text]');
+                    const errorLinks = document.querySelectorAll('a[data-text]');
 
                     errorLinks.forEach(link => {
                         link.addEventListener('click', function(e) {
                             e.preventDefault();
                             const lineNumber = this.getAttribute('data-text');
                             if (lineNumber) {
-                                // Send message to VS Code to navigate to line
                                 vscode.postMessage({
                                     type: 'navigateToLine',
                                     line: parseInt(lineNumber, 10)
@@ -228,9 +315,14 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string)
         // Inject the script before closing body tag
         const htmlWithScript = apiResponse.replace('</body>', errorNavigationScript + '</body>');
 
+        // Log processed HTML to webview channel
+        calcpadWebviewHtmlChannel.clear();
+        calcpadWebviewHtmlChannel.appendLine(htmlWithScript);
+        calcpadWebviewHtmlChannel.show(true);
+
         panel.webview.html = htmlWithScript;
-        
-        outputChannel.appendLine('Webview HTML set directly from API response');
+
+        outputChannel.appendLine('Webview HTML set directly');
         
     } catch (error) {
         outputChannel.appendLine(`ERROR in updatePreviewContent: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -264,7 +356,8 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string)
 
 async function updatePreviewContentUnwrapped(panel: vscode.WebviewPanel, content: string) {
     outputChannel.appendLine('Starting updatePreviewContentUnwrapped...');
-    
+    outputChannel.appendLine(`Content length: ${content.length} characters`);
+
     // Update panel title with current file name
     const activeEditor = vscode.window.activeTextEditor;
     if (activeEditor) {
@@ -272,9 +365,31 @@ async function updatePreviewContentUnwrapped(panel: vscode.WebviewPanel, content
         panel.title = `CalcPad Preview Unwrapped - ${fileName}`;
     }
 
+    // Check if content is empty
+    if (!content || content.trim().length === 0) {
+        outputChannel.appendLine('Content is empty - showing empty state');
+        panel.webview.html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>CalcPad Preview Unwrapped</title>
+            </head>
+            <body>
+                <div style="color: #858585; background: var(--vscode-editor-background); padding: 20px; text-align: center; font-family: var(--vscode-font-family);">
+                    <h3>Empty Document</h3>
+                    <p>Start typing CalcPad code to see the preview.</p>
+                </div>
+            </body>
+            </html>
+        `;
+        return;
+    }
+
     try {
         outputChannel.appendLine('Getting settings...');
         const settingsManager = CalcpadSettingsManager.getInstance(extensionContext);
+
         const settings = await settingsManager.getApiSettings();
         const calcpadSettings = settingsManager.getSettings();
         const apiBaseUrl = calcpadSettings.server.url;
@@ -302,29 +417,90 @@ async function updatePreviewContentUnwrapped(panel: vscode.WebviewPanel, content
         );
         outputChannel.appendLine('API call successful');
 
-        // Use the entire API response as the webview HTML
+        // Get the API response
         const apiResponse = response.data;
 
-        outputChannel.appendLine('Setting webview HTML directly...');
-        outputChannel.appendLine(`API response length: ${apiResponse.length} characters`);
+        // Log to dedicated HTML output channel
+        calcpadOutputHtmlChannel.clear();
+        calcpadOutputHtmlChannel.appendLine(apiResponse);
+        calcpadOutputHtmlChannel.show(true);
 
-        // Inject JavaScript for error link navigation
+        outputChannel.appendLine(`HTML Length: ${apiResponse.length} characters`);
+
+        // Inject JavaScript for error link navigation and console interception
         const errorNavigationScript = `
             <script>
-                // VS Code webview API
+                // Acquire VS Code API
                 const vscode = acquireVsCodeApi();
+
+                // Intercept console methods and send to VS Code
+                (function() {
+                    const originalConsole = {
+                        log: console.log,
+                        warn: console.warn,
+                        error: console.error,
+                        info: console.info,
+                        debug: console.debug
+                    };
+
+                    function sendConsoleMessage(level, args) {
+                        const message = Array.from(args).map(arg => {
+                            if (typeof arg === 'object') {
+                                try {
+                                    return JSON.stringify(arg, null, 2);
+                                } catch (e) {
+                                    return String(arg);
+                                }
+                            }
+                            return String(arg);
+                        }).join(' ');
+
+                        vscode.postMessage({
+                            type: 'consoleMessage',
+                            level: level,
+                            message: message
+                        });
+                    }
+
+                    console.log = function() {
+                        originalConsole.log.apply(console, arguments);
+                        sendConsoleMessage('log', arguments);
+                    };
+
+                    console.warn = function() {
+                        originalConsole.warn.apply(console, arguments);
+                        sendConsoleMessage('warn', arguments);
+                    };
+
+                    console.error = function() {
+                        originalConsole.error.apply(console, arguments);
+                        sendConsoleMessage('error', arguments);
+                    };
+
+                    console.info = function() {
+                        originalConsole.info.apply(console, arguments);
+                        sendConsoleMessage('info', arguments);
+                    };
+
+                    console.debug = function() {
+                        originalConsole.debug.apply(console, arguments);
+                        sendConsoleMessage('debug', arguments);
+                    };
+                })();
+
+                // Test console interception
+                console.log('CalcPad webview console interception initialized');
 
                 // Handle error link clicks
                 document.addEventListener('DOMContentLoaded', function() {
                     // Find all error links with data-text attributes
-                    const errorLinks = document.querySelectorAll('span.err a[data-text]');
+                    const errorLinks = document.querySelectorAll('a[data-text]');
 
                     errorLinks.forEach(link => {
                         link.addEventListener('click', function(e) {
                             e.preventDefault();
                             const lineNumber = this.getAttribute('data-text');
                             if (lineNumber) {
-                                // Send message to VS Code to navigate to line
                                 vscode.postMessage({
                                     type: 'navigateToLine',
                                     line: parseInt(lineNumber, 10)
@@ -336,12 +512,55 @@ async function updatePreviewContentUnwrapped(panel: vscode.WebviewPanel, content
             </script>
         `;
 
-        // Inject the script before closing body tag
-        const htmlWithScript = apiResponse.replace('</body>', errorNavigationScript + '</body>');
+        // Check if the response is full HTML or plain text
+        const isFullHtml = apiResponse.includes('<!DOCTYPE') || apiResponse.includes('<html');
 
-        panel.webview.html = htmlWithScript;
-        
-        outputChannel.appendLine('Webview HTML set directly from API response');
+        let finalHtml: string;
+
+        if (isFullHtml) {
+            // Full HTML document - inject script before </body>
+            outputChannel.appendLine('Response is full HTML - injecting script');
+            finalHtml = apiResponse.replace('</body>', errorNavigationScript + '</body>');
+        } else {
+            // Plain text with embedded HTML tags - wrap in HTML structure
+            outputChannel.appendLine('Response is plain text - wrapping in HTML structure');
+            finalHtml = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <style>
+                        body {
+                            font-family: 'Consolas', 'Courier New', monospace;
+                            white-space: pre-wrap;
+                            word-wrap: break-word;
+                            padding: 15px;
+                            background: var(--vscode-editor-background);
+                            color: var(--vscode-editor-foreground);
+                        }
+                        a[data-text] {
+                            color: var(--vscode-textLink-foreground);
+                            cursor: pointer;
+                            text-decoration: underline;
+                        }
+                        a[data-text]:hover {
+                            color: var(--vscode-textLink-activeForeground);
+                        }
+                    </style>
+                </head>
+                <body>${apiResponse}${errorNavigationScript}</body>
+                </html>
+            `;
+        }
+
+        // Log processed HTML to webview channel
+        calcpadWebviewHtmlChannel.clear();
+        calcpadWebviewHtmlChannel.appendLine(finalHtml);
+        calcpadWebviewHtmlChannel.show(true);
+
+        panel.webview.html = finalHtml;
+        outputChannel.appendLine('Webview HTML set directly');
         
     } catch (error) {
         outputChannel.appendLine(`ERROR in updatePreviewContentUnwrapped: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -603,13 +822,22 @@ async function createHtmlPreview(context: vscode.ExtensionContext) {
                 case 'navigateToLine':
                     const sourceEditor = previewSourceEditor;
                     if (sourceEditor && message.line) {
-                        const line = Math.max(0, message.line - 1); // Convert to 0-based index
-                        const position = new vscode.Position(line, 0);
+                        // data-text already contains the original source line (1-based)
+                        // Just convert from 1-based to 0-based indexing
+                        const lineIndex = Math.max(0, message.line - 1);
+                        outputChannel.appendLine(`Navigating to source line ${message.line}`);
+
+                        const position = new vscode.Position(lineIndex, 0);
                         const selection = new vscode.Selection(position, position);
                         sourceEditor.selection = selection;
                         sourceEditor.revealRange(selection, vscode.TextEditorRevealType.InCenter);
                         vscode.window.showTextDocument(sourceEditor.document, vscode.ViewColumn.One);
                     }
+                    break;
+                case 'consoleMessage':
+                    const timestamp = new Date().toISOString();
+                    const level = message.level.toUpperCase();
+                    calcpadWebviewConsoleChannel.appendLine(`[${timestamp}] [${level}] ${message.message}`);
                     break;
                 default:
                     break;
@@ -656,13 +884,22 @@ async function createHtmlPreviewUnwrapped(context: vscode.ExtensionContext) {
                 case 'navigateToLine':
                     const sourceEditor = previewSourceEditor;
                     if (sourceEditor && message.line) {
-                        const line = Math.max(0, message.line - 1); // Convert to 0-based index
-                        const position = new vscode.Position(line, 0);
+                        // data-text already contains the original source line (1-based)
+                        // Just convert from 1-based to 0-based indexing
+                        const lineIndex = Math.max(0, message.line - 1);
+                        outputChannel.appendLine(`Navigating to source line ${message.line}`);
+
+                        const position = new vscode.Position(lineIndex, 0);
                         const selection = new vscode.Selection(position, position);
                         sourceEditor.selection = selection;
                         sourceEditor.revealRange(selection, vscode.TextEditorRevealType.InCenter);
                         vscode.window.showTextDocument(sourceEditor.document, vscode.ViewColumn.One);
                     }
+                    break;
+                case 'consoleMessage':
+                    const timestamp = new Date().toISOString();
+                    const level = message.level.toUpperCase();
+                    calcpadWebviewConsoleChannel.appendLine(`[${timestamp}] [${level}] ${message.message}`);
                     break;
                 default:
                     break;
@@ -705,7 +942,12 @@ export function activate(context: vscode.ExtensionContext) {
         // Create output channel for debugging
         outputChannel = vscode.window.createOutputChannel('CalcPad Extension');
         outputChannel.appendLine('CalcPad extension activated');
-        
+
+        // Create dedicated output channels for HTML
+        calcpadOutputHtmlChannel = vscode.window.createOutputChannel('Calcpad Output HTML');
+        calcpadWebviewHtmlChannel = vscode.window.createOutputChannel('Calcpad Webview HTML');
+        calcpadWebviewConsoleChannel = vscode.window.createOutputChannel('Calcpad Webview Console');
+
         outputChannel.appendLine('Initializing settings manager...');
         const settingsManager = CalcpadSettingsManager.getInstance(context);
         
