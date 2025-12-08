@@ -135,7 +135,7 @@ export class CalcpadLinter {
         'if', 'else', 'else if', 'end if', 'rad', 'deg', 'gra', 'val', 'equ', 'noc', 
         'round', 'format', 'show', 'hide', 'varsub', 'nosub', 'novar', 'split', 'wrap', 
         'pre', 'post', 'repeat', 'for', 'while', 'loop', 'break', 'continue', 'include', 
-        'local', 'global', 'def', 'end def', 'pause', 'input', 'md', 'read', 'write', 'append', 'fetch'
+        'local', 'global', 'def', 'end def', 'pause', 'input', 'md', 'read', 'write', 'append'
     ]);
 
     // Mathematical operators from CalcPad documentation  
@@ -374,11 +374,6 @@ export class CalcpadLinter {
                 return true;
             }
             
-            // Check for fetch operations
-            if (trimmed.startsWith('#fetch ')) {
-                return true;
-            }
-            
             // Check for macro definitions (both inline and multiline)
             if (trimmed.startsWith('#def ')) {
                 return true;
@@ -417,7 +412,7 @@ export class CalcpadLinter {
         }
         lines = processedLines;
 
-        // Check if file needs complex resolution (has includes, fetch, or macros)
+        // Check if file needs complex resolution (has includes or macros)
         const needsComplexResolution = this.needsComplexResolution(lines);
         this.outputChannel.appendLine(`[DEBUG] needsComplexResolution: ${needsComplexResolution}`);
 
@@ -426,7 +421,7 @@ export class CalcpadLinter {
         let macroExpansionLines: Map<number, string>;
 
         if (needsComplexResolution) {
-            // Content resolution: expand includes, macros, and fetch operations
+            // Content resolution: expand include and macro operations
             this.outputChannel.appendLine(`[DEBUG] Using complex resolution for ${lines.length} lines`);
             const resolvedContent = this.resolveContent(lines, document.uri);
             expandedLines = resolvedContent.expandedLines;
@@ -745,7 +740,7 @@ export class CalcpadLinter {
         const text = document.getText();
         const lines = text.split('\n');
 
-        // Pre-cache all fetch content before linting
+        // Pre-cache all included content before linting
         await this.contentResolver.preCacheContent(lines);
 
         // Parse all lines into code and string segments upfront

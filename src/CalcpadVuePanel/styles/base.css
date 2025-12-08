@@ -202,7 +202,6 @@ body {
 
 .source-local { color: var(--vscode-gitDecoration-addedResourceForeground); }
 .source-include { color: var(--vscode-gitDecoration-modifiedResourceForeground); }
-.source-fetch { color: var(--vscode-gitDecoration-untrackedResourceForeground); }
 
 .loading, .no-variables {
   text-align: center;

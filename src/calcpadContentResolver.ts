@@ -39,21 +39,22 @@ export class CalcpadContentResolver {
         this.outputChannel = outputChannel;
     }
 
-    // Pre-cache all fetch content asynchronously
+    // Pre-cache all include content asynchronously
     public async preCacheContent(lines: string[]): Promise<void> {
-        const fetchUrls = new Set<string>();
+        const includeUrls = new Set<string>();
         
-        // Find all fetch operations
+        // Find all include operations
         for (const line of lines) {
-            const fetchMatch = /#fetch\s+([^\s]+)/.exec(line);
-            if (fetchMatch) {
-                const fileName = fetchMatch[1].replace(/['"]/g, '');
-                fetchUrls.add(fileName);
+            const includeMatch = /#include\s+([^\s]+)/.exec(line);
+            // !!! Add logic to check if #include is local or based on URL and handle it accordingly
+            if (includeMatch) {
+                const fileName = includeMatch[1].replace(/['"]/g, '');
+                includeUrls.add(fileName);
             }
         }
         
         // Cache content for each unique file
-        for (const fileName of fetchUrls) {
+        for (const fileName of includeUrls) {
             if (!this.contentCache.has(fileName)) {
                 try {
                     this.outputChannel.appendLine(`[DEBUG] Pre-caching content from S3: ${fileName}`);
@@ -119,7 +120,7 @@ export class CalcpadContentResolver {
         this.outputChannel.appendLine(`[DEBUG] needsComplexResolution: ${needsComplexResolution}`);
         
         if (!needsComplexResolution) {
-            // Simple case: no includes, fetch, or complex macros
+            // Simple case: no includes or complex macros
             const sourceMap = new Map<number, number>();
             processedLines.forEach((_, index) => sourceMap.set(index, index));
 
@@ -148,7 +149,7 @@ export class CalcpadContentResolver {
             };
         }
 
-        // Complex resolution with includes, fetch, and macro expansions
+        // Complex resolution with includes and macro expansions
         return this.performComplexResolution(processedLines, lineContinuationMap);
     }
 
@@ -208,15 +209,14 @@ export class CalcpadContentResolver {
     // Check if we need complex resolution
     private needsComplexResolution(lines: string[]): boolean {
         for (const line of lines) {
-            if (line.includes('#include ') || line.includes('#fetch ') || 
-                line.includes('#def ') || line.includes('#end def')) {
+            if (line.includes('#include ') || line.includes('#def ') || line.includes('#end def')) {
                 return true;
             }
         }
         return false;
     }
 
-    // Perform complex resolution with includes, fetch, and macro expansions
+    // Perform complex resolution with includes and macro expansions
     private performComplexResolution(lines: string[], lineContinuationMap: Map<number, number[]>): ResolvedContent {
         const expandedLines: string[] = [];
         const sourceMap = new Map<number, number>();
@@ -299,31 +299,6 @@ export class CalcpadContentResolver {
                     lineSourceMap.set(expandedLines.length - 1, {
                         source: 'include',
                         sourceFile: includeFile
-                    });
-                }
-                continue;
-            }
-
-            // Handle fetch operations (obsolete but keep for compatibility)
-            if (line.startsWith('#fetch ')) {
-                this.outputChannel.appendLine(`[DEBUG] Processing fetch: ${line}`);
-                const fetchedLines = this.resolveFetch(line);
-                const fetchFile = line.replace('#fetch ', '').trim().replace(/['"]/g, '');
-                this.outputChannel.appendLine(`[DEBUG] Fetch resolved to ${fetchedLines.length} lines`);
-
-                // Check for duplicate macros in fetched content
-                this.checkDuplicateMacros(fetchedLines, macroFirstDefinitions, duplicateMacros, expandedLines.length);
-
-                // Collect macros from fetched content (treat as include for source tracking)
-                const fetchedMacros = this.collectAllMacroDefinitions(fetchedLines, 'include', fetchFile);
-                allMacros.push(...fetchedMacros);
-
-                for (const fetchedLine of fetchedLines) {
-                    expandedLines.push(fetchedLine);
-                    sourceMap.set(expandedLines.length - 1, originalLineNumber);
-                    lineSourceMap.set(expandedLines.length - 1, {
-                        source: 'include',
-                        sourceFile: fetchFile
                     });
                 }
                 continue;
@@ -460,8 +435,7 @@ export class CalcpadContentResolver {
         return null;
     }
 
-    // Rest of the methods remain the same as in the original linter...
-    // (I'll include the key ones needed for the resolver)
+    // Rest of the methods remain the same as in the original linter
 
     private resolveInclude(line: string): string[] {
         const includePattern = /#include\s+([^\s]+)/;
@@ -487,7 +461,7 @@ export class CalcpadContentResolver {
             return [`' Error reading include file: ${filename}`];
         }
     }
-
+    // !!! Merge these functions into a single one that uses updated #include syntax
     private resolveFetch(line: string): string[] {
         const fetchPattern = /#fetch\s+([^\s]+)/;
         const match = fetchPattern.exec(line);

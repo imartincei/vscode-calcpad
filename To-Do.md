@@ -7,7 +7,8 @@
 - Add duplicate macro definitions to linter
 - Test linter for advanced issues
 - Make the webview always available, but the preview and export buttons only available in .cpd files
-- Add URL processing for line numbers that jumps to VS code line
+- Update HTML pre-processing for links to Calcpad.Server and remove code in extension
+- Add navigation for number links in unwrapped code
 - Add search for variables
 - Add recent features added to Calcpad to linting/insert tab
-- Check references to #fetch have been removed.
+- Remove final #fetch reference and resolve associated !!! comments

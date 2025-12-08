@@ -1,4 +1,4 @@
-' Simple test for undefined variable detection (no includes, fetch, or macros)
+' Simple test for undefined variable detection (no includes or macros)
 
 ' Define some variables
 x = 5

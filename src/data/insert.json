@@ -3301,10 +3301,6 @@
     {
       "tag": "#append M to filename.xlsx@Sheet1!A1:B2 TYPE=N",
       "description": "Append Excel File"
-    },
-    {
-      "tag": "#fetch",
-      "description": "Read File from S3 Storage"
     }
   ],
   "Html": [

@@ -158,8 +158,6 @@ const getSourceLabel = (source: string | undefined): string => {
       return 'Current file'
     case 'include':
       return 'Included file'
-    case 'fetch':
-      return 'Remote file'
     default:
       return source
   }
@@ -308,9 +306,5 @@ watch(
 
 .source-include {
   color: var(--vscode-gitDecoration-modifiedResourceForeground);
-}
-
-.source-fetch {
-  color: var(--vscode-gitDecoration-untrackedResourceForeground);
 }
 </style>

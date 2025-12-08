@@ -44,7 +44,7 @@
       "patterns": [
         {
           "name": "keyword.control.calcpad",
-          "match": "(?i)#(if|else\\s+if|else|end\\s+if|rad|deg|gra|val|equ|noc|round|format|show|hide|varsub|nosub|novar|split|wrap|pre|post|repeat|for|while|loop|break|continue|include|local|global|def|end\\s+def|pause|input|md|read|write|append|fetch)\\b"
+          "match": "(?i)#(if|else\\s+if|else|end\\s+if|rad|deg|gra|val|equ|noc|round|format|show|hide|varsub|nosub|novar|split|wrap|pre|post|repeat|for|while|loop|break|continue|include|local|global|def|end\\s+def|pause|input|md|read|write|append)\\b"
         },
         {
           "name": "keyword.other.calcpad",
