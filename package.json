@@ -137,6 +137,11 @@
           ],
           "description": "Theme to use for CalcPad preview"
         },
+        "calcpad.enableQuickTyping": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable quick typing shortcuts (e.g., ~a → α, ~' → ′). Works everywhere including comments."
+        },
         "calcpad.settings": {
           "type": "object",
           "description": "CalcPad calculation and rendering settings",

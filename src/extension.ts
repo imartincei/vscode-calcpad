@@ -7,6 +7,7 @@ import { CalcpadLinter } from './calcpadLinter';
 import { CalcpadVueUIProvider } from './calcpadVueUIProvider';
 import { CalcpadSettingsManager } from './calcpadSettings';
 import { OperatorReplacer } from './operatorReplacer';
+import { QuickTyper } from './quickTyper';
 import { CalcpadCompletionProvider } from './calcpadCompletionProvider';
 import { CalcpadInsertManager } from './calcpadInsertManager';
 
@@ -152,29 +153,6 @@ function getPreviewHtml(): string {
         </body>
         </html>
     `;
-}
-
-function processHtmlAnchors(html: string): string {
-    // Process HTML to fix anchor tags in two different formats from the server:
-    // 1. Regular convert: HTML entities like &lt;a href=&quot;#0&quot;...
-    // 2. Unwrapped convert: Broken into spans like <span class="operator">[</span><span...>a</span>...
-    let processed = html;
-
-    // Pattern 1: Fix broken-up spans from unwrapped code (most complex pattern first)
-    // Match: [<span...>&lt;</span><span...>a</span>...href...data-text="20">20</a>]
-    const brokenSpanPattern = /<span class="operator">\[<\/span><span class="operator">&lt;<\/span><span class="variable">a<\/span>\s*<span class="variable">href<\/span><span class="operator">=<\/span><span class="comment">&quot;([^"]*?)&quot;<\/span>\s*<span class="variable">data<\/span><span class="operator">-<\/span><span class="variable">text<\/span><span class="operator">=<\/span><span class="comment">&quot;(\d+)&quot;<\/span><span class="operator">&gt;<\/span><span class="number">(\d+)<\/span><span class="operator">&lt;<\/span><span class="operator">\/<\/span><span class="variable">a<\/span><span class="operator">&gt;<\/span><span class="operator">\]<\/span>/g;
-
-    processed = processed.replace(brokenSpanPattern, (match, href, dataText, lineNum) => {
-        return '<a href="' + href + '" data-text="' + dataText + '">' + lineNum + '</a>';
-    });
-
-    // Pattern 2: Fix simple HTML entities from regular convert
-    // Match: &lt;a href=&quot;#0&quot; data-text=&quot;20&quot;&gt;20&lt;/a&gt;
-    processed = processed.replace(/&lt;a\s+href=&quot;#0&quot;\s+data-text=&quot;(\d+)&quot;&gt;(\d+)&lt;\/a&gt;/g, (match, dataText, lineNum) => {
-        return '<a href="#0" data-text="' + dataText + '">' + lineNum + '</a>';
-    });
-
-    return processed;
 }
 
 function getErrorNavigationScript(): string {
@@ -340,15 +318,11 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string,
 
         outputChannel.appendLine(`HTML Length: ${apiResponse.length} characters`);
 
-        // Process HTML to fix escaped anchor tags (matching C# FixHref method)
-        const processedHtml = processHtmlAnchors(apiResponse);
-        outputChannel.appendLine('Fixed escaped anchor tags in HTML');
-
         // Inject JavaScript for error link navigation and console interception
         const errorNavigationScript = getErrorNavigationScript();
 
         // Inject the script before closing body tag
-        const htmlWithScript = processedHtml.replace('</body>', errorNavigationScript + '</body>');
+        const htmlWithScript = apiResponse.replace('</body>', errorNavigationScript + '</body>');
 
         // Log processed HTML to webview channel
         calcpadWebviewHtmlChannel.clear();
@@ -759,6 +733,11 @@ export function activate(context: vscode.ExtensionContext) {
         const operatorReplacer = new OperatorReplacer(outputChannel);
         const operatorReplacerDisposable = operatorReplacer.registerDocumentChangeListener(context);
 
+        // Initialize quick typer
+        outputChannel.appendLine('Initializing quick typer...');
+        const quickTyper = new QuickTyper(outputChannel);
+        const quickTyperDisposable = quickTyper.registerDocumentChangeListener(context);
+
         // Initialize autocomplete provider
         outputChannel.appendLine('Initializing autocomplete provider...');
         const completionProviderDisposable = CalcpadCompletionProvider.register(settingsManager, outputChannel);
@@ -925,13 +904,14 @@ export function activate(context: vscode.ExtensionContext) {
             exportToPdfCommand,
             vueUiProviderDisposable,
             vueUiProvider, // Add the provider itself for disposal
-            linter, 
+            linter,
             outputChannel,
-            onDidChangeTextDocument, 
-            onDidOpenTextDocument, 
+            onDidChangeTextDocument,
+            onDidOpenTextDocument,
             onDidSaveTextDocument,
             onDidChangeActiveTextEditor,
             operatorReplacerDisposable,
+            quickTyperDisposable,
             completionProviderDisposable
         );
         

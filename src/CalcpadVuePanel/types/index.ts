@@ -6,6 +6,7 @@ export interface InsertItem {
   description?: string
   categoryPath?: string
   category?: string
+  quickType?: string
 }
 
 export interface InsertCategory {

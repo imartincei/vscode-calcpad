@@ -3539,5 +3539,372 @@
       "tag": "#gra",
       "description": "#gra"
     }
-  ]
+  ],
+  "Symbols": {
+    "categories": [
+      {
+        "name": "Special Symbols",
+        "items": [
+          {
+            "tag": "‰",
+            "description": "Per Mille (Parts Per Thousand)",
+            "label": "‰",
+            "quickType": "~%"
+          },
+          {
+            "tag": "‱",
+            "description": "Per Ten Thousand (Basis Point)",
+            "label": "‱",
+            "quickType": "~%%"
+          },
+          {
+            "tag": "°",
+            "description": "Degree Symbol",
+            "label": "°",
+            "quickType": "~0"
+          },
+          {
+            "tag": "′",
+            "description": "Prime (Minutes, Feet)",
+            "label": "′",
+            "quickType": "~'"
+          },
+          {
+            "tag": "″",
+            "description": "Double Prime (Seconds, Inches)",
+            "label": "″",
+            "quickType": "~\""
+          },
+          {
+            "tag": "‴",
+            "description": "Triple Prime",
+            "label": "‴",
+            "quickType": "~'''"
+          },
+          {
+            "tag": "⁗",
+            "description": "Quadruple Prime",
+            "label": "⁗",
+            "quickType": "~''''"
+          },
+          {
+            "tag": "ø",
+            "description": "Lowercase Diameter Symbol",
+            "label": "ø",
+            "quickType": "~\\o"
+          },
+          {
+            "tag": "Ø",
+            "description": "Uppercase Diameter Symbol",
+            "label": "Ø",
+            "quickType": "~\\O"
+          }
+        ]
+      },
+      {
+        "name": "Greek Letters (Lowercase)",
+        "items": [
+          {
+            "tag": "α",
+            "description": "Alpha",
+            "label": "α",
+            "quickType": "~a"
+          },
+          {
+            "tag": "β",
+            "description": "Beta",
+            "label": "β",
+            "quickType": "~b"
+          },
+          {
+            "tag": "γ",
+            "description": "Gamma",
+            "label": "γ",
+            "quickType": "~g"
+          },
+          {
+            "tag": "δ",
+            "description": "Delta",
+            "label": "δ",
+            "quickType": "~d"
+          },
+          {
+            "tag": "ε",
+            "description": "Epsilon",
+            "label": "ε",
+            "quickType": "~e"
+          },
+          {
+            "tag": "ζ",
+            "description": "Zeta",
+            "label": "ζ",
+            "quickType": "~z"
+          },
+          {
+            "tag": "η",
+            "description": "Eta",
+            "label": "η",
+            "quickType": "~h"
+          },
+          {
+            "tag": "θ",
+            "description": "Theta",
+            "label": "θ",
+            "quickType": "~q"
+          },
+          {
+            "tag": "ι",
+            "description": "Iota",
+            "label": "ι",
+            "quickType": "~i"
+          },
+          {
+            "tag": "κ",
+            "description": "Kappa",
+            "label": "κ",
+            "quickType": "~k"
+          },
+          {
+            "tag": "λ",
+            "description": "Lambda",
+            "label": "λ",
+            "quickType": "~l"
+          },
+          {
+            "tag": "μ",
+            "description": "Mu",
+            "label": "μ",
+            "quickType": "~m"
+          },
+          {
+            "tag": "ν",
+            "description": "Nu",
+            "label": "ν",
+            "quickType": "~n"
+          },
+          {
+            "tag": "ξ",
+            "description": "Xi",
+            "label": "ξ",
+            "quickType": "~x"
+          },
+          {
+            "tag": "ο",
+            "description": "Omicron",
+            "label": "ο",
+            "quickType": "~o"
+          },
+          {
+            "tag": "π",
+            "description": "Pi",
+            "label": "π",
+            "quickType": "~p"
+          },
+          {
+            "tag": "ρ",
+            "description": "Rho",
+            "label": "ρ",
+            "quickType": "~r"
+          },
+          {
+            "tag": "ς",
+            "description": "Final Sigma",
+            "label": "ς",
+            "quickType": "~j"
+          },
+          {
+            "tag": "σ",
+            "description": "Sigma",
+            "label": "σ",
+            "quickType": "~s"
+          },
+          {
+            "tag": "τ",
+            "description": "Tau",
+            "label": "τ",
+            "quickType": "~t"
+          },
+          {
+            "tag": "υ",
+            "description": "Upsilon",
+            "label": "υ",
+            "quickType": "~u"
+          },
+          {
+            "tag": "φ",
+            "description": "Phi",
+            "label": "φ",
+            "quickType": "~f"
+          },
+          {
+            "tag": "χ",
+            "description": "Chi",
+            "label": "χ",
+            "quickType": "~c"
+          },
+          {
+            "tag": "ψ",
+            "description": "Psi",
+            "label": "ψ",
+            "quickType": "~y"
+          },
+          {
+            "tag": "ω",
+            "description": "Omega",
+            "label": "ω",
+            "quickType": "~w"
+          }
+        ]
+      },
+      {
+        "name": "Greek Letters (Uppercase)",
+        "items": [
+          {
+            "tag": "Α",
+            "description": "Alpha",
+            "label": "Α",
+            "quickType": "~A"
+          },
+          {
+            "tag": "Β",
+            "description": "Beta",
+            "label": "Β",
+            "quickType": "~B"
+          },
+          {
+            "tag": "Γ",
+            "description": "Gamma",
+            "label": "Γ",
+            "quickType": "~G"
+          },
+          {
+            "tag": "Δ",
+            "description": "Delta",
+            "label": "Δ",
+            "quickType": "~D"
+          },
+          {
+            "tag": "Ε",
+            "description": "Epsilon",
+            "label": "Ε",
+            "quickType": "~E"
+          },
+          {
+            "tag": "Ζ",
+            "description": "Zeta",
+            "label": "Ζ",
+            "quickType": "~Z"
+          },
+          {
+            "tag": "Η",
+            "description": "Eta",
+            "label": "Η",
+            "quickType": "~H"
+          },
+          {
+            "tag": "Θ",
+            "description": "Theta",
+            "label": "Θ",
+            "quickType": "~Q"
+          },
+          {
+            "tag": "Ι",
+            "description": "Iota",
+            "label": "Ι",
+            "quickType": "~I"
+          },
+          {
+            "tag": "Κ",
+            "description": "Kappa",
+            "label": "Κ",
+            "quickType": "~K"
+          },
+          {
+            "tag": "Λ",
+            "description": "Lambda",
+            "label": "Λ",
+            "quickType": "~L"
+          },
+          {
+            "tag": "Μ",
+            "description": "Mu",
+            "label": "Μ",
+            "quickType": "~M"
+          },
+          {
+            "tag": "Ν",
+            "description": "Nu",
+            "label": "Ν",
+            "quickType": "~N"
+          },
+          {
+            "tag": "Ξ",
+            "description": "Xi",
+            "label": "Ξ",
+            "quickType": "~X"
+          },
+          {
+            "tag": "Ο",
+            "description": "Omicron",
+            "label": "Ο",
+            "quickType": "~O"
+          },
+          {
+            "tag": "Π",
+            "description": "Pi",
+            "label": "Π",
+            "quickType": "~P"
+          },
+          {
+            "tag": "Ρ",
+            "description": "Rho",
+            "label": "Ρ",
+            "quickType": "~R"
+          },
+          {
+            "tag": "Σ",
+            "description": "Sigma",
+            "label": "Σ",
+            "quickType": "~S"
+          },
+          {
+            "tag": "Τ",
+            "description": "Tau",
+            "label": "Τ",
+            "quickType": "~T"
+          },
+          {
+            "tag": "Υ",
+            "description": "Upsilon",
+            "label": "Υ",
+            "quickType": "~U"
+          },
+          {
+            "tag": "Φ",
+            "description": "Phi",
+            "label": "Φ",
+            "quickType": "~F"
+          },
+          {
+            "tag": "Χ",
+            "description": "Chi",
+            "label": "Χ",
+            "quickType": "~C"
+          },
+          {
+            "tag": "Ψ",
+            "description": "Psi",
+            "label": "Ψ",
+            "quickType": "~Y"
+          },
+          {
+            "tag": "Ω",
+            "description": "Omega",
+            "label": "Ω",
+            "quickType": "~W"
+          }
+        ]
+      }
+    ]
+  }
 }

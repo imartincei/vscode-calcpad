@@ -29,6 +29,9 @@
         <div v-if="item.description" class="item-description">
           {{ item.description }}
         </div>
+        <div v-if="item.quickType" class="item-quicktype">
+          Quick type: {{ item.quickType }}
+        </div>
         <div v-if="item.categoryPath" class="item-category">
           {{ item.categoryPath }}
         </div>
@@ -230,9 +233,19 @@ const createTreeItem = (item: InsertItem) => {
 
   const button = document.createElement('button')
   button.className = 'tree-item'
-  button.title = item.description || ''
 
-  const text = item.label ? item.label + ' - ' + (item.description || '') : (item.description || '')
+  // Build tooltip with description and quickType
+  let tooltip = item.description || ''
+  if (item.quickType) {
+    tooltip += tooltip ? ` (Quick type: ${item.quickType})` : `Quick type: ${item.quickType}`
+  }
+  button.title = tooltip
+
+  // Build button text
+  let text = item.label ? item.label + ' - ' + (item.description || '') : (item.description || '')
+  if (item.quickType) {
+    text += ` [${item.quickType}]`
+  }
   button.textContent = text
 
   button.addEventListener('click', () => {
@@ -340,6 +353,14 @@ watch(
   font-size: 11px;
   color: var(--vscode-descriptionForeground);
   margin-top: 2px;
+}
+
+.item-quicktype {
+  font-size: 10px;
+  color: var(--vscode-textLink-foreground);
+  margin-top: 2px;
+  font-family: monospace;
+  font-weight: 600;
 }
 
 .item-category {
