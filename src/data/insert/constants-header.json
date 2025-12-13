@@ -1,0 +1,139 @@
+{
+  "Constants Header": [
+    {
+      "tag": "π",
+      "description": "Pi Number",
+      "label": "  π"
+    },
+    {
+      "tag": "e",
+      "description": "Euler Number",
+      "label": "  e"
+    },
+    {
+      "tag": "φ = 1.618033988749894",
+      "description": "Golden Ratio",
+      "label": "  φ"
+    },
+    {
+      "tag": "γ = 0.5772156649015328",
+      "description": "Euler Constant",
+      "label": "  γ"
+    },
+    {
+      "tag": "g = 9.80665m/s^2",
+      "description": "Gravitational Acceleration",
+      "label": "  g"
+    },
+    {
+      "tag": "G = 6.67430*10^-11*(m^3/(kg*s^2))",
+      "description": "Gravitational Constant",
+      "label": "  G"
+    },
+    {
+      "tag": "M_E = 5.9722*10^24*kg",
+      "description": "Earth Mass",
+      "label": "ME"
+    },
+    {
+      "tag": "M_S = 1.98847*10^30*kg",
+      "description": "Solar Mass",
+      "label": "MS"
+    },
+    {
+      "tag": "c = 299792458m/s",
+      "description": "Speed Of Light",
+      "label": "  c"
+    },
+    {
+      "tag": "h = 6.62607015*10^-34*J/Hz",
+      "description": "Planck Constant",
+      "label": "  h"
+    },
+    {
+      "tag": "μ_0 = 1.25663706212*10^-6*N/A^2",
+      "description": "Vacuum Permeability",
+      "label": " μ0"
+    },
+    {
+      "tag": "ε_0 = 8.8541878128*10^-12*F/m",
+      "description": "Vacuum Permitivity",
+      "label": " ε0"
+    },
+    {
+      "tag": "k_e = 8.9875517923*10^9*N*m^2/C^2",
+      "description": "Coulomb Constant",
+      "label": " ke"
+    },
+    {
+      "tag": "e = 1.602176634*10^-19*C",
+      "description": "Elementary Charge",
+      "label": "  e"
+    },
+    {
+      "tag": "m_e = 9.1093837015*10^-31*kg",
+      "description": "Electron Mass",
+      "label": "me"
+    },
+    {
+      "tag": "m_p = 1.67262192369*10^-27*kg",
+      "description": "Proton Mass",
+      "label": "mp"
+    },
+    {
+      "tag": "m_n = 1.67492749804*10^-27*kg",
+      "description": "Neutron Mass",
+      "label": "mn"
+    },
+    {
+      "tag": "N_A = 6.02214076*10^23*mol^-1",
+      "description": "Avogadro Constant",
+      "label": "NA"
+    },
+    {
+      "tag": "σ = 5.670374419*10^-8*W*m^-2*K^-4",
+      "description": "Stefan Boltzmann Constant",
+      "label": "  σ"
+    },
+    {
+      "tag": "k_B = 1.380649*10^-23*J/K",
+      "description": "Boltzmann Constant",
+      "label": " kB"
+    },
+    {
+      "tag": "R = 8.31446261815324*(J/(mol*K))",
+      "description": "Molar Gas Constant",
+      "label": "  R"
+    },
+    {
+      "tag": "F = 96485.33212331C/mol",
+      "description": "Faraday Constant",
+      "label": "  F"
+    },
+    {
+      "tag": "γ_c = 25kN/m^3",
+      "description": "Unit Weight Of Concrete",
+      "label": " γc"
+    },
+    {
+      "tag": "γ_s = 78.5kN/m^3",
+      "description": "Unit Weight Of Steel",
+      "label": " γs"
+    },
+    {
+      "tag": "γ_a = 27kN/m^3",
+      "description": "Unit Weight Of Aluminium",
+      "label": " γa"
+    },
+    {
+      "tag": "γ_g = 25kN/m^3",
+      "description": "Unit Weight Of Glass",
+      "label": " γg"
+    },
+    {
+      "tag": "γ_w = 10kN/m^3",
+      "description": "Unit Weight Of Water",
+      "label": "γw"
+    }
+  ]
+}

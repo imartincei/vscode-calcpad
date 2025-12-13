@@ -192,6 +192,18 @@
         </select>
       </div>
 
+      <h3>Editor Features</h3>
+      <div class="setting-group">
+        <label>
+          <input
+            v-model="enableQuickTyping"
+            type="checkbox"
+            @change="updateQuickTyping"
+          />
+          Enable Quick Typing (e.g., ~a → α, ~' → ′)
+        </label>
+      </div>
+
       <button @click="resetSettings" class="reset-button">
         Reset Settings
       </button>
@@ -207,6 +219,7 @@ import type { Settings } from '../types'
 interface Props {
   settings?: Settings
   initialPreviewTheme?: string
+  initialEnableQuickTyping?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -237,19 +250,22 @@ const props = withDefaults(defineProps<Props>(), {
     },
     units: 'm'
   }),
-  initialPreviewTheme: 'system'
+  initialPreviewTheme: 'system',
+  initialEnableQuickTyping: true
 })
 
 // Emits
 const emit = defineEmits<{
   updateSettings: [settings: Settings]
   updatePreviewTheme: [theme: string]
+  updateQuickTyping: [enabled: boolean]
   resetSettings: []
 }>()
 
 // State
 const localSettings = ref<Settings>({ ...props.settings })
 const previewTheme = ref(props.initialPreviewTheme)
+const enableQuickTyping = ref(props.initialEnableQuickTyping)
 
 // Methods
 const updateSettings = () => {
@@ -258,6 +274,10 @@ const updateSettings = () => {
 
 const updatePreviewTheme = () => {
   emit('updatePreviewTheme', previewTheme.value)
+}
+
+const updateQuickTyping = () => {
+  emit('updateQuickTyping', enableQuickTyping.value)
 }
 
 const resetSettings = () => {
@@ -279,6 +299,13 @@ watch(
   () => props.initialPreviewTheme,
   (newTheme) => {
     previewTheme.value = newTheme
+  }
+)
+
+watch(
+  () => props.initialEnableQuickTyping,
+  (newValue) => {
+    enableQuickTyping.value = newValue
   }
 )
 </script>

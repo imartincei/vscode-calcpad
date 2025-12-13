@@ -1,0 +1,300 @@
+{
+  "Symbols": {
+    "Special Symbols": [
+      {
+        "tag": "‰",
+        "description": "Per Mille (Parts Per Thousand)",
+        "quickType": "~%"
+      },
+      {
+        "tag": "‱",
+        "description": "Per Ten Thousand (Basis Point)",
+        "quickType": "~%%"
+      },
+      {
+        "tag": "°",
+        "description": "Degree Symbol",
+        "quickType": "~0"
+      },
+      {
+        "tag": "′",
+        "description": "Prime (Minutes, Feet)",
+        "quickType": "~'"
+      },
+      {
+        "tag": "″",
+        "description": "Double Prime (Seconds, Inches)",
+        "quickType": "~\""
+      },
+      {
+        "tag": "‴",
+        "description": "Triple Prime",
+        "quickType": "~'''"
+      },
+      {
+        "tag": "⁗",
+        "description": "Quadruple Prime",
+        "quickType": "~''''"
+      },
+      {
+        "tag": "ø",
+        "description": "Lowercase Diameter Symbol",
+        "quickType": "~/o"
+      },
+      {
+        "tag": "Ø",
+        "description": "Uppercase Diameter Symbol",
+        "quickType": "~/O"
+      }
+    ],
+    "Greek Letters (Lowercase)": [
+      {
+        "tag": "α",
+        "description": "Alpha",
+        "quickType": "~a"
+      },
+      {
+        "tag": "β",
+        "description": "Beta",
+        "quickType": "~b"
+      },
+      {
+        "tag": "γ",
+        "description": "Gamma",
+        "quickType": "~g"
+      },
+      {
+        "tag": "δ",
+        "description": "Delta",
+        "quickType": "~d"
+      },
+      {
+        "tag": "ε",
+        "description": "Epsilon",
+        "quickType": "~e"
+      },
+      {
+        "tag": "ζ",
+        "description": "Zeta",
+        "quickType": "~z"
+      },
+      {
+        "tag": "η",
+        "description": "Eta",
+        "quickType": "~h"
+      },
+      {
+        "tag": "θ",
+        "description": "Theta",
+        "quickType": "~q"
+      },
+      {
+        "tag": "ι",
+        "description": "Iota",
+        "quickType": "~i"
+      },
+      {
+        "tag": "κ",
+        "description": "Kappa",
+        "quickType": "~k"
+      },
+      {
+        "tag": "λ",
+        "description": "Lambda",
+        "quickType": "~l"
+      },
+      {
+        "tag": "μ",
+        "description": "Mu",
+        "quickType": "~m"
+      },
+      {
+        "tag": "ν",
+        "description": "Nu",
+        "quickType": "~n"
+      },
+      {
+        "tag": "ξ",
+        "description": "Xi",
+        "quickType": "~x"
+      },
+      {
+        "tag": "ο",
+        "description": "Omicron",
+        "quickType": "~o"
+      },
+      {
+        "tag": "π",
+        "description": "Pi",
+        "quickType": "~p"
+      },
+      {
+        "tag": "ρ",
+        "description": "Rho",
+        "quickType": "~r"
+      },
+      {
+        "tag": "ς",
+        "description": "Final Sigma",
+        "quickType": "~j"
+      },
+      {
+        "tag": "σ",
+        "description": "Sigma",
+        "quickType": "~s"
+      },
+      {
+        "tag": "τ",
+        "description": "Tau",
+        "quickType": "~t"
+      },
+      {
+        "tag": "υ",
+        "description": "Upsilon",
+        "quickType": "~u"
+      },
+      {
+        "tag": "φ",
+        "description": "Phi",
+        "quickType": "~f"
+      },
+      {
+        "tag": "χ",
+        "description": "Chi",
+        "quickType": "~c"
+      },
+      {
+        "tag": "ψ",
+        "description": "Psi",
+        "quickType": "~y"
+      },
+      {
+        "tag": "ω",
+        "description": "Omega",
+        "quickType": "~w"
+      }
+    ],
+    "Greek Letters (Uppercase)": [
+      {
+        "tag": "Α",
+        "description": "Alpha",
+        "quickType": "~A"
+      },
+      {
+        "tag": "Β",
+        "description": "Beta",
+        "quickType": "~B"
+      },
+      {
+        "tag": "Γ",
+        "description": "Gamma",
+        "quickType": "~G"
+      },
+      {
+        "tag": "Δ",
+        "description": "Delta",
+        "quickType": "~D"
+      },
+      {
+        "tag": "Ε",
+        "description": "Epsilon",
+        "quickType": "~E"
+      },
+      {
+        "tag": "Ζ",
+        "description": "Zeta",
+        "quickType": "~Z"
+      },
+      {
+        "tag": "Η",
+        "description": "Eta",
+        "quickType": "~H"
+      },
+      {
+        "tag": "Θ",
+        "description": "Theta",
+        "quickType": "~Q"
+      },
+      {
+        "tag": "Ι",
+        "description": "Iota",
+        "quickType": "~I"
+      },
+      {
+        "tag": "Κ",
+        "description": "Kappa",
+        "quickType": "~K"
+      },
+      {
+        "tag": "Λ",
+        "description": "Lambda",
+        "quickType": "~L"
+      },
+      {
+        "tag": "Μ",
+        "description": "Mu",
+        "quickType": "~M"
+      },
+      {
+        "tag": "Ν",
+        "description": "Nu",
+        "quickType": "~N"
+      },
+      {
+        "tag": "Ξ",
+        "description": "Xi",
+        "quickType": "~X"
+      },
+      {
+        "tag": "Ο",
+        "description": "Omicron",
+        "quickType": "~O"
+      },
+      {
+        "tag": "Π",
+        "description": "Pi",
+        "quickType": "~P"
+      },
+      {
+        "tag": "Ρ",
+        "description": "Rho",
+        "quickType": "~R"
+      },
+      {
+        "tag": "Σ",
+        "description": "Sigma",
+        "quickType": "~S"
+      },
+      {
+        "tag": "Τ",
+        "description": "Tau",
+        "quickType": "~T"
+      },
+      {
+        "tag": "Υ",
+        "description": "Upsilon",
+        "quickType": "~U"
+      },
+      {
+        "tag": "Φ",
+        "description": "Phi",
+        "quickType": "~F"
+      },
+      {
+        "tag": "Χ",
+        "description": "Chi",
+        "quickType": "~C"
+      },
+      {
+        "tag": "Ψ",
+        "description": "Psi",
+        "quickType": "~Y"
+      },
+      {
+        "tag": "Ω",
+        "description": "Omega",
+        "quickType": "~W"
+      }
+    ]
+  }
+}

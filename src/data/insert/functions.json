@@ -1,0 +1,902 @@
+{
+  "Functions": {
+    "Trigonometric": [
+      {
+        "tag": "sin(x)",
+        "description": "sin(x)"
+      },
+      {
+        "tag": "cos(x)",
+        "description": "cos(x)"
+      },
+      {
+        "tag": "tan(x)",
+        "description": "tan(x)"
+      },
+      {
+        "tag": "csc(x)",
+        "description": "csc(x)"
+      },
+      {
+        "tag": "sec(x)",
+        "description": "sec(x)"
+      },
+      {
+        "tag": "cot(x)",
+        "description": "cot(x)"
+      }
+    ],
+    "Hyperbolic": [
+      {
+        "tag": "sinh(x)",
+        "description": "sinh(x)"
+      },
+      {
+        "tag": "cosh(x)",
+        "description": "cosh(x)"
+      },
+      {
+        "tag": "tanh(x)",
+        "description": "tanh(x)"
+      },
+      {
+        "tag": "csch(x)",
+        "description": "csch(x)"
+      },
+      {
+        "tag": "sech(x)",
+        "description": "sech(x)"
+      },
+      {
+        "tag": "coth(x)",
+        "description": "coth(x)"
+      }
+    ],
+    "Inverse Trigonometric": [
+      {
+        "tag": "asin(x)",
+        "description": "asin(x)"
+      },
+      {
+        "tag": "acos(x)",
+        "description": "acos(x)"
+      },
+      {
+        "tag": "atan(x)",
+        "description": "atan(x)"
+      },
+      {
+        "tag": "atan2(x; y)",
+        "description": "atan2(x; y)"
+      },
+      {
+        "tag": "acsc(x)",
+        "description": "acsc(x)"
+      },
+      {
+        "tag": "asec(x)",
+        "description": "asec(x)"
+      },
+      {
+        "tag": "acot(x)",
+        "description": "acot(x)"
+      }
+    ],
+    "Inverse Hyperbolic": [
+      {
+        "tag": "asinh(x)",
+        "description": "asinh(x)"
+      },
+      {
+        "tag": "acosh(x)",
+        "description": "acosh(x)"
+      },
+      {
+        "tag": "atanh(x)",
+        "description": "atanh(x)"
+      },
+      {
+        "tag": "acsch(x)",
+        "description": "acsch(x)"
+      },
+      {
+        "tag": "asech(x)",
+        "description": "asech(x)"
+      },
+      {
+        "tag": "acoth(x)",
+        "description": "acoth(x)"
+      }
+    ],
+    "Logarithmic Exponential And Roots": [
+      {
+        "tag": "log(x)",
+        "description": "log(x)"
+      },
+      {
+        "tag": "ln(x)",
+        "description": "ln(x)"
+      },
+      {
+        "tag": "log_2(x)",
+        "description": "log2(x)"
+      },
+      {
+        "tag": "exp(x)",
+        "description": "exp(x)"
+      },
+      {
+        "tag": "sqrt(x)",
+        "description": "sqrt(x)"
+      },
+      {
+        "tag": "cbrt(x)",
+        "description": "cbrt(x)"
+      },
+      {
+        "tag": "root(x; n)",
+        "description": "root(x; n)"
+      }
+    ],
+    "Rounding": [
+      {
+        "tag": "round(x)",
+        "description": "round(x)"
+      },
+      {
+        "tag": "floor(x)",
+        "description": "floor(x)"
+      },
+      {
+        "tag": "ceiling(x)",
+        "description": "ceiling(x)"
+      },
+      {
+        "tag": "trunc(x)",
+        "description": "trunc(x)"
+      }
+    ],
+    "Integer": [
+      {
+        "tag": "mod(x; y)",
+        "description": "mod(x; y)"
+      },
+      {
+        "tag": "gcd(x; y; z…)",
+        "description": "gcd(x; y; z…)"
+      },
+      {
+        "tag": "lcm(x; y; z…) ",
+        "description": "lcm(x; y; z…) "
+      }
+    ],
+    "Complex": [
+      {
+        "tag": "re(x)",
+        "description": "re(x)"
+      },
+      {
+        "tag": "im(x)",
+        "description": "im(x)"
+      },
+      {
+        "tag": "phase(x)",
+        "description": "phase(x)"
+      },
+      {
+        "tag": "abs(x)",
+        "description": "abs(x)"
+      }
+    ],
+    "Aggregate And Interpolation": [
+      {
+        "tag": "min(M; v; x…)",
+        "description": "min(M; v; x…)"
+      },
+      {
+        "tag": "max(M; v; x…)",
+        "description": "max(M; v; x…)"
+      },
+      {
+        "tag": "sum(M; v; x…)",
+        "description": "sum(M; v; x…)"
+      },
+      {
+        "tag": "sumsq(M; v; x…)",
+        "description": "sumsq(M; v; x…)"
+      },
+      {
+        "tag": "srss(M; v; x…)",
+        "description": "srss(M; v; x…)"
+      },
+      {
+        "tag": "average(M; v; x…)",
+        "description": "average(M; v; x…)"
+      },
+      {
+        "tag": "product(M; v; x…)",
+        "description": "product(M; v; x…)"
+      },
+      {
+        "tag": "mean(M; v; x…)",
+        "description": "mean(x; y; z...)"
+      },
+      {
+        "tag": "take(n; M; v; x…)",
+        "description": "take(n; M; v; x…)"
+      },
+      {
+        "tag": "line(x; M; v; y…)",
+        "description": "line(x; M; v; y…)"
+      },
+      {
+        "tag": "spline(x; M; v; y…)",
+        "description": "spline(x; M; v; y…)"
+      }
+    ],
+    "Conditional And Logical": [
+      {
+        "tag": "if(cond, vt, vf)",
+        "description": "if(cond, vt, vf)"
+      },
+      {
+        "tag": "switch(c₁; v₁; c₂; v₂; …; def)",
+        "description": "switch(c₁; v₁; c₂; v₂; …; def)"
+      },
+      {
+        "tag": "not(x)",
+        "description": "not(x)"
+      },
+      {
+        "tag": "and(M; v; x…)",
+        "description": "and(M; v; x…)"
+      },
+      {
+        "tag": "or(M; v; x…)",
+        "description": "or(M; v; x…)"
+      },
+      {
+        "tag": "xor(M; v; x…)",
+        "description": "xor(M; v; x…)"
+      }
+    ],
+    "Other": [
+      {
+        "tag": "sign(x)",
+        "description": "sign(x)"
+      },
+      {
+        "tag": "random(x)",
+        "description": "random(x)"
+      },
+      {
+        "tag": "getUnits(x)",
+        "description": "getUnits(x)"
+      },
+      {
+        "tag": "setUnits(x; u)",
+        "description": "setUnits(x; u)"
+      },
+      {
+        "tag": "clrUnits(x)",
+        "description": "clrUnits(x)"
+      },
+      {
+        "tag": "hp(x)",
+        "description": "hp(x)"
+      },
+      {
+        "tag": "ishp(x)",
+        "description": "ishp(x)"
+      }
+    ],
+    "Vector": {
+      "Creational": [
+        {
+          "tag": "vector(n)",
+          "description": "vector(n)"
+        },
+        {
+          "tag": "vector_hp(n)",
+          "description": "vector__hp(n)"
+        },
+        {
+          "tag": "fill(v; x)",
+          "description": "fill(v; x)"
+        },
+        {
+          "tag": "range(x₁; xₙ; step)",
+          "description": "range(x₁; xₙ; step)"
+        },
+        {
+          "tag": "range_hp(x₁; xₙ; step)",
+          "description": "range__hp(x₁; xₙ; step)"
+        }
+      ],
+      "Structural": [
+        {
+          "tag": "len(v)",
+          "description": "len(v)"
+        },
+        {
+          "tag": "size(v)",
+          "description": "size(v)"
+        },
+        {
+          "tag": "join(M; v; x…) ",
+          "description": "join(M; v; x…) "
+        },
+        {
+          "tag": "slice(v; i₁; i₂)",
+          "description": "slice(v; i₁; i₂)"
+        },
+        {
+          "tag": "resize(v; n)",
+          "description": "resize(v; n)"
+        },
+        {
+          "tag": "first(v; n)",
+          "description": "first(v; n)"
+        },
+        {
+          "tag": "last(v; n)",
+          "description": "last(v; n)"
+        },
+        {
+          "tag": "extract(v; vi)",
+          "description": "extract(v; vi)"
+        }
+      ],
+      "Data": {
+        "direct": [
+          {
+            "tag": "sort(v)",
+            "description": "sort(v)"
+          },
+          {
+            "tag": "rsort(v)",
+            "description": "rsort(v)"
+          },
+          {
+            "tag": "order(v)",
+            "description": "order(v)"
+          },
+          {
+            "tag": "revorder(v)",
+            "description": "revorder(v)"
+          },
+          {
+            "tag": "reverse(v)",
+            "description": "reverse(v)"
+          },
+          {
+            "tag": "count(v; x; i)",
+            "description": "count(v; x; i)"
+          },
+          {
+            "tag": "search(v; x; i)",
+            "description": "search(v; x; i)"
+          }
+        ],
+        "Find": [
+          {
+            "tag": "find(v; x; i)",
+            "description": "find(v; x; i)"
+          },
+          {
+            "tag": "find_eq(v; x; i)",
+            "description": "find__eq(v; x; i)"
+          },
+          {
+            "tag": "find_ne(v; x; i)",
+            "description": "find__ne(v; x; i)"
+          },
+          {
+            "tag": "find_lt(v; x; i)",
+            "description": "find__lt(v; x; i)"
+          },
+          {
+            "tag": "find_le(v; x; i)",
+            "description": "find__le(v; x; i)"
+          },
+          {
+            "tag": "find_gt(v; x; i)",
+            "description": "find__gt(v; x; i)"
+          },
+          {
+            "tag": "find_ge(v; x; i)",
+            "description": "find__ge(v; x; i)"
+          }
+        ],
+        "Lookup": [
+          {
+            "tag": "lookup(a; b; x)",
+            "description": "lookup(a; b; x)"
+          },
+          {
+            "tag": "lookup_eq(a; b; x)",
+            "description": "lookup__eq(a; b; x)"
+          },
+          {
+            "tag": "lookup_ne(a; b; x)",
+            "description": "lookup__ne(a; b; x)"
+          },
+          {
+            "tag": "lookup_lt(a; b; x)",
+            "description": "lookup__lt(a; b; x)"
+          },
+          {
+            "tag": "lookup_le(a; b; x)",
+            "description": "lookup__le(a; b; x)"
+          },
+          {
+            "tag": "lookup_gt(a; b; x)",
+            "description": "lookup__gt(a; b; x)"
+          },
+          {
+            "tag": "lookup_ge(a; b; x)",
+            "description": "lookup__ge(a; b; x)"
+          }
+        ]
+      },
+      "Math": [
+        {
+          "tag": "norm(v)",
+          "description": "norm(v)"
+        },
+        {
+          "tag": "norm_1(v)",
+          "description": "norm__1(v)"
+        },
+        {
+          "tag": "norm_2(v)",
+          "description": "norm__2(v)"
+        },
+        {
+          "tag": "norm_e(v)",
+          "description": "norm__e(v)"
+        },
+        {
+          "tag": "norm_p(v; p)",
+          "description": "norm__p(v; p)"
+        },
+        {
+          "tag": "norm_i(v)",
+          "description": "norm__i(v)"
+        },
+        {
+          "tag": "unit(v)",
+          "description": "unit(v)"
+        },
+        {
+          "tag": "dot(a; b)",
+          "description": "dot(a; b)"
+        },
+        {
+          "tag": "cross(a; b)",
+          "description": "cross(a; b)"
+        }
+      ]
+    },
+    "Matrix": {
+      "Creational": {
+        "direct": [
+          {
+            "tag": "matrix(m; n)",
+            "description": "matrix(m; n)"
+          },
+          {
+            "tag": "identity(n)",
+            "description": "identity(n)"
+          },
+          {
+            "tag": "diagonal(n; d)",
+            "description": "diagonal(n; d)"
+          },
+          {
+            "tag": "column(m; c)",
+            "description": "column(m; c)"
+          },
+          {
+            "tag": "utriang(n)",
+            "description": "utriang(n)"
+          },
+          {
+            "tag": "ltriang(n)",
+            "description": "ltriang(n)"
+          },
+          {
+            "tag": "symmetric(n)",
+            "description": "symmetric(n)"
+          },
+          {
+            "tag": "join_cols(c₁; c₂; c₃…)",
+            "description": "join__cols(c₁; c₂; c₃…)"
+          },
+          {
+            "tag": "join_rows(r₁; r₂; r₃…)",
+            "description": "join__rows(r₁; r₂; r₃…)"
+          },
+          {
+            "tag": "augment(A; B; C…)",
+            "description": "augment(A; B; C…)"
+          },
+          {
+            "tag": "stack(A; B; C…)",
+            "description": "stack(A; B; C…)"
+          }
+        ],
+        "High Performance": [
+          {
+            "tag": "matrix_hp(m; n)",
+            "description": "matrix__hp(m; n)"
+          },
+          {
+            "tag": "identity_hp(n)",
+            "description": "identity__hp(n)"
+          },
+          {
+            "tag": "diagonal_hp(n; d)",
+            "description": "diagonal__hp(n; d)"
+          },
+          {
+            "tag": "column_hp(m; c)",
+            "description": "column__hp(m; c)"
+          },
+          {
+            "tag": "utriang_hp(n)",
+            "description": "utriang__hp(n)"
+          },
+          {
+            "tag": "ltriang_hp(n)",
+            "description": "ltriang__hp(n)"
+          },
+          {
+            "tag": "symmetric_hp(n)",
+            "description": "symmetric__hp(n)"
+          }
+        ]
+      },
+      "Structural": [
+        {
+          "tag": "n_rows(M)",
+          "description": "n__rows(M)"
+        },
+        {
+          "tag": "n_cols(M)",
+          "description": "n__cols(M)"
+        },
+        {
+          "tag": "mresize(M; m; n)",
+          "description": "mresize(M; m; n)"
+        },
+        {
+          "tag": "mfill(M; x)",
+          "description": "mfill(M; x)"
+        },
+        {
+          "tag": "fill_row(M; i; x)",
+          "description": "fill__row(M; i; x)"
+        },
+        {
+          "tag": "fill_col(M; j; x)",
+          "description": "fill__col(M; j; x)"
+        },
+        {
+          "tag": "copy(A; B; i; j)",
+          "description": "copy(A; B; i; j)"
+        },
+        {
+          "tag": "add(A; B; i; j)",
+          "description": "add(A; B; i; j)"
+        },
+        {
+          "tag": "row(M; i)",
+          "description": "row(M; i)"
+        },
+        {
+          "tag": "col(M; j)",
+          "description": "col(M; j)"
+        },
+        {
+          "tag": "extract_rows(M; vi)",
+          "description": "extract__rows(M; vi)"
+        },
+        {
+          "tag": "extract_cols(M; vj)",
+          "description": "extract__cols(M; vj)"
+        },
+        {
+          "tag": "diag2vec(M)",
+          "description": "diag2vec(M)"
+        },
+        {
+          "tag": "submatrix(M; i₁; i₂; j₁; j₂)",
+          "description": "submatrix(M; i₁; i₂; j₁; j₂)"
+        }
+      ],
+      "Data": {
+        "direct": [
+          {
+            "tag": "sort_cols(M; i)",
+            "description": "sort__cols(M; i)"
+          },
+          {
+            "tag": "rsort_cols(M; i)",
+            "description": "rsort__cols(M; i)"
+          },
+          {
+            "tag": "sort_rows(M; j)",
+            "description": "sort__rows(M; j)"
+          },
+          {
+            "tag": "rsort_rows(M; j)",
+            "description": "rsort__rows(M; j)"
+          },
+          {
+            "tag": "order_cols(M; i)",
+            "description": "order__cols(M; i)"
+          },
+          {
+            "tag": "revorder_cols(M; i)",
+            "description": "revorder_cols(M; i)"
+          },
+          {
+            "tag": "order_rows(M; j)",
+            "description": "order__rows(M; j)"
+          },
+          {
+            "tag": "revorder_rows(M; j)",
+            "description": "revorder__rows(M; j)"
+          },
+          {
+            "tag": "mcount(M; x)",
+            "description": "mcount(M; x)"
+          },
+          {
+            "tag": "msearch(M; x; i; j)",
+            "description": "msearch(M; x; i; j)"
+          }
+        ],
+        "Find": [
+          {
+            "tag": "mfind(M; x)",
+            "description": "mfind(M; x)"
+          },
+          {
+            "tag": "mfind_eq(M; x)",
+            "description": "mfind__eq(M; x)"
+          },
+          {
+            "tag": "mfind_ne(M; x)",
+            "description": "mfind__ne(M; x)"
+          },
+          {
+            "tag": "mfind_lt(M; x)",
+            "description": "mfind__lt(M; x)"
+          },
+          {
+            "tag": "mfind_le(M; x)",
+            "description": "mfind__le(M; x)"
+          },
+          {
+            "tag": "mfind_gt(M; x)",
+            "description": "mfind__gt(M; x)"
+          },
+          {
+            "tag": "mfind_ge(M; x)",
+            "description": "mfind__ge(M; x)"
+          }
+        ],
+        "Lookup": [
+          {
+            "tag": "hlookup(M; x; i₁; i₂)",
+            "description": "hlookup(M; x; i₁; i₂)"
+          },
+          {
+            "tag": "hlookup_eq(M; x; i₁; i₂)",
+            "description": "hlookup__eq(M; x; i₁; i₂)"
+          },
+          {
+            "tag": "hlookup_ne(M; x; i₁; i₂)",
+            "description": "hlookup__ne(M; x; i₁; i₂)"
+          },
+          {
+            "tag": "hlookup_lt(M; x; i₁; i₂)",
+            "description": "hlookup__lt(M; x; i₁; i₂)"
+          },
+          {
+            "tag": "hlookup_le(M; x; i₁; i₂)",
+            "description": "hlookup__le(M; x; i₁; i₂)"
+          },
+          {
+            "tag": "hlookup_gt(M; x; i₁; i₂)",
+            "description": "hlookup__gt(M; x; i₁; i₂)"
+          },
+          {
+            "tag": "hlookup_ge(M; x; i₁; i₂)",
+            "description": "hlookup__ge(M; x; i₁; i₂)"
+          },
+          {
+            "tag": "vlookup(M; x; j₁; j₂)",
+            "description": "vlookup(M; x; j₁; j₂)"
+          },
+          {
+            "tag": "vlookup_eq(M; x; j₁; j₂)",
+            "description": "vlookup__eq(M; x; j₁; j₂)"
+          },
+          {
+            "tag": "vlookup_ne(M; x; j₁; j₂)",
+            "description": "vlookup__ne(M; x; j₁; j₂)"
+          },
+          {
+            "tag": "vlookup_lt(M; x; j₁; j₂)",
+            "description": "vlookup__lt(M; x; j₁; j₂)"
+          },
+          {
+            "tag": "vlookup_le(M; x; j₁; j₂)",
+            "description": "vlookup__le(M; x; j₁; j₂)"
+          },
+          {
+            "tag": "vlookup_gt(M; x; j₁; j₂)",
+            "description": "vlookup__gt(M; x; j₁; j₂)"
+          },
+          {
+            "tag": "vlookup_ge(M; x; j₁; j₂)",
+            "description": "vlookup__ge(M; x; j₁; j₂)"
+          }
+        ]
+      },
+      "Math": {
+        "direct": [
+          {
+            "tag": "hprod(A; B)",
+            "description": "hprod(A; B)"
+          },
+          {
+            "tag": "fprod(A; B)",
+            "description": "fprod(A; B)"
+          },
+          {
+            "tag": "kprod(A; B)",
+            "description": "kprod(A; B)"
+          },
+          {
+            "tag": "det(M)",
+            "description": "det(M)"
+          },
+          {
+            "tag": "rank(M)",
+            "description": "rank(M)"
+          },
+          {
+            "tag": "trace(M)",
+            "description": "trace(M)"
+          },
+          {
+            "tag": "transp(M)",
+            "description": "transp(M)"
+          },
+          {
+            "tag": "adj(M)",
+            "description": "adj(M)"
+          },
+          {
+            "tag": "cofactor(M)",
+            "description": "cofactor(M)"
+          },
+          {
+            "tag": "inverse(M)",
+            "description": "inverse(M)"
+          },
+          {
+            "tag": "lsolve(A; b)",
+            "description": "lsolve(A; b)"
+          },
+          {
+            "tag": "clsolve(A; b)",
+            "description": "clsolve(A; b)"
+          },
+          {
+            "tag": "msolve(A; B)",
+            "description": "msolve(A; B)"
+          },
+          {
+            "tag": "cmsolve(A; B)",
+            "description": "cmsolve(A; B)"
+          }
+        ],
+        "Norms": [
+          {
+            "tag": "mnorm(",
+            "description": "mnorm(M)"
+          },
+          {
+            "tag": "mnorm_1(M)",
+            "description": "mnorm__1(M)"
+          },
+          {
+            "tag": "mnorm_2(M)",
+            "description": "mnorm__2(M)"
+          },
+          {
+            "tag": "mnorm_e(M)",
+            "description": "mnorm__e(M)"
+          },
+          {
+            "tag": "mnorm_i(M)",
+            "description": "mnorm__i(M)"
+          }
+        ],
+        "Condition Numbers": [
+          {
+            "tag": "cond(M)",
+            "description": "cond(M)"
+          },
+          {
+            "tag": "cond_1(M)",
+            "description": "cond__1(M)"
+          },
+          {
+            "tag": "cond_2(M)",
+            "description": "cond__2(M)"
+          },
+          {
+            "tag": "cond_e(M)",
+            "description": "cond__e(M)"
+          },
+          {
+            "tag": "cond_i(M)",
+            "description": "cond__i(M)"
+          }
+        ],
+        "Eigenvalues And Eigenvectors": [
+          {
+            "tag": "eigenvals(M; nₑ)",
+            "description": "eigenvals(M; nₑ)"
+          },
+          {
+            "tag": "eigenvecs(M; nₑ)",
+            "description": "eigenvecs(M; nₑ)"
+          },
+          {
+            "tag": "eigen(M; nₑ)",
+            "description": "eigen(M; nₑ)"
+          }
+        ],
+        "Decompositions": [
+          {
+            "tag": "cholesky(M)",
+            "description": "cholesky(M)"
+          },
+          {
+            "tag": "lu(M)",
+            "description": "lu(M)"
+          },
+          {
+            "tag": "qr(M)",
+            "description": "qr(M)"
+          },
+          {
+            "tag": "svd(M)",
+            "description": "svd(M)"
+          }
+        ],
+        "Double Interpolation": [
+          {
+            "tag": "take(x; y; M)",
+            "description": "take(x; y; M)"
+          },
+          {
+            "tag": "line(x; y; M)",
+            "description": "line(x; y; M)"
+          },
+          {
+            "tag": "spline(x; y; M)",
+            "description": "spline(x; y; M)"
+          }
+        ]
+      }
+    }
+  }
+}

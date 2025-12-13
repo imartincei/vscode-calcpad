@@ -3,6 +3,7 @@
   "displayName": "VS Code CalcPad",
   "description": "Calculator extension for VS Code",
   "version": "0.0.1",
+  "repository": "https://github.com/imartincei/vscode-calcpad",
   "engines": {
     "vscode": "^1.74.0"
   },
@@ -289,7 +290,7 @@
         {
           "id": "calcpad-ui",
           "title": "CalcPad",
-          "icon": "./calcpad-icon.svg"
+          "icon": "./calcpad-icon.png"
         }
       ]
     }

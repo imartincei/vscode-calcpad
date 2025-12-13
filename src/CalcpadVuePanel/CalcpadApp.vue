@@ -23,8 +23,10 @@
         v-else-if="activeTab === 'settings'"
         :settings="settings"
         :initial-preview-theme="previewTheme"
+        :initial-enable-quick-typing="enableQuickTyping"
         @update-settings="handleUpdateSettings"
         @update-preview-theme="handleUpdatePreviewTheme"
+        @update-quick-typing="handleUpdateQuickTyping"
         @reset-settings="handleResetSettings"
       />
       <CalcpadVariablesTab
@@ -62,6 +64,7 @@ const activeTab = ref('insert')
 const insertData = ref<InsertData>({})
 const settings = ref<Settings>()
 const previewTheme = ref('system')
+const enableQuickTyping = ref(true)
 const variablesData = ref<VariablesData>({
   macros: [],
   variables: [],
@@ -126,6 +129,13 @@ const handleUpdatePreviewTheme = (theme: string) => {
   postMessage({
     type: 'updatePreviewTheme',
     theme
+  })
+}
+
+const handleUpdateQuickTyping = (enabled: boolean) => {
+  postMessage({
+    type: 'updateQuickTyping',
+    enabled
   })
 }
 

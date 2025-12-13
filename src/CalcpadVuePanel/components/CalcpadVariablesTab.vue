@@ -1,5 +1,13 @@
 <template>
   <div class="variables-tab">
+    <div class="search-container">
+      <input
+        v-model="searchTerm"
+        type="text"
+        placeholder="Search variables, macros, functions..."
+        class="search-input"
+      />
+    </div>
     <div class="variables-container p-3">
       <div v-if="loading" class="loading">
         Loading variables...
@@ -7,15 +15,18 @@
       <div v-else-if="!hasVariables" class="no-variables">
         No variables found. Open a CalcPad document to see variables, macros, and functions.
       </div>
+      <div v-else-if="searchTerm && !hasFilteredResults" class="no-variables">
+        No results found for "{{ searchTerm }}"
+      </div>
       <div v-else class="variables-sections">
         <!-- Macros Section -->
-        <div v-if="variablesData.macros.length > 0" class="variables-section">
+        <div v-if="filteredMacros.length > 0" class="variables-section">
           <div
             class="variables-header"
             :class="{ collapsed: collapsedSections.macros }"
             @click="toggleSection('macros')"
           >
-            <span>Macros ({{ variablesData.macros.length }})</span>
+            <span>Macros ({{ filteredMacros.length }})</span>
             <span class="expand-icon">▼</span>
           </div>
           <div
@@ -23,10 +34,11 @@
             :class="{ collapsed: collapsedSections.macros }"
           >
             <div
-              v-for="macro in variablesData.macros"
+              v-for="macro in filteredMacros"
               :key="`macro-${macro.name}`"
               class="variable-item"
-              @click="insertVariable(macro.name)"
+              :title="getMacroTooltip(macro)"
+              @click="insertMacro(macro)"
             >
               <div class="variable-name">{{ macro.name }}</div>
               <div class="variable-type">Macro</div>
@@ -37,13 +49,13 @@
         </div>
 
         <!-- Variables Section -->
-        <div v-if="variablesData.variables.length > 0" class="variables-section">
+        <div v-if="filteredVariables.length > 0" class="variables-section">
           <div
             class="variables-header"
             :class="{ collapsed: collapsedSections.variables }"
             @click="toggleSection('variables')"
           >
-            <span>Variables ({{ variablesData.variables.length }})</span>
+            <span>Variables ({{ filteredVariables.length }})</span>
             <span class="expand-icon">▼</span>
           </div>
           <div
@@ -51,9 +63,10 @@
             :class="{ collapsed: collapsedSections.variables }"
           >
             <div
-              v-for="variable in variablesData.variables"
+              v-for="variable in filteredVariables"
               :key="`var-${variable.name}`"
               class="variable-item"
+              :title="`Click to insert: ${variable.name}`"
               @click="insertVariable(variable.name)"
             >
               <div class="variable-name">{{ variable.name }}</div>
@@ -65,13 +78,13 @@
         </div>
 
         <!-- Functions Section -->
-        <div v-if="variablesData.functions.length > 0" class="variables-section">
+        <div v-if="filteredFunctions.length > 0" class="variables-section">
           <div
             class="variables-header"
             :class="{ collapsed: collapsedSections.functions }"
             @click="toggleSection('functions')"
           >
-            <span>Functions ({{ variablesData.functions.length }})</span>
+            <span>Functions ({{ filteredFunctions.length }})</span>
             <span class="expand-icon">▼</span>
           </div>
           <div
@@ -79,9 +92,10 @@
             :class="{ collapsed: collapsedSections.functions }"
           >
             <div
-              v-for="func in variablesData.functions"
+              v-for="func in filteredFunctions"
               :key="`func-${func.name}`"
               class="variable-item"
+              :title="getFunctionTooltip(func)"
               @click="insertFunction(func)"
             >
               <div class="variable-name">{{ func.name }}</div>
@@ -122,6 +136,7 @@ const emit = defineEmits<{
 }>()
 
 // State
+const searchTerm = ref('')
 const collapsedSections = ref({
   macros: false,
   variables: false,
@@ -135,6 +150,42 @@ const hasVariables = computed(() => {
          props.variablesData.functions.length > 0
 })
 
+const filteredMacros = computed(() => {
+  if (!searchTerm.value.trim()) {
+    return props.variablesData.macros
+  }
+  const term = searchTerm.value.toLowerCase()
+  return props.variablesData.macros.filter(macro =>
+    macro.name.toLowerCase().includes(term)
+  )
+})
+
+const filteredVariables = computed(() => {
+  if (!searchTerm.value.trim()) {
+    return props.variablesData.variables
+  }
+  const term = searchTerm.value.toLowerCase()
+  return props.variablesData.variables.filter(variable =>
+    variable.name.toLowerCase().includes(term)
+  )
+})
+
+const filteredFunctions = computed(() => {
+  if (!searchTerm.value.trim()) {
+    return props.variablesData.functions
+  }
+  const term = searchTerm.value.toLowerCase()
+  return props.variablesData.functions.filter(func =>
+    func.name.toLowerCase().includes(term)
+  )
+})
+
+const hasFilteredResults = computed(() => {
+  return filteredMacros.value.length > 0 ||
+         filteredVariables.value.length > 0 ||
+         filteredFunctions.value.length > 0
+})
+
 // Methods
 const toggleSection = (section: 'macros' | 'variables' | 'functions') => {
   collapsedSections.value[section] = !collapsedSections.value[section]
@@ -144,9 +195,15 @@ const insertVariable = (name: string) => {
   emit('insertText', name)
 }
 
+const insertMacro = (macro: VariableItem) => {
+  // Insert macro with definition if available
+  const macroText = macro.definition ? macro.definition : macro.name
+  emit('insertText', macroText)
+}
+
 const insertFunction = (func: VariableItem) => {
-  // Insert function with parentheses
-  const functionCall = func.params ? `${func.name}()` : `${func.name}()`
+  // Insert function with parameters if available
+  const functionCall = func.params ? `${func.name}(${func.params})` : `${func.name}()`
   emit('insertText', functionCall)
 }
 
@@ -161,6 +218,11 @@ const getSourceLabel = (source: string | undefined): string => {
     default:
       return source
   }
+}
+
+const getFunctionTooltip = (func: VariableItem): string => {
+  const functionCall = func.params ? `${func.name}(${func.params})` : `${func.name}()`
+  return `Click to insert: ${functionCall}`
 }
 
 // Watch for changes in variables data to auto-expand sections when new data arrives
@@ -191,9 +253,30 @@ watch(
   flex-direction: column;
 }
 
+.search-container {
+  padding: 12px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.search-input {
+  width: 100%;
+  padding: 8px;
+  background: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border);
+  color: var(--vscode-input-foreground);
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: var(--vscode-font-family);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--vscode-focusBorder);
+}
+
 .variables-container {
   overflow-y: auto;
-  height: 100%;
+  flex: 1;
 }
 
 .loading,

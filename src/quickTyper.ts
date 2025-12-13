@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as insertData from './data/insert.json';
+import insertData from './insertLoader';
 
 /**
  * Handles automatic replacement of quick typing shortcuts with Unicode symbols
@@ -61,6 +61,7 @@ export class QuickTyper {
 
     /**
      * Process text change and replace quick type shortcuts with Unicode symbols
+     * Only triggers when spacebar is pressed after a ~ pattern
      */
     public async processTextChange(
         document: vscode.TextDocument,
@@ -79,12 +80,17 @@ export class QuickTyper {
             return;
         }
 
+        // Only activate on spacebar
+        if (change.text !== ' ') {
+            return;
+        }
+
         const position = change.range.start;
         const line = document.lineAt(position.line);
         const lineText = line.text;
 
-        // Look for quick type patterns that end at the insertion point
-        const replacement = this.findQuickTypeReplacement(lineText, position.character + 1);
+        // Look for quick type patterns that end just before the space
+        const replacement = this.findQuickTypeReplacement(lineText, position.character);
         if (replacement) {
             await this.replaceQuickType(document, position, replacement);
         }
@@ -125,6 +131,7 @@ export class QuickTyper {
 
     /**
      * Replace the quick type shortcut in the document
+     * Also removes the space that triggered the replacement
      */
     private async replaceQuickType(
         document: vscode.TextDocument,
@@ -133,15 +140,16 @@ export class QuickTyper {
     ): Promise<void> {
         const edit = new vscode.WorkspaceEdit();
 
-        // Create range for the shortcut to replace
+        // Create range for the shortcut to replace (includes the space after it)
+        // insertPosition points to where the space was inserted, so we need to include it
         const range = new vscode.Range(
             insertPosition.line,
             replacement.startPos,
             insertPosition.line,
-            replacement.endPos
+            insertPosition.character + 1  // Include the space that was just typed
         );
 
-        // Replace with Unicode character
+        // Replace with Unicode character (no trailing space)
         edit.replace(document.uri, range, replacement.replacement);
 
         const shortcut = document.lineAt(insertPosition.line).text.substring(
@@ -166,9 +174,10 @@ export class QuickTyper {
                 return;
             }
 
-            // Process each change
-            for (const change of event.contentChanges) {
-                await this.processTextChange(event.document, change);
+            // Only process single change (typing scenario)
+            // Multiple changes would be from paste/other operations which we ignore anyway
+            if (event.contentChanges.length === 1) {
+                await this.processTextChange(event.document, event.contentChanges[0]);
             }
         });
     }

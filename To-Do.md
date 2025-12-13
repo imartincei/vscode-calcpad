@@ -1,19 +1,23 @@
 # To-Do
 
 ## vscode-calcpad
+
+### Enhancements
 - Finish enhanced PDF generation
 - See if intellisense can be improved
 - Implement user defined variable, units, function, and macro definitions using html comment before the #def line (e.g. cmt$({"description": "This macro does this.\nparam1 is the thing..."})). Add tooltip for these that uses the description.
 - Implement custom units
 - Add duplicate macro definitions to linter
 - Test linter for advanced issues
-- Make the webview always available, but the preview and export buttons only available in .cpd files
-- Add search for variables
 - Add recent features added to Calcpad to linting/insert tab
 - Remove final #fetch reference and resolve associated !!! comments
-- Fix symbol dropdown and move to top of insert.json, check insert.json formatting.
-- Test quick typing of symbols and make sure it only affects the last typed symbols and doesn't update the entire file (same with operators). Make symbol quick typing end with a space so content overlap is possible. Add quick typing for macros (~1 macro 1, ~2 macro 2, etc.). Add macro mapping to vscode config using json object {macroMapping:{"1": "macroName$", ...}}. 
-- Add hotkeys for HTML/markdown formatting. Add toggle for HTML vs markdown in the settings. 
+- Add quick typing for macros (~1 macro 1, ~2 macro 2, etc.). Add macro mapping to vscode config using json object {macroMapping:{"1": "macroName$", ...}}. 
+- Add hotkeys for HTML/markdown formatting. Add toggle for HTML vs markdown in the settings.
+- Add .vscodeignore
+- Package extension for further testing within the company. Publish to vsx and Visual Studio Marketplace (under personal account)
+
+### Bugs
+[Vue Debug] Vue Error: TypeError: e.getMacroTooltip is not a function - https://vuejs.org/error-reference/#runtime-1
 
 ## Calcpad.Server
 - Test new URL structure from Calcpad.Core.

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as insertData from './data/insert.json';
+import insertData from './insertLoader';
 
 export interface InsertItem {
     tag: string;
