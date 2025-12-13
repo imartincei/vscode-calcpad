@@ -9,6 +9,7 @@ interface DefinitionCollector {
     getAllVariables(): Set<string>;
     getAllFunctions(): Map<string, number>;
     getAllMacros(): Map<string, number>;
+    getAllCustomUnits(): Set<string>;
     getBuiltInFunctions(): Set<string>;
     getControlKeywords(): Set<string>;
     getCommands(): Set<string>;
@@ -224,7 +225,8 @@ export class CalcpadLinter {
         const variables = this.collectDefinedVariables(lines);
         const functions = this.collectUserDefinedFunctions(lines);
         const macrosWithLineNumbers = this.collectUserDefinedMacros(lines);
-        
+        const customUnits = this.collectCustomUnits(lines);
+
         // Convert to parameter count map for DefinitionCollector interface
         const macros = new Map<string, number>();
         for (const [name, info] of macrosWithLineNumbers) {
@@ -235,6 +237,7 @@ export class CalcpadLinter {
             getAllVariables: () => variables,
             getAllFunctions: () => functions,
             getAllMacros: () => macros,
+            getAllCustomUnits: () => customUnits,
             getBuiltInFunctions: () => this.builtInFunctions,
             getControlKeywords: () => this.controlKeywords,
             getCommands: () => this.commands,
@@ -321,6 +324,7 @@ export class CalcpadLinter {
             getAllVariables: () => new Set<string>(),
             getAllFunctions: () => new Map<string, number>(),
             getAllMacros: () => new Map<string, number>(),
+            getAllCustomUnits: () => new Set<string>(),
             getBuiltInFunctions: () => this.builtInFunctions,
             getControlKeywords: () => this.controlKeywords,
             getCommands: () => this.commands,
@@ -688,6 +692,28 @@ export class CalcpadLinter {
         return variables;
     }
 
+    private collectCustomUnits(lines: string[]): Set<string> {
+        const customUnits = new Set<string>();
+
+        for (const line of lines) {
+            if (CalcpadLinter.isEmptyCommentOrDirective(line)) {
+                continue;
+            }
+
+            // Check for custom unit definitions: .unitName = expression
+            const customUnitPattern = /^\.([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*(.+)/;
+            const match = customUnitPattern.exec(line.trim());
+            if (match) {
+                const unitName = match[1]; // Without the dot
+                customUnits.add(unitName);
+                this.outputChannel.appendLine(`[DEBUG] Collected custom unit: ${unitName} from line: "${line}"`);
+            }
+        }
+
+        this.outputChannel.appendLine(`[DEBUG] Total custom units collected: [${Array.from(customUnits).join(', ')}]`);
+        return customUnits;
+    }
+
     private collectUserDefinedFunctions(lines: string[]): Map<string, number> {
         const userFunctions = new Map<string, number>();
         
@@ -762,10 +788,13 @@ export class CalcpadLinter {
         // Check for unmatched control blocks first
         this.checkControlBlockBalance(lines, diagnostics);
 
+        // Create definition collector once for all lines (includes custom units)
+        const definitions = this.createDefinitionCollector(compiledContent.expandedLines);
+
         // Validate original source lines (syntax, structure, etc.)
         // Track macro context as we process lines
         let currentMacroContext: {name: string, params: string[]} | undefined = undefined;
-        
+
         // Lint the expanded/resolved content instead of original lines
         for (let i = 0; i < compiledContent.expandedLines.length; i++) {
             const expandedLine = compiledContent.expandedLines[i];
@@ -835,8 +864,7 @@ export class CalcpadLinter {
                 this.checkKeywordValidation(parsedLine, macroLineDiagnostics);
                 this.checkAssignments(parsedLine, macroLineDiagnostics);
                 this.checkMacroSyntax(parsedLine, macroLineDiagnostics, compiledContent.userDefinedMacros);
-                this.checkUnits(parsedLine, macroLineDiagnostics);
-                const definitions = this.createDefinitionCollector(compiledContent.expandedLines);
+                this.checkUnits(parsedLine, macroLineDiagnostics, definitions);
                 this.checkUndefinedVariablesInCompiledLine(expandedLine, originalLineNumber, macroLineDiagnostics, definitions, lineMacroContext);
 
                 // Convert any diagnostics to highlight the entire macro call
@@ -864,8 +892,7 @@ export class CalcpadLinter {
                 this.checkAssignments(parsedLine, diagnostics);
                 this.checkMacroSyntax(parsedLine, diagnostics, compiledContent.userDefinedMacros);
                 this.checkMacroUsage(expandedLine, originalLineNumber, diagnostics, compiledContent.userDefinedMacros);
-                this.checkUnits(parsedLine, diagnostics);
-                const definitions = this.createDefinitionCollector(compiledContent.expandedLines);
+                this.checkUnits(parsedLine, diagnostics, definitions);
                 this.checkUndefinedVariablesInCompiledLine(expandedLine, originalLineNumber, diagnostics, definitions, lineMacroContext);
             }
             
@@ -2465,7 +2492,7 @@ export class CalcpadLinter {
         return allSuggestions.slice(0, 3); // Return max 3 suggestions
     }
 
-    private checkUnits(parsedLine: ParsedLine, diagnostics: vscode.Diagnostic[]): void {
+    private checkUnits(parsedLine: ParsedLine, diagnostics: vscode.Diagnostic[], collector: DefinitionCollector): void {
         const line = parsedLine.originalLine;
         const lineNumber = parsedLine.lineNumber;
         // Check for common unit conversion issues
@@ -2570,7 +2597,9 @@ export class CalcpadLinter {
             // Energy
             'BTU', 'therm', 'therm_UK', 'therm_US', 'quad',
             // Power
-            'hp', 'hpE', 'hpS'
+            'hp', 'hpE', 'hpS',
+            // Custom units (dynamically added)
+            ...collector.getAllCustomUnits()
         ]);
 
         while ((match = unitPattern.exec(line)) !== null) {
@@ -2581,7 +2610,7 @@ export class CalcpadLinter {
                 const range = new vscode.Range(lineNumber, match.index + numberPartLength, lineNumber, match.index + match[0].length);
                 diagnostics.push(new vscode.Diagnostic(
                     range,
-                    `Unknown unit '${unit}'. Check spelling or use custom unit definition`,
+                    `Unknown unit '${unit}'. Check spelling, use a built-in unit, or define with .${unit} = <expression>`,
                     vscode.DiagnosticSeverity.Error
                 ));
             }

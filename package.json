@@ -3,6 +3,7 @@
   "displayName": "VS Code CalcPad",
   "description": "Calculator extension for VS Code",
   "version": "0.0.1",
+  "publisher": "imartincei",
   "repository": "https://github.com/imartincei/vscode-calcpad",
   "engines": {
     "vscode": "^1.74.0"
@@ -10,8 +11,14 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
-  "main": "./out/extension.js",
+  "activationEvents": [
+    "onLanguage:calcpad",
+    "onCommand:vscode-calcpad.activate",
+    "onCommand:vscode-calcpad.previewHtml",
+    "onCommand:vscode-calcpad.showInsert",
+    "onView:calcpadVueUI"
+  ],
+  "main": "./dist/extension.js",
   "contributes": {
     "languages": [
       {
@@ -296,9 +303,12 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "npm run build:vue && tsc -p ./",
-    "watch": "concurrently \"npm run watch:vue\" \"tsc -watch -p ./\"",
+    "vscode:prepublish": "npm run package",
+    "compile": "npm run build:vue && webpack",
+    "watch": "concurrently \"npm run watch:vue\" \"webpack --watch\"",
+    "package": "npm run build:vue && webpack --mode production --devtool hidden-source-map",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
     "build:vue": "vite build",
     "watch:vue": "vite build --watch",
     "dev:vue": "vite build --watch --mode development",
@@ -307,13 +317,17 @@
   "devDependencies": {
     "@types/node": "^20.19.16",
     "@types/vscode": "^1.74.0",
+    "@types/webpack": "^5.28.5",
     "@vitejs/plugin-vue": "^5.2.4",
     "@vue/compiler-sfc": "^3.5.21",
     "concurrently": "^9.2.1",
     "terser": "^5.44.0",
+    "ts-loader": "^9.5.4",
     "typescript": "^5.9.2",
     "vite": "^5.4.20",
-    "vue-tsc": "^2.2.12"
+    "vue-tsc": "^2.2.12",
+    "webpack": "^5.103.0",
+    "webpack-cli": "^6.0.1"
   },
   "dependencies": {
     "axios": "^1.11.0",

@@ -762,7 +762,7 @@ export function activate(context: vscode.ExtensionContext) {
             await contentResolver.preCacheContent(lines);
             const resolvedContent = contentResolver.getCompiledContent(document);
             
-            outputChannel.appendLine(`[processDocument] Found ${resolvedContent.allMacros.length} macros, ${resolvedContent.variablesWithDefinitions.length} variables, ${resolvedContent.functionsWithParams.length} functions`);
+            outputChannel.appendLine(`[processDocument] Found ${resolvedContent.allMacros.length} macros, ${resolvedContent.variablesWithDefinitions.length} variables, ${resolvedContent.functionsWithParams.length} functions, ${resolvedContent.customUnits.length} custom units`);
             
             // Send all user-defined content to UI providers
             // uiProvider.updateVariables({
@@ -773,9 +773,16 @@ export function activate(context: vscode.ExtensionContext) {
             // Cast to rich types with source info for Vue UI
             const variables = resolvedContent.variablesWithDefinitions as import('./types/calcpad').VariableDefinition[];
             const functions = resolvedContent.functionsWithParams as import('./types/calcpad').FunctionDefinition[];
+            const customUnits = resolvedContent.customUnits as import('./types/calcpad').CustomUnitDefinition[];
 
             vueUiProvider.updateVariables({
-                macros: resolvedContent.allMacros,
+                macros: resolvedContent.allMacros.map(m => ({
+                    name: m.name,
+                    params: m.params.length > 0 ? m.params.join('; ') : undefined,
+                    definition: m.content.join('\n'),
+                    source: m.source,
+                    sourceFile: m.sourceFile
+                })),
                 variables: variables.map(v => ({
                     name: v.name,
                     definition: v.definition,
@@ -787,6 +794,12 @@ export function activate(context: vscode.ExtensionContext) {
                     params: f.params.join('; '),
                     source: f.source,
                     sourceFile: f.sourceFile
+                })),
+                customUnits: customUnits.map(u => ({
+                    name: u.name,
+                    definition: u.definition,
+                    source: u.source,
+                    sourceFile: u.sourceFile
                 }))
             });
         } catch (error) {

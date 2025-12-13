@@ -1,5 +1,6 @@
 out/
 node_modules/
+dist/
 *.vsix
 .vscode-test/
 .nyc_output/

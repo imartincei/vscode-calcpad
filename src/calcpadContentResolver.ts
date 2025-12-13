@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { CalcpadSettingsManager } from './calcpadSettings';
-import { VariableDefinition, FunctionDefinition } from './types/calcpad';
+import { VariableDefinition, FunctionDefinition, CustomUnitDefinition } from './types/calcpad';
 
 // Interface for macro definition
 export interface MacroDefinition {
@@ -25,6 +25,7 @@ export interface ResolvedContent {
     userDefinedMacros: Map<string, {lineNumber: number, paramCount: number}>;
     definedVariables: Set<string>;
     variablesWithDefinitions: Array<{name: string, definition: string}> | VariableDefinition[];
+    customUnits: CustomUnitDefinition[];
     allMacros: MacroDefinition[];
     duplicateMacros: Array<{name: string, duplicateLineNumber: number, originalLineNumber: number}>;
 }
@@ -144,6 +145,7 @@ export class CalcpadContentResolver {
                 userDefinedMacros: this.collectUserDefinedMacros(processedLines),
                 definedVariables: this.collectDefinedVariables(processedLines),
                 variablesWithDefinitions: variablesWithSourceInfo.map(v => ({name: v.name, definition: v.definition})),
+                customUnits: this.collectCustomUnits(processedLines, lineSourceMap),
                 allMacros: this.collectAllMacroDefinitions(processedLines, 'local'),
                 duplicateMacros: [] // No duplicates in simple case
             };
@@ -362,6 +364,7 @@ export class CalcpadContentResolver {
             userDefinedMacros,
             definedVariables,
             variablesWithDefinitions: variablesWithSourceInfo.map(v => ({name: v.name, definition: v.definition})),
+            customUnits: this.collectCustomUnits(expandedLines, lineSourceMap),
             allMacros,
             duplicateMacros
         };
@@ -675,6 +678,39 @@ export class CalcpadContentResolver {
         }
 
         return variables as Array<{name: string, definition: string}> | VariableDefinition[];
+    }
+
+    private collectCustomUnits(
+        lines: string[],
+        lineSourceMap?: Map<number, {source: 'local' | 'include', sourceFile?: string}>
+    ): CustomUnitDefinition[] {
+        const customUnits: CustomUnitDefinition[] = [];
+
+        for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+            const line = lines[lineIndex];
+            if (line.trim() === '' || line.trim().startsWith("'") || line.trim().startsWith('"') || line.trim().startsWith('#')) {
+                continue;
+            }
+
+            // Check for custom unit definitions: .unitName = expression
+            const customUnitPattern = /^\.([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*(.+)/;
+            const match = customUnitPattern.exec(line.trim());
+            if (match) {
+                const unitName = match[1]; // Without the dot
+                const definition = match[2].replace(/\s*'.*$/, '').trim(); // Remove comments
+
+                const sourceInfo = lineSourceMap?.get(lineIndex) || {source: 'local' as const};
+                customUnits.push({
+                    name: unitName,
+                    definition: definition,
+                    lineNumber: lineIndex,
+                    source: sourceInfo.source,
+                    sourceFile: sourceInfo.sourceFile
+                });
+            }
+        }
+
+        return customUnits;
     }
 
     // Helper function to check for duplicate macros in a set of lines

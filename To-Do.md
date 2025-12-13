@@ -6,18 +6,18 @@
 - Finish enhanced PDF generation
 - See if intellisense can be improved
 - Implement user defined variable, units, function, and macro definitions using html comment before the #def line (e.g. cmt$({"description": "This macro does this.\nparam1 is the thing..."})). Add tooltip for these that uses the description.
-- Implement custom units
-- Add duplicate macro definitions to linter
 - Test linter for advanced issues
 - Add recent features added to Calcpad to linting/insert tab
+    -Inline and Block, HP vectors/matricies, markdown, find anything else that might be missing
 - Remove final #fetch reference and resolve associated !!! comments
-- Add quick typing for macros (~1 macro 1, ~2 macro 2, etc.). Add macro mapping to vscode config using json object {macroMapping:{"1": "macroName$", ...}}. 
+- Add quick typing for macros (~1 macro 1, ~2 macro 2, etc.). Add macro mapping to vscode config using json object {macroMapping:{"1": "macroName$", ...}}. Have VS code set cursor position to within () and before first param.
 - Add hotkeys for HTML/markdown formatting. Add toggle for HTML vs markdown in the settings.
-- Add .vscodeignore
-- Package extension for further testing within the company. Publish to vsx and Visual Studio Marketplace (under personal account)
+- Package extension for further testing within the company. Publish to Open VSX but not Visual Studio Marketplace unless I need a personal Azure account for other reasons
+- Fix settings.json to remove settings defined in the Vue component. Only have baseline settings or complex json settings here.
 
 ### Bugs
-[Vue Debug] Vue Error: TypeError: e.getMacroTooltip is not a function - https://vuejs.org/error-reference/#runtime-1
+Ignore custom units in undefined variable checks
+Fix bundling of js for .vsix distribution, see if js files can be used instead of JSON for the insert data (this is likely better anyways).
 
 ## Calcpad.Server
 - Test new URL structure from Calcpad.Core.

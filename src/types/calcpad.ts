@@ -50,3 +50,12 @@ export interface FunctionDefinition {
   source: 'local' | 'include';
   sourceFile?: string;
 }
+
+// Custom unit definition with source tracking
+export interface CustomUnitDefinition {
+  name: string;              // Unit name WITHOUT the dot (e.g., "customUnit")
+  definition: string;        // The value expression (e.g., "1in")
+  lineNumber: number;
+  source: 'local' | 'include';
+  sourceFile?: string;
+}
