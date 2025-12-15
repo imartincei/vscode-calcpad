@@ -30,6 +30,33 @@ export interface ResolvedContent {
     duplicateMacros: Array<{name: string, duplicateLineNumber: number, originalLineNumber: number}>;
 }
 
+// Interface for staged content resolution
+export interface StagedResolvedContent {
+    stage1: {
+        lines: string[];
+        sourceMap: Map<number, number>;
+        lineContinuationMap: Map<number, number[]>;
+    };
+    stage2: {
+        lines: string[];
+        sourceMap: Map<number, number>;
+        includeMap: Map<number, {source: 'local' | 'include', sourceFile?: string}>;
+        macroDefinitions: MacroDefinition[];
+        duplicateMacros: Array<{name: string, duplicateLineNumber: number, originalLineNumber: number}>;
+    };
+    stage3: {
+        lines: string[];
+        sourceMap: Map<number, number>;
+        macroExpansionLines: Map<number, string>;
+        userDefinedFunctions: Map<string, number>;
+        functionsWithParams: FunctionDefinition[];
+        userDefinedMacros: Map<string, {lineNumber: number, paramCount: number}>;
+        definedVariables: Set<string>;
+        variablesWithDefinitions: VariableDefinition[];
+        customUnits: CustomUnitDefinition[];
+    };
+}
+
 export class CalcpadContentResolver {
     private contentCache: Map<string, string[]> = new Map();
     private outputChannel: vscode.OutputChannel;
@@ -733,5 +760,202 @@ export class CalcpadContentResolver {
                 }
             }
         }
+    }
+
+    // Get staged content with all three stages
+    public getStagedContent(document: vscode.TextDocument): StagedResolvedContent {
+        const text = document.getText();
+        const lines = text.split('\n');
+
+        // STAGE 1: Process line continuations only
+        const stage1 = this.processStage1(lines);
+
+        // STAGE 2: Resolve includes, collect macros (but don't expand)
+        const stage2 = this.processStage2(stage1);
+
+        // STAGE 3: Expand macros, collect all definitions
+        const stage3 = this.processStage3(stage2);
+
+        return { stage1, stage2, stage3 };
+    }
+
+    // STAGE 1: Process line continuations only
+    private processStage1(lines: string[]): StagedResolvedContent['stage1'] {
+        const { processedLines, lineContinuationMap } = this.processLineContinuations(lines);
+
+        const sourceMap = new Map<number, number>();
+        for (let i = 0; i < processedLines.length; i++) {
+            const continuationOriginalLines = lineContinuationMap.get(i);
+            if (continuationOriginalLines && continuationOriginalLines.length > 0) {
+                sourceMap.set(i, continuationOriginalLines[0]);
+            } else {
+                sourceMap.set(i, i);
+            }
+        }
+
+        return {
+            lines: processedLines,
+            sourceMap,
+            lineContinuationMap
+        };
+    }
+
+    // STAGE 2: Resolve includes, collect macros (don't expand)
+    private processStage2(stage1: StagedResolvedContent['stage1']): StagedResolvedContent['stage2'] {
+        const lines: string[] = [];
+        const sourceMap = new Map<number, number>();
+        const includeMap = new Map<number, {source: 'local' | 'include', sourceFile?: string}>();
+        const macroDefinitions: MacroDefinition[] = [];
+        const duplicateMacros: Array<{name: string, duplicateLineNumber: number, originalLineNumber: number}> = [];
+        const macroFirstDefinitions = new Map<string, number>();
+
+        for (let i = 0; i < stage1.lines.length; i++) {
+            const line = stage1.lines[i];
+
+            // Handle #include directives - expand but don't process macros
+            if (line.trim().startsWith('#include ')) {
+                const includedLines = this.resolveInclude(line);
+                const includeFile = line.replace('#include ', '').trim().replace(/['"]/g, '');
+
+                // Check for duplicate macros in included content
+                for (let j = 0; j < includedLines.length; j++) {
+                    const includedLine = includedLines[j];
+                    if (includedLine.trim().startsWith('#def ')) {
+                        const macroDefinition = this.parseMacroDefinition(includedLine.trim());
+                        if (macroDefinition) {
+                            if (macroFirstDefinitions.has(macroDefinition.name)) {
+                                duplicateMacros.push({
+                                    name: macroDefinition.name,
+                                    duplicateLineNumber: lines.length + j,
+                                    originalLineNumber: macroFirstDefinitions.get(macroDefinition.name)!
+                                });
+                            } else {
+                                macroFirstDefinitions.set(macroDefinition.name, lines.length + j);
+                            }
+
+                            macroDefinitions.push({
+                                name: macroDefinition.name,
+                                params: macroDefinition.params,
+                                content: macroDefinition.content,
+                                lineNumber: lines.length + j,
+                                source: 'include',
+                                sourceFile: includeFile
+                            });
+                        }
+                    }
+                }
+
+                for (const includedLine of includedLines) {
+                    lines.push(includedLine);
+                    sourceMap.set(lines.length - 1, i);
+                    includeMap.set(lines.length - 1, {
+                        source: 'include',
+                        sourceFile: includeFile
+                    });
+                }
+                continue;
+            }
+
+            // Track macro definitions (but don't expand them yet)
+            if (line.trim().startsWith('#def ')) {
+                const macroDefinition = this.parseMacroDefinition(line.trim());
+                if (macroDefinition) {
+                    // Check for duplicates
+                    if (macroFirstDefinitions.has(macroDefinition.name)) {
+                        duplicateMacros.push({
+                            name: macroDefinition.name,
+                            duplicateLineNumber: lines.length,
+                            originalLineNumber: macroFirstDefinitions.get(macroDefinition.name)!
+                        });
+                    } else {
+                        macroFirstDefinitions.set(macroDefinition.name, lines.length);
+                    }
+
+                    macroDefinitions.push({
+                        name: macroDefinition.name,
+                        params: macroDefinition.params,
+                        content: macroDefinition.content,
+                        lineNumber: lines.length,
+                        source: 'local'
+                    });
+                }
+            }
+
+            // Add line as-is (macros not expanded yet)
+            lines.push(line);
+            sourceMap.set(lines.length - 1, i);
+            includeMap.set(lines.length - 1, {source: 'local'});
+        }
+
+        return {
+            lines,
+            sourceMap,
+            includeMap,
+            macroDefinitions,
+            duplicateMacros
+        };
+    }
+
+    // STAGE 3: Expand macros, collect all definitions
+    private processStage3(stage2: StagedResolvedContent['stage2']): StagedResolvedContent['stage3'] {
+        const lines: string[] = [];
+        const sourceMap = new Map<number, number>();
+        const macroExpansionLines = new Map<number, string>();
+        const macros = new Map<string, { params: string[], content: string[] }>();
+
+        // Build macro map from stage2 definitions (skip duplicates, use first definition)
+        for (const macroDef of stage2.macroDefinitions) {
+            if (!macros.has(macroDef.name)) {
+                macros.set(macroDef.name, {
+                    params: macroDef.params,
+                    content: macroDef.content
+                });
+            }
+        }
+
+        // Expand macros in all lines
+        for (let i = 0; i < stage2.lines.length; i++) {
+            const line = stage2.lines[i];
+            const expandedLine = this.expandMacros(line, macros);
+            const isFromMacroExpansion = expandedLine !== line;
+
+            // Handle multiline expansions
+            if (expandedLine.includes('\n')) {
+                const expandedSubLines = expandedLine.split('\n');
+                for (const subLine of expandedSubLines) {
+                    lines.push(subLine);
+                    sourceMap.set(lines.length - 1, i);
+                    if (isFromMacroExpansion) {
+                        macroExpansionLines.set(lines.length - 1, line);
+                    }
+                }
+            } else {
+                lines.push(expandedLine);
+                sourceMap.set(lines.length - 1, i);
+                if (isFromMacroExpansion) {
+                    macroExpansionLines.set(lines.length - 1, line);
+                }
+            }
+        }
+
+        // Collect all definitions from expanded content
+        const userDefinedFunctions = this.collectUserDefinedFunctions(lines);
+        const functionsWithParams = this.collectUserDefinedFunctionsWithParams(lines, stage2.includeMap) as FunctionDefinition[];
+        const userDefinedMacros = this.collectUserDefinedMacros(lines);
+        const definedVariables = this.collectDefinedVariables(lines);
+        const variablesWithDefinitions = this.collectDefinedVariablesWithValues(lines, stage2.includeMap) as VariableDefinition[];
+        const customUnits = this.collectCustomUnits(lines, stage2.includeMap);
+
+        return {
+            lines,
+            sourceMap,
+            macroExpansionLines,
+            userDefinedFunctions,
+            functionsWithParams,
+            userDefinedMacros,
+            definedVariables,
+            variablesWithDefinitions,
+            customUnits
+        };
     }
 }

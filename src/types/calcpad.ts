@@ -59,3 +59,6 @@ export interface CustomUnitDefinition {
   source: 'local' | 'include';
   sourceFile?: string;
 }
+
+// Re-export StagedResolvedContent from calcpadContentResolver
+export type { StagedResolvedContent } from '../calcpadContentResolver';
