@@ -1,3 +1,5 @@
+// Auto-generated from output-visibility-control.json
+export default 
 {
   "Output Visibility Control": [
     {
@@ -85,4 +87,4 @@
       "description": "#gra"
     }
   ]
-}
+};

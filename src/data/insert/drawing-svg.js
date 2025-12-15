@@ -1,3 +1,5 @@
+// Auto-generated from drawing-svg.json
+export default 
 {
   "Drawing SVG": [
     {
@@ -33,4 +35,4 @@
       "description": "Text"
     }
   ]
-}
+};

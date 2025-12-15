@@ -1,3 +1,5 @@
+// Auto-generated from units-header.json
+export default 
 {
   "Units Header": {
     "Dimensionless": [
@@ -2017,4 +2019,4 @@
       ]
     }
   }
-}
+};

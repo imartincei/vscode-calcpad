@@ -29,7 +29,7 @@ To-Do.md
 # Scripts and helpers
 scripts/**
 helper/**
-webpack.config.js
+rollup.config.js
 
 # Development files
 *.cpd

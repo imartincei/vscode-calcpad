@@ -1,3 +1,5 @@
+// Auto-generated from numerical-method.json
+export default 
 {
   "Numerical Method": [
     {
@@ -45,4 +47,4 @@
       "description": "General Inline Iterative Procedure"
     }
   ]
-}
+};

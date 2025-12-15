@@ -1,3 +1,5 @@
+// Auto-generated from constants-header.json
+export default 
 {
   "Constants Header": [
     {
@@ -136,4 +138,4 @@
       "label": "γw"
     }
   ]
-}
+};

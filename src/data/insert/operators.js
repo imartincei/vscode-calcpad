@@ -1,3 +1,5 @@
+// Auto-generated from operators.json
+export default 
 {
   "Operators": [
     {
@@ -96,4 +98,4 @@
       "label": "  ="
     }
   ]
-}
+};

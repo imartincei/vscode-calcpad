@@ -1,3 +1,5 @@
+// Auto-generated from string-variable-or-macro.json
+export default 
 {
   "String Variable Or Macro": [
     {
@@ -21,4 +23,4 @@
       "description": "Include External File"
     }
   ]
-}
+};

@@ -1,3 +1,5 @@
+// Auto-generated from html.json
+export default 
 {
   "Html": [
     {
@@ -102,4 +104,4 @@
       "label": " —"
     }
   ]
-}
+};

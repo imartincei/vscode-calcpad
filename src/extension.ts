@@ -377,19 +377,11 @@ async function generatePdf(panel: vscode.WebviewPanel, content: string) {
         const settingsManager = CalcpadSettingsManager.getInstance(extensionContext);
         const settings = await settingsManager.getApiSettings();
 
-        // Add hardcoded output format for PDF
-        const pdfSettings = {
-            ...(settings as Record<string, unknown>),
-            output: {
-                format: 'pdf',
-                silent: false
-            }
-        };
-
         const response = await axios.post(`${apiBaseUrl}/api/calcpad/convert`,
             {
                 content,
-                settings: pdfSettings
+                settings: settings,
+                outputFormat: 'pdf'
             },
             {
                 headers: { 'Content-Type': 'application/json' },
@@ -494,20 +486,12 @@ async function printToPdf() {
 
                 progress.report({ increment: 20, message: "Calling PDF generation API..." });
 
-                // Add hardcoded output format for PDF and merge with PDF-specific settings
-                const settingsWithPdf = {
-                    ...(settings as Record<string, unknown>),
-                    output: {
-                        format: 'pdf',
-                        silent: false
-                    }
-                };
-
-                // Call the server's PDF generation API
+                // Call the server's PDF generation API with outputFormat at top level
                 const response = await axios.post(`${apiBaseUrl}/api/calcpad/convert`,
                     {
                         content: documentContent,
-                        settings: settingsWithPdf,
+                        settings: settings,
+                        outputFormat: 'pdf',
                         pdfSettings: pdfSettings
                     },
                     {
