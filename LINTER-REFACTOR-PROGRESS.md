@@ -85,30 +85,52 @@ Created organized folder structure: `src/linter/`
 
 ---
 
+### Phase 8b: Stage 3 Naming Checks (COMPLETE)
+**File**: `src/linter/stage3/naming.ts`
+- ✅ `checkVariableNaming()` - CPD-3201, CPD-3202, CPD-3205
+- ✅ `checkFunctionDefinition()` - CPD-3203, CPD-3204
+
+### Phase 8c: Stage 3 Usage Checks (COMPLETE)
+**File**: `src/linter/stage3/usage.ts`
+- ✅ `checkUndefinedVariables()` - CPD-3301 with suggestions
+- ✅ `checkFunctionUsage()` - CPD-3302 (parameter count validation)
+- ✅ `checkMacroUsage()` - CPD-3303, CPD-3304
+- ✅ `checkUnitUsage()` - CPD-3305
+
+### Phase 8d: Stage 3 Semantic Checks (COMPLETE)
+**File**: `src/linter/stage3/semantic.ts`
+- ✅ `checkOperatorSyntax()` - CPD-3401, CPD-3402
+- ✅ `checkCommandUsage()` - CPD-3403
+- ✅ `validateCommandPatterns()` - CPD-3404
+- ✅ `checkControlStructures()` - CPD-3405
+- ✅ `checkKeywordValidation()` - CPD-3406
+- ✅ `checkAssignments()` - CPD-3407
+- ✅ `checkUnitsInExpressions()` - CPD-3408
+
+### Phase 8e: Stage 3 Index (COMPLETE)
+**File**: `src/linter/stage3/index.ts`
+- ✅ Exports all Stage 3 check functions
+
+### Phase 9: Main Orchestrator (COMPLETE)
+**File**: `src/calcpadLinterStaged.ts`
+- ✅ `CalcpadLinterStaged` class created
+- ✅ `lintDocument()` method - orchestrates all three stages
+- ✅ `lintStage3()` method - runs all Stage 3 checks
+- ✅ `createDefinitionCollector()` - builds collector from Stage 3 data
+- ✅ `getContentResolver()` - accessor method
+- ✅ Constructor matches old linter signature
+
+### Phase 10: Integration (COMPLETE)
+**File**: `src/extension.ts`
+- ✅ Imported `CalcpadLinterStaged`
+- ✅ Updated type declaration: `let linter: CalcpadLinterStaged`
+- ✅ Updated instantiation: `linter = new CalcpadLinterStaged(settingsManager)`
+
+---
+
 ## 📋 Remaining Work
 
-### Phase 8b-c: Complete Stage 3 Modules (PENDING)
-Need to create:
-- `src/linter/stage3/naming.ts` - Variable/function naming checks (CPD-3201-3205)
-- `src/linter/stage3/usage.ts` - Undefined variables, function usage (CPD-3301-3305)
-- `src/linter/stage3/semantic.ts` - Operators, commands, control structures (CPD-3401-3408)
-- `src/linter/stage3/index.ts` - Export all Stage 3 checks
-
-### Phase 9: Main Orchestrator (PENDING)
-**File**: `src/calcpadLinterStaged.ts`
-- Create `CalcpadLinterStaged` class
-- Implement `lintDocument()` method
-- Wire up all three stages
-- Handle line continuation adjustments
-- Implement `createDefinitionCollector()`
-
-### Phase 10: Integration (PENDING)
-**File**: `src/extension.ts`
-- Import `CalcpadLinterStaged`
-- Replace `CalcpadLinter` instantiation
-- Verify method signatures match
-
-### Phase 11: Testing (PENDING)
+### Phase 11: Testing (PENDING - READY TO TEST)
 - Test with simple CPD files
 - Test with #include
 - Test with macros
@@ -136,12 +158,13 @@ src/
     stage2.ts             ✅ Stage 2: Macro definition checks
     stage3/
       balance.ts          ✅ Parentheses, brackets, control blocks
-      naming.ts           ⏳ Variable/function naming
-      usage.ts            ⏳ Undefined variables, function usage
-      semantic.ts         ⏳ Operators, commands, control structures
-      index.ts            ⏳ Export all Stage 3 checks
-  calcpadLinterStaged.ts  ⏳ Main orchestrator
+      naming.ts           ✅ Variable/function naming
+      usage.ts            ✅ Undefined variables, function usage
+      semantic.ts         ✅ Operators, commands, control structures
+      index.ts            ✅ Export all Stage 3 checks
+  calcpadLinterStaged.ts  ✅ Main orchestrator
   calcpadContentResolver.ts ✅ Staged content resolution
+  extension.ts            ✅ Integration complete
 ```
 
 ### Three-Stage Pipeline

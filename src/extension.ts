@@ -3,7 +3,7 @@ import axios from 'axios';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
-import { CalcpadLinter } from './calcpadLinter';
+import { CalcpadLinterStaged } from './calcpadLinterStaged';
 import { CalcpadVueUIProvider } from './calcpadVueUIProvider';
 import { CalcpadSettingsManager } from './calcpadSettings';
 import { OperatorReplacer } from './operatorReplacer';
@@ -15,7 +15,7 @@ let activePreviewPanel: vscode.WebviewPanel | unknown = undefined;
 let activePreviewType: 'regular' | 'unwrapped' | undefined = undefined;
 let previewUpdateTimeout: NodeJS.Timeout | unknown = undefined;
 let previewSourceEditor: vscode.TextEditor | undefined = undefined;
-let linter: CalcpadLinter;
+let linter: CalcpadLinterStaged;
 let outputChannel: vscode.OutputChannel;
 let calcpadOutputHtmlChannel: vscode.OutputChannel;
 let calcpadWebviewHtmlChannel: vscode.OutputChannel;
@@ -710,7 +710,7 @@ export function activate(context: vscode.ExtensionContext) {
         const settingsManager = CalcpadSettingsManager.getInstance(context);
         
         outputChannel.appendLine('Initializing linter...');
-        linter = new CalcpadLinter(settingsManager);
+        linter = new CalcpadLinterStaged(settingsManager);
 
         // Initialize operator replacer
         outputChannel.appendLine('Initializing operator replacer...');
