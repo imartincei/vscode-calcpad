@@ -29,11 +29,22 @@
         "configuration": "./language-configuration.json"
       }
     ],
-    "grammars": [
+    "semanticTokenScopes": [
       {
-        "language": "calcpad",
-        "scopeName": "source.calcpad",
-        "path": "./syntaxes/calcpad.tmLanguage.json"
+        "scopes": {
+          "number": ["constant.numeric.calcpad"],
+          "type": ["support.type.units.calcpad"],
+          "operator": ["keyword.operator.calcpad"],
+          "variable": ["variable.other.calcpad"],
+          "function": ["support.function.calcpad"],
+          "keyword": ["keyword.control.calcpad"],
+          "macro": ["variable.parameter.macro.calcpad"],
+          "punctuation": ["punctuation.section.brackets.calcpad"],
+          "comment": ["comment.calcpad"],
+          "string": ["string.quoted.calcpad"],
+          "parameter": ["variable.language.input.calcpad"],
+          "decorator": ["punctuation.definition.format.calcpad"]
+        }
       }
     ],
     "themes": [
@@ -466,6 +477,11 @@
           "icon": "./calcpad-icon.png"
         }
       ]
+    },
+    "configurationDefaults": {
+      "[calcpad]": {
+        "editor.semanticHighlighting.enabled": true
+      }
     }
   },
   "scripts": {

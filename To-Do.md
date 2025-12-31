@@ -19,19 +19,25 @@
 - Add more line continuation logic per 7.5.1/7.5.2: Left bracket '(' is enabled to serve as line continuation, besides '{' and ';' and without the need to add ' _' symbol at the end of the line. Made all opening brackets and delimiters to be line continuation symbols.
 
 ### Bugs
-Ignore custom units in undefined variable checks
+Fix syntax highlighting for local variables
+Add line continuation mapping for error underlining
 
 ## Calcpad.Server
-- Finish adding CalcpadS3 and CalcpadAuth to Calcpad.Server. 
+- Finish adding CalcpadAuth to Calcpad.Server.
+- CalcpadS3 should remain its own project (with a frontend built into vs code). However, make config in Calcpad.Core that allows #include and #read to directly pull files from s3. Example: #include myfile.cpd should check 1. Local files, 2. File cache sent from client. 3. CalcpadS3 if config is available.
 - Make Docker config that allows using MinIO or external S3 provider. 
 - Add password or OAuth to Docker. 
 - Add cloudflare tunnel config as option in Docker.
-- Note that Windows version will only support localhost with no auth, S3, or custom routing. It is intended f
+- Note that Windows version will only support localhost with no auth, S3, or custom routing.
 - Refactor CalcpadAuth routing to work with <service:endpoint> structure and make router.json config to work with any API calls (such as GET vs POST and auth/content type headers). Body is passed from Calcpad itself.
 - Add token management config with auth endpoints for various tokens. MAKE SURE TOKENS ARE ONLY STORED IN SERVER MEMORY AND SELECTED BASED ON CONFIG SETTINGS. Use handlebars {{jwt.calcpad}} syntax to select which token to use in API calls. This is the only time handlebars are needed (anything only in server program memory), as all other params should be passed from Calcpad as JSON in the body of the request.
 - Add getting JS variables as string
 - Add string functions to MacroParser. See Github issue.
 - Pass the source mapping from Calcpad.Server/Calcpad.Core to vscode as the logic is already built into this. Use highlighter as an example of some aspects.
-- The merge from the calcpad-s3-pr branch didn't work as expected. Manually add the relevant changes that were required to get it to work to the latest version and make a PR. DO THIS BEFORE MAKING ANY OTHER CHANGES TO CALCPAD VM.
+- Docker and include could work by vs code sending file bytes of included files to Calcpad.Server and changing the path (#include myfile.cpd to #include [GUID]). Then the server can cache the bytes and retrieve it by GUID. The cache is cleared each time convert is run.
+
+### Bugs
+
+## Calcpad.Wpf
 
 ### Bugs

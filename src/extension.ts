@@ -3,7 +3,8 @@ import axios from 'axios';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
-import { CalcpadLinterStaged } from './calcpadLinterStaged';
+import { CalcpadServerLinter } from './calcpadServerLinter';
+import { CalcpadSemanticTokensProvider, semanticTokensLegend } from './calcpadSemanticTokensProvider';
 import { CalcpadVueUIProvider } from './calcpadVueUIProvider';
 import { CalcpadSettingsManager } from './calcpadSettings';
 import { OperatorReplacer } from './operatorReplacer';
@@ -15,7 +16,7 @@ let activePreviewPanel: vscode.WebviewPanel | unknown = undefined;
 let activePreviewType: 'regular' | 'unwrapped' | undefined = undefined;
 let previewUpdateTimeout: NodeJS.Timeout | unknown = undefined;
 let previewSourceEditor: vscode.TextEditor | undefined = undefined;
-let linter: CalcpadLinterStaged;
+let linter: CalcpadServerLinter;
 let outputChannel: vscode.OutputChannel;
 let calcpadOutputHtmlChannel: vscode.OutputChannel;
 let calcpadWebviewHtmlChannel: vscode.OutputChannel;
@@ -710,7 +711,16 @@ export function activate(context: vscode.ExtensionContext) {
         const settingsManager = CalcpadSettingsManager.getInstance(context);
         
         outputChannel.appendLine('Initializing linter...');
-        linter = new CalcpadLinterStaged(settingsManager);
+        linter = new CalcpadServerLinter(settingsManager, outputChannel);
+
+        // Initialize semantic token provider
+        outputChannel.appendLine('Initializing semantic token provider...');
+        const semanticTokensProvider = new CalcpadSemanticTokensProvider(settingsManager, outputChannel);
+        const semanticTokensDisposable = vscode.languages.registerDocumentSemanticTokensProvider(
+            { language: 'calcpad', scheme: 'file' },
+            semanticTokensProvider,
+            semanticTokensLegend
+        );
 
         // Initialize operator replacer
         outputChannel.appendLine('Initializing operator replacer...');
@@ -760,7 +770,7 @@ export function activate(context: vscode.ExtensionContext) {
             const customUnits = resolvedContent.customUnits as import('./types/calcpad').CustomUnitDefinition[];
 
             vueUiProvider.updateVariables({
-                macros: resolvedContent.allMacros.map(m => ({
+                macros: resolvedContent.allMacros.map((m: import('./calcpadContentResolver').MacroDefinition) => ({
                     name: m.name,
                     params: m.params.length > 0 ? m.params.join('; ') : undefined,
                     definition: m.content.join('\n'),
@@ -902,6 +912,7 @@ export function activate(context: vscode.ExtensionContext) {
             vueUiProviderDisposable,
             vueUiProvider, // Add the provider itself for disposal
             linter,
+            semanticTokensDisposable,
             outputChannel,
             onDidChangeTextDocument,
             onDidOpenTextDocument,

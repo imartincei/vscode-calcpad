@@ -67,6 +67,11 @@ export class CalcpadContentResolver {
         this.outputChannel = outputChannel;
     }
 
+    // Get cached content for an include file (used by server linter)
+    public getCachedContent(fileName: string): string[] | undefined {
+        return this.contentCache.get(fileName);
+    }
+
     // Pre-cache all include content asynchronously
     public async preCacheContent(lines: string[]): Promise<void> {
         const includeUrls = new Set<string>();
