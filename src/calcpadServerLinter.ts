@@ -31,6 +31,12 @@ export class CalcpadServerLinter {
      * Main entry point for linting a document
      */
     public async lintDocument(document: vscode.TextDocument): Promise<void> {
+        // Only lint .cpd files
+        if (!document.fileName.endsWith('.cpd')) {
+            this.diagnosticCollection.delete(document.uri);
+            return;
+        }
+
         const content = document.getText();
         const lines = content.split('\n');
 

@@ -17,6 +17,7 @@
 - Add hotkeys for HTML/markdown formatting. Add toggle for HTML vs markdown in the settings.
 - Package extension for further testing within the company. Publish to Open VSX but not Visual Studio Marketplace unless I need a personal Azure account for other reasons
 - Add more line continuation logic per 7.5.1/7.5.2: Left bracket '(' is enabled to serve as line continuation, besides '{' and ';' and without the need to add ' _' symbol at the end of the line. Made all opening brackets and delimiters to be line continuation symbols.
+-Line continuation error mapping has some issues
 
 ### Bugs
 Fix syntax highlighting for local variables
@@ -35,6 +36,7 @@ Add line continuation mapping for error underlining
 - Add string functions to MacroParser. See Github issue.
 - Pass the source mapping from Calcpad.Server/Calcpad.Core to vscode as the logic is already built into this. Use highlighter as an example of some aspects.
 - Docker and include could work by vs code sending file bytes of included files to Calcpad.Server and changing the path (#include myfile.cpd to #include [GUID]). Then the server can cache the bytes and retrieve it by GUID. The cache is cleared each time convert is run.
+- Test Windows build with esbuild instead of caxa
 
 ### Bugs
 

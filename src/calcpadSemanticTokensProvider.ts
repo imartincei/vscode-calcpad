@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import { CalcpadSettingsManager } from './calcpadSettings';
 import { HighlightRequest, HighlightResponse, HighlightToken, CalcpadTokenType } from './api/calcpadApiTypes';
 
@@ -88,29 +88,18 @@ export class CalcpadSemanticTokensProvider implements vscode.DocumentSemanticTok
         token: vscode.CancellationToken
     ): Promise<vscode.SemanticTokens | null> {
         const content = document.getText();
-        this.outputChannel.appendLine('[SemanticTokens] provideDocumentSemanticTokens called for: ' + document.fileName);
 
         // Skip empty documents
         if (!content.trim()) {
-            this.outputChannel.appendLine('[SemanticTokens] Document is empty, skipping');
             return null;
         }
 
         try {
-            this.outputChannel.appendLine('[SemanticTokens] Fetching tokens from server...');
             const tokens = await this.fetchHighlightTokens(content);
 
-            if (!tokens) {
-                this.outputChannel.appendLine('[SemanticTokens] No tokens returned from server');
+            if (!tokens || token.isCancellationRequested) {
                 return null;
             }
-
-            if (token.isCancellationRequested) {
-                this.outputChannel.appendLine('[SemanticTokens] Request was cancelled');
-                return null;
-            }
-
-            this.outputChannel.appendLine('[SemanticTokens] Received ' + tokens.length + ' tokens from server');
 
             const builder = new vscode.SemanticTokensBuilder(semanticTokensLegend);
 
@@ -122,7 +111,6 @@ export class CalcpadSemanticTokensProvider implements vscode.DocumentSemanticTok
                 return a.column - b.column;
             });
 
-            let validTokenCount = 0;
             for (const tok of tokens) {
                 // Skip None type (typeId 0)
                 if (tok.typeId === CalcpadTokenType.None) {
@@ -132,11 +120,9 @@ export class CalcpadSemanticTokensProvider implements vscode.DocumentSemanticTok
                 const tokenType = this.mapTokenType(tok.typeId);
                 if (tokenType >= 0) {
                     builder.push(tok.line, tok.column, tok.length, tokenType, 0);
-                    validTokenCount++;
                 }
             }
 
-            this.outputChannel.appendLine('[SemanticTokens] Built ' + validTokenCount + ' valid semantic tokens');
             return builder.build();
         } catch (error) {
             this.outputChannel.appendLine('[SemanticTokens] Error: ' + (error instanceof Error ? error.message : 'Unknown error'));
@@ -163,12 +149,10 @@ export class CalcpadSemanticTokensProvider implements vscode.DocumentSemanticTok
         const apiBaseUrl = settings.server.url;
 
         if (!apiBaseUrl) {
-            this.outputChannel.appendLine('[SemanticTokens] No server URL configured');
             return null;
         }
 
         const url = apiBaseUrl + '/api/calcpad/highlight';
-        this.outputChannel.appendLine('[SemanticTokens] Calling: ' + url);
 
         const request: HighlightRequest = {
             content,
@@ -181,28 +165,13 @@ export class CalcpadSemanticTokensProvider implements vscode.DocumentSemanticTok
                 request,
                 {
                     headers: { 'Content-Type': 'application/json' },
-                    timeout: 5000  // Shorter timeout for highlighting (needs to be responsive)
+                    timeout: 5000
                 }
             );
 
-            this.outputChannel.appendLine('[SemanticTokens] Server response status: ' + response.status);
             return response.data.tokens;
         } catch (error) {
-            if (axios.isAxiosError(error)) {
-                const axiosError = error as AxiosError;
-                if (axiosError.code === 'ECONNREFUSED') {
-                    this.outputChannel.appendLine('[SemanticTokens] Server not available (connection refused)');
-                } else if (axiosError.code === 'ETIMEDOUT' || axiosError.code === 'ECONNABORTED') {
-                    this.outputChannel.appendLine('[SemanticTokens] Server request timed out');
-                } else {
-                    this.outputChannel.appendLine('[SemanticTokens] API error: ' + axiosError.message);
-                    if (axiosError.response) {
-                        this.outputChannel.appendLine('[SemanticTokens] Response status: ' + axiosError.response.status);
-                    }
-                }
-            } else {
-                this.outputChannel.appendLine('[SemanticTokens] Unknown error: ' + String(error));
-            }
+            // Silently fail - syntax highlighting is non-critical
             return null;
         }
     }

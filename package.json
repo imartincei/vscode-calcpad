@@ -29,21 +29,27 @@
         "configuration": "./language-configuration.json"
       }
     ],
+    "semanticTokenTypes": [
+      {
+        "id": "punctuation",
+        "description": "Brackets and punctuation characters"
+      }
+    ],
     "semanticTokenScopes": [
       {
         "scopes": {
           "number": ["constant.numeric.calcpad"],
           "type": ["support.type.units.calcpad"],
-          "operator": ["keyword.operator.calcpad"],
+          "operator": ["keyword.operator.arithmetic.calcpad"],
           "variable": ["variable.other.calcpad"],
-          "function": ["support.function.calcpad"],
+          "function": ["support.function.builtin.calcpad"],
           "keyword": ["keyword.control.calcpad"],
           "macro": ["variable.parameter.macro.calcpad"],
           "punctuation": ["punctuation.section.brackets.calcpad"],
-          "comment": ["comment.calcpad"],
-          "string": ["string.quoted.calcpad"],
+          "comment": ["comment.line.single-quote.calcpad"],
+          "string": ["string.quoted.double.calcpad"],
           "parameter": ["variable.language.input.calcpad"],
-          "decorator": ["punctuation.definition.format.calcpad"]
+          "decorator": ["meta.format.calcpad"]
         }
       }
     ],
@@ -480,7 +486,8 @@
     },
     "configurationDefaults": {
       "[calcpad]": {
-        "editor.semanticHighlighting.enabled": true
+        "editor.semanticHighlighting.enabled": true,
+        "editor.bracketPairColorization.enabled": false
       }
     }
   },
