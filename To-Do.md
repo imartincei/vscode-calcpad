@@ -34,12 +34,21 @@ Add line continuation mapping for error underlining
 - Add token management config with auth endpoints for various tokens. MAKE SURE TOKENS ARE ONLY STORED IN SERVER MEMORY AND SELECTED BASED ON CONFIG SETTINGS. Use handlebars {{jwt.calcpad}} syntax to select which token to use in API calls. This is the only time handlebars are needed (anything only in server program memory), as all other params should be passed from Calcpad as JSON in the body of the request.
 - Add getting JS variables as string
 - Add string functions to MacroParser. See Github issue.
-- Pass the source mapping from Calcpad.Server/Calcpad.Core to vscode as the logic is already built into this. Use highlighter as an example of some aspects.
 - Docker and include could work by vs code sending file bytes of included files to Calcpad.Server and changing the path (#include myfile.cpd to #include [GUID]). Then the server can cache the bytes and retrieve it by GUID. The cache is cleared each time convert is run.
 - Test Windows build with esbuild instead of caxa
+- Make keyword arguments in functions and macros. If a keyword argument is used, have the linter check the macro against the default values for type mismatch errors.
+- Implement traceback system for 500 errors where the traceback gets sent as a message to the frontend.
+
+## Calcpad.Highlighter
+- Double check builtin function return types are correct. Have Claude run the comprehensive check to see what is returned.
+- Have the linter check when a macro parameter is used as a string and do type checking in this case.
+- Add parsing of metadata lines for macro descriptions and parameter descriptions/type hinting. Metadata lines contain inline or multiline JSON that external programs can pull from cpd files but are ignored by the parser.
 
 ### Bugs
 
 ## Calcpad.Wpf
 
 ### Bugs
+
+## Calcpad.Core
+- Add logic that ignore metadata lines that start with ~ or blocks between ~~~.

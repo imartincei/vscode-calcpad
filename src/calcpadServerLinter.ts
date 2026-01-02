@@ -1,30 +1,26 @@
 import * as vscode from 'vscode';
 import axios, { AxiosError } from 'axios';
 import { CalcpadSettingsManager } from './calcpadSettings';
-import { CalcpadContentResolver } from './calcpadContentResolver';
-import { LintRequest, LintResponse, LintDiagnostic } from './api/calcpadApiTypes';
+import { LintRequest, LintResponse, LintDiagnostic, ClientFileCache } from './api/calcpadApiTypes';
+import { buildClientFileCacheFromContent } from './clientFileCacheHelper';
 
 /**
  * Server-side CalcPad linter
  *
  * Calls the /api/calcpad/lint endpoint to perform linting on the server.
- * Include files are resolved locally and passed to the server.
+ * Include files are resolved by the server, with local workspace files
+ * passed via clientFileCache for files referenced in #include/#read directives.
  */
 export class CalcpadServerLinter {
     private diagnosticCollection: vscode.DiagnosticCollection;
-    private outputChannel: vscode.OutputChannel;
+    private debugChannel: vscode.OutputChannel;
     private settingsManager: CalcpadSettingsManager;
-    private contentResolver: CalcpadContentResolver;
+    private requestId = 0;
 
-    constructor(settingsManager: CalcpadSettingsManager, outputChannel: vscode.OutputChannel) {
+    constructor(settingsManager: CalcpadSettingsManager, debugChannel: vscode.OutputChannel) {
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('calcpad');
         this.settingsManager = settingsManager;
-        this.outputChannel = outputChannel;
-        this.contentResolver = new CalcpadContentResolver(settingsManager, outputChannel);
-    }
-
-    public getContentResolver(): CalcpadContentResolver {
-        return this.contentResolver;
+        this.debugChannel = debugChannel;
     }
 
     /**
@@ -37,52 +33,33 @@ export class CalcpadServerLinter {
             return;
         }
 
+        const reqId = ++this.requestId;
+        const startTime = Date.now();
         const content = document.getText();
-        const lines = content.split('\n');
+
+        this.debugChannel.appendLine('[Lint #' + reqId + '] Request started for ' + document.fileName + ' (' + content.length + ' chars)');
 
         try {
-            // Pre-cache include files (needed for server lint request)
-            await this.contentResolver.preCacheContent(lines);
+            // Build client file cache for referenced files
+            const clientFileCache = await buildClientFileCacheFromContent(content, this.debugChannel, '[Lint #' + reqId + ']');
 
-            // Build include files map for the server
-            const includeFiles = this.buildIncludeFilesMap(lines);
-
-            // Call server lint API
-            const lintResponse = await this.fetchLintDiagnostics(content, includeFiles);
+            // Call server lint API with client file cache
+            const lintResponse = await this.fetchLintDiagnostics(content, reqId, clientFileCache);
 
             if (lintResponse) {
                 const diagnostics = this.convertToDiagnostics(lintResponse.diagnostics);
                 this.diagnosticCollection.set(document.uri, diagnostics);
-                this.outputChannel.appendLine(`[Linter] Found ${lintResponse.errorCount} errors, ${lintResponse.warningCount} warnings`);
+                this.debugChannel.appendLine('[Lint #' + reqId + '] Found ' + lintResponse.errorCount + ' errors, ' + lintResponse.warningCount + ' warnings in ' + (Date.now() - startTime) + 'ms');
             } else {
                 // Server unavailable - clear diagnostics rather than show stale data
                 this.diagnosticCollection.set(document.uri, []);
+                this.debugChannel.appendLine('[Lint #' + reqId + '] No response from server after ' + (Date.now() - startTime) + 'ms');
             }
         } catch (error) {
-            this.outputChannel.appendLine(`[Linter] Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            this.debugChannel.appendLine('[Lint #' + reqId + '] Error after ' + (Date.now() - startTime) + 'ms: ' + (error instanceof Error ? error.message : 'Unknown error'));
             // Clear diagnostics on error
             this.diagnosticCollection.set(document.uri, []);
         }
-    }
-
-    /**
-     * Build a map of include file names to their content
-     */
-    private buildIncludeFilesMap(lines: string[]): Record<string, string> {
-        const includeFiles: Record<string, string> = {};
-
-        for (const line of lines) {
-            const includeMatch = /#include\s+([^\s]+)/.exec(line);
-            if (includeMatch) {
-                const fileName = includeMatch[1].replace(/['"]/g, '');
-                const cachedContent = this.contentResolver.getCachedContent(fileName);
-                if (cachedContent) {
-                    includeFiles[fileName] = cachedContent.join('\n');
-                }
-            }
-        }
-
-        return includeFiles;
     }
 
     /**
@@ -90,44 +67,47 @@ export class CalcpadServerLinter {
      */
     private async fetchLintDiagnostics(
         content: string,
-        includeFiles: Record<string, string>
+        reqId: number,
+        clientFileCache?: ClientFileCache
     ): Promise<LintResponse | null> {
         const settings = this.settingsManager.getSettings();
         const apiBaseUrl = settings.server.url;
 
         if (!apiBaseUrl) {
-            this.outputChannel.appendLine('[Linter] Server URL not configured');
+            this.debugChannel.appendLine('[Lint #' + reqId + '] No server URL configured');
             return null;
         }
 
         const request: LintRequest = {
             content,
-            includeFiles: Object.keys(includeFiles).length > 0 ? includeFiles : undefined
+            clientFileCache
         };
 
         try {
+            this.debugChannel.appendLine('[Lint #' + reqId + '] Sending request to server...');
             const response = await axios.post<LintResponse>(
                 apiBaseUrl + '/api/calcpad/lint',
                 request,
                 {
                     headers: { 'Content-Type': 'application/json' },
-                    timeout: 10000
+                    timeout: 30000  // 30 seconds for large files
                 }
             );
 
+            this.debugChannel.appendLine('[Lint #' + reqId + '] Server response: ' + JSON.stringify(response.data));
             return response.data;
         } catch (error) {
             if (axios.isAxiosError(error)) {
                 const axiosError = error as AxiosError;
                 if (axiosError.code === 'ECONNREFUSED') {
-                    this.outputChannel.appendLine('[Linter] Calcpad server not available');
+                    this.debugChannel.appendLine('[Lint #' + reqId + '] Server connection refused');
                 } else if (axiosError.code === 'ETIMEDOUT' || axiosError.code === 'ECONNABORTED') {
-                    this.outputChannel.appendLine('[Linter] Server request timed out');
+                    this.debugChannel.appendLine('[Lint #' + reqId + '] Request timed out');
                 } else {
-                    this.outputChannel.appendLine('[Linter] API error: ' + axiosError.message);
+                    this.debugChannel.appendLine('[Lint #' + reqId + '] API error: ' + axiosError.message);
                 }
             } else {
-                this.outputChannel.appendLine('[Linter] Unexpected error: ' + (error instanceof Error ? error.message : String(error)));
+                this.debugChannel.appendLine('[Lint #' + reqId + '] Unexpected error: ' + (error instanceof Error ? error.message : String(error)));
             }
             return null;
         }

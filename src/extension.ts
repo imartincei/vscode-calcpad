@@ -1,8 +1,6 @@
 import * as vscode from 'vscode';
 import axios from 'axios';
 import * as path from 'path';
-import * as fs from 'fs';
-import * as os from 'os';
 import { CalcpadServerLinter } from './calcpadServerLinter';
 import { CalcpadSemanticTokensProvider, semanticTokensLegend } from './calcpadSemanticTokensProvider';
 import { CalcpadVueUIProvider } from './calcpadVueUIProvider';
@@ -11,12 +9,16 @@ import { OperatorReplacer } from './operatorReplacer';
 import { QuickTyper } from './quickTyper';
 import { CalcpadCompletionProvider } from './calcpadCompletionProvider';
 import { CalcpadInsertManager } from './calcpadInsertManager';
+import { CalcpadDefinitionsService } from './calcpadDefinitionsService';
+import { AutoIndenter } from './autoIndenter';
+import { buildClientFileCacheFromContent } from './clientFileCacheHelper';
 
 let activePreviewPanel: vscode.WebviewPanel | unknown = undefined;
 let activePreviewType: 'regular' | 'unwrapped' | undefined = undefined;
 let previewUpdateTimeout: NodeJS.Timeout | unknown = undefined;
 let previewSourceEditor: vscode.TextEditor | undefined = undefined;
 let linter: CalcpadServerLinter;
+let definitionsService: CalcpadDefinitionsService;
 let outputChannel: vscode.OutputChannel;
 let calcpadOutputHtmlChannel: vscode.OutputChannel;
 let calcpadWebviewHtmlChannel: vscode.OutputChannel;
@@ -290,6 +292,9 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string,
         outputChannel.appendLine(`Server URL: ${apiBaseUrl}`);
         outputChannel.appendLine(`Settings retrieved: ${JSON.stringify(settings)}`);
 
+        // Build client file cache for referenced files
+        const clientFileCache = await buildClientFileCacheFromContent(content, outputChannel, '[Convert]');
+
         // Select API endpoint based on unwrapped parameter
         const endpoint = unwrapped ? '/api/calcpad/convert-unwrapped' : '/api/calcpad/convert';
         outputChannel.appendLine(`Making API call to ${endpoint}...`);
@@ -300,7 +305,8 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string,
                 content: content,
                 settings: settings,
                 theme: theme,
-                forceUnwrappedCode: unwrapped
+                forceUnwrappedCode: unwrapped,
+                clientFileCache: clientFileCache
             },
             {
                 headers: { 'Content-Type': 'application/json' },
@@ -378,11 +384,15 @@ async function generatePdf(panel: vscode.WebviewPanel, content: string) {
         const settingsManager = CalcpadSettingsManager.getInstance(extensionContext);
         const settings = await settingsManager.getApiSettings();
 
+        // Build client file cache for referenced files
+        const clientFileCache = await buildClientFileCacheFromContent(content, outputChannel, '[PDF]');
+
         const response = await axios.post(`${apiBaseUrl}/api/calcpad/convert`,
             {
                 content,
                 settings: settings,
-                outputFormat: 'pdf'
+                outputFormat: 'pdf',
+                clientFileCache: clientFileCache
             },
             {
                 headers: { 'Content-Type': 'application/json' },
@@ -438,18 +448,9 @@ async function printToPdf() {
         const pdfSettings = getPdfSettings();
         
         // Get the active editor to determine the filename and directory
-        let defaultPath: string;
-        
-        if (activeEditor && activeEditor.document.fileName !== 'Untitled-1') {
-            // Use the same directory as the current file
-            const currentDir = path.dirname(activeEditor.document.fileName);
-            const baseFilename = path.basename(activeEditor.document.fileName, path.extname(activeEditor.document.fileName));
-            defaultPath = path.join(currentDir, `${baseFilename}.pdf`);
-        } else {
-            // Use user's home directory as fallback
-            const homeDir = os.homedir();
-            defaultPath = path.join(homeDir, 'calcpad-preview.pdf');
-        }
+        const currentDir = path.dirname(activeEditor.document.fileName);
+        const baseFilename = path.basename(activeEditor.document.fileName, path.extname(activeEditor.document.fileName));
+        const defaultPath = path.join(currentDir, baseFilename + '.pdf');
 
         // Show save dialog
         const saveUri = await vscode.window.showSaveDialog({
@@ -485,6 +486,11 @@ async function printToPdf() {
                     throw new Error('Document is empty. Please add some CalcPad content first.');
                 }
 
+                progress.report({ increment: 10, message: "Loading referenced files..." });
+
+                // Build client file cache for referenced files
+                const clientFileCache = await buildClientFileCacheFromContent(documentContent, outputChannel, '[PDF]');
+
                 progress.report({ increment: 20, message: "Calling PDF generation API..." });
 
                 // Call the server's PDF generation API with outputFormat at top level
@@ -493,7 +499,8 @@ async function printToPdf() {
                         content: documentContent,
                         settings: settings,
                         outputFormat: 'pdf',
-                        pdfSettings: pdfSettings
+                        pdfSettings: pdfSettings,
+                        clientFileCache: clientFileCache
                     },
                     {
                         headers: { 'Content-Type': 'application/json' },
@@ -707,17 +714,23 @@ export function activate(context: vscode.ExtensionContext) {
         calcpadWebviewHtmlChannel = vscode.window.createOutputChannel('Calcpad Webview HTML');
         calcpadWebviewConsoleChannel = vscode.window.createOutputChannel('Calcpad Webview Console');
 
+        // Create debug channel for linter/highlighter
+        const serverDebugChannel = vscode.window.createOutputChannel('CalcPad Server Debug');
+
         outputChannel.appendLine('Initializing settings manager...');
         const settingsManager = CalcpadSettingsManager.getInstance(context);
-        
+
         outputChannel.appendLine('Initializing linter...');
-        linter = new CalcpadServerLinter(settingsManager, outputChannel);
+        linter = new CalcpadServerLinter(settingsManager, serverDebugChannel);
+
+        outputChannel.appendLine('Initializing definitions service...');
+        definitionsService = new CalcpadDefinitionsService(settingsManager, serverDebugChannel);
 
         // Initialize semantic token provider
         outputChannel.appendLine('Initializing semantic token provider...');
-        const semanticTokensProvider = new CalcpadSemanticTokensProvider(settingsManager, outputChannel);
+        const semanticTokensProvider = new CalcpadSemanticTokensProvider(settingsManager, serverDebugChannel);
         const semanticTokensDisposable = vscode.languages.registerDocumentSemanticTokensProvider(
-            { language: 'calcpad', scheme: 'file' },
+            { language: 'calcpad' },
             semanticTokensProvider,
             semanticTokensLegend
         );
@@ -732,9 +745,14 @@ export function activate(context: vscode.ExtensionContext) {
         const quickTyper = new QuickTyper(outputChannel);
         const quickTyperDisposable = quickTyper.registerDocumentChangeListener(context);
 
+        // Initialize auto-indenter
+        outputChannel.appendLine('Initializing auto-indenter...');
+        const autoIndenter = new AutoIndenter(outputChannel);
+        const autoIndenterDisposable = autoIndenter.registerDocumentChangeListener(context);
+
         // Initialize autocomplete provider
         outputChannel.appendLine('Initializing autocomplete provider...');
-        const completionProviderDisposable = CalcpadCompletionProvider.register(settingsManager, outputChannel);
+        const completionProviderDisposable = CalcpadCompletionProvider.register(definitionsService, outputChannel);
 
     // Unified document processing function
     async function processDocument(document: vscode.TextDocument) {
@@ -742,62 +760,51 @@ export function activate(context: vscode.ExtensionContext) {
             return;
         }
 
-        outputChannel.appendLine(`[processDocument] Processing document: ${document.uri.fsPath}`);
+        outputChannel.appendLine('[processDocument] Processing document: ' + document.uri.fsPath);
 
         // Run linting
         await linter.lintDocument(document);
 
-        // Extract macros and send to UI
+        // Fetch definitions from server and send to UI
         try {
-            const contentResolver = linter.getContentResolver();
-            const text = document.getText();
-            const lines = text.split('\n');
-            
-            await contentResolver.preCacheContent(lines);
-            const resolvedContent = contentResolver.getCompiledContent(document);
-            
-            outputChannel.appendLine(`[processDocument] Found ${resolvedContent.allMacros.length} macros, ${resolvedContent.variablesWithDefinitions.length} variables, ${resolvedContent.functionsWithParams.length} functions, ${resolvedContent.customUnits.length} custom units`);
-            
-            // Send all user-defined content to UI providers
-            // uiProvider.updateVariables({
-            //     macros: resolvedContent.allMacros,
-            //     variables: resolvedContent.variablesWithDefinitions,
-            //     functions: resolvedContent.functionsWithParams
-            // });
-            // Cast to rich types with source info for Vue UI
-            const variables = resolvedContent.variablesWithDefinitions as import('./types/calcpad').VariableDefinition[];
-            const functions = resolvedContent.functionsWithParams as import('./types/calcpad').FunctionDefinition[];
-            const customUnits = resolvedContent.customUnits as import('./types/calcpad').CustomUnitDefinition[];
+            const definitions = await definitionsService.refreshDefinitions(document);
 
-            vueUiProvider.updateVariables({
-                macros: resolvedContent.allMacros.map((m: import('./calcpadContentResolver').MacroDefinition) => ({
-                    name: m.name,
-                    params: m.params.length > 0 ? m.params.join('; ') : undefined,
-                    definition: m.content.join('\n'),
-                    source: m.source,
-                    sourceFile: m.sourceFile
-                })),
-                variables: variables.map(v => ({
-                    name: v.name,
-                    definition: v.definition,
-                    source: v.source,
-                    sourceFile: v.sourceFile
-                })),
-                functions: functions.map(f => ({
-                    name: f.name,
-                    params: f.params.join('; '),
-                    source: f.source,
-                    sourceFile: f.sourceFile
-                })),
-                customUnits: customUnits.map(u => ({
-                    name: u.name,
-                    definition: u.definition,
-                    source: u.source,
-                    sourceFile: u.sourceFile
-                }))
-            });
+            if (definitions) {
+                outputChannel.appendLine('[processDocument] Found ' + definitions.macros.length + ' macros, ' + definitions.variables.length + ' variables, ' + definitions.functions.length + ' functions, ' + definitions.customUnits.length + ' custom units');
+
+                // Send definitions to Vue UI provider
+                vueUiProvider.updateVariables({
+                    macros: definitions.macros.map(m => ({
+                        name: m.name,
+                        params: m.parameters.length > 0 ? m.parameters.join('; ') : undefined,
+                        definition: m.content.join('\n'),
+                        source: m.source as 'local' | 'include',
+                        sourceFile: m.sourceFile
+                    })),
+                    variables: definitions.variables.map(v => ({
+                        name: v.name,
+                        definition: v.expression,
+                        source: v.source as 'local' | 'include',
+                        sourceFile: v.sourceFile
+                    })),
+                    functions: definitions.functions.map(f => ({
+                        name: f.name,
+                        params: f.parameters.join('; '),
+                        source: f.source as 'local' | 'include',
+                        sourceFile: f.sourceFile
+                    })),
+                    customUnits: definitions.customUnits.map(u => ({
+                        name: u.name,
+                        definition: u.expression,
+                        source: u.source as 'local' | 'include',
+                        sourceFile: u.sourceFile
+                    }))
+                });
+            } else {
+                outputChannel.appendLine('[processDocument] No definitions returned from server');
+            }
         } catch (error) {
-            outputChannel.appendLine(`Error extracting macros: ${error}`);
+            outputChannel.appendLine('Error fetching definitions: ' + error);
         }
     }
 
@@ -914,12 +921,14 @@ export function activate(context: vscode.ExtensionContext) {
             linter,
             semanticTokensDisposable,
             outputChannel,
+            serverDebugChannel,
             onDidChangeTextDocument,
             onDidOpenTextDocument,
             onDidSaveTextDocument,
             onDidChangeActiveTextEditor,
             operatorReplacerDisposable,
             quickTyperDisposable,
+            autoIndenterDisposable,
             completionProviderDisposable
         );
         

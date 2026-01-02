@@ -1,0 +1,37 @@
+#local
+#include Helper.cpd
+#global
+#def rebar$(As$; db$; spacing$; id$)
+	'<!GETS REBAR AREA AND DIAMETER FOR THE REBAR NUMBER!>'
+	'Select Bar Size: <select name="rebarSelectid$">
+	'<option value="1">#3</option>
+	'<option value="2">#4</option>
+	'<option value="3">#5</option>
+	'<option value="4">#6</option>
+	'<option value="5">#7</option>
+	'<option value="6">#8</option>
+	'<option value="7">#9</option>
+	'<option value="8">#10</option>
+	'<option value="9">#11</option>
+	'<option value="10">#14</option>
+	'<option value="11">#18</option>
+	'</select>
+	'<p id="rebarSelectid$" style="display:none"> Values:'index = ? {1}'</p>
+	hide$
+	db$ = take(2; row(barChart; index))
+	As$ = 12in/spacing$*take(3; row(barChart; index))
+	unhide$
+	As$', 'db$
+#end def
+#def rebarArea$(size$; spacing$) = 12in/spacing$*take(3; row(barChart; take(1; find(barSizes; size$; 1))))
+#def rebarAreaNum$(size$; number$) = number$*take(3; row(barChart; take(1; find(barSizes; size$; 1))))
+#def rebarDiameter$(size$) = take(2; row(barChart; take(1; find(barSizes; size$; 1))))
+hide$barChart = [3; 0.375in; 0.11in^2|4; 0.500in; 0.20in^2|5; 0.625in; 0.31in^2|6; 0.750in; 0.44in^2|7; 0.875in; 0.60in^2|8; 1.000in; 0.79in^2|9; 1.128in; 1.00in^2|10; 1.270in; 1.27in^2|11; 1.410in; 1.56in^2|14; 1.693in; 2.25in^2|18; 2.257in; 4.00in^2]unhide$
+hide$barSizes = [3; 4; 5; 6; 7; 8; 9; 10; 11; 14; 18]unhide$
+#local
+cmt$('Sample Macro Usage')
+rebar$(A_s1; d_b1; 12in; 1) #{3}
+A_s2 = rebarArea$(6; 12in)
+A_s3 = rebarAreaNum$(6; 3)
+d_b2 = rebarDiameter$(4)
+#global

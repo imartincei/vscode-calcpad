@@ -2,12 +2,20 @@
 // Based on API_SCHEMA.md
 
 // ============================================
+// Client File Cache Types
+// ============================================
+
+// Simple dictionary mapping filename -> base64-encoded content
+export type ClientFileCache = Record<string, string>;
+
+// ============================================
 // Lint API Types
 // ============================================
 
 export interface LintRequest {
     content: string;
     includeFiles?: Record<string, string>;
+    clientFileCache?: ClientFileCache;
 }
 
 export interface LintResponse {
@@ -72,4 +80,77 @@ export enum CalcpadTokenType {
     Format = 15,
     LocalVariable = 16,  // Local variables scoped to expressions (function params, #for vars, command scope vars)
     FilePath = 17        // File paths in data exchange keywords (#read, #write, #append)
+}
+
+// ============================================
+// Definitions API Types
+// ============================================
+
+export interface DefinitionsRequest {
+    content: string;
+    includeFiles?: Record<string, string>;
+    clientFileCache?: ClientFileCache;
+}
+
+export interface DefinitionsResponse {
+    macros: MacroDefinition[];
+    functions: FunctionDefinition[];
+    variables: VariableDefinition[];
+    customUnits: CustomUnitDefinition[];
+}
+
+export interface MacroDefinition {
+    name: string;
+    parameters: string[];
+    isMultiline: boolean;
+    content: string[];
+    lineNumber: number;
+    source: string;
+    sourceFile?: string;
+}
+
+export interface FunctionDefinition {
+    name: string;
+    parameters: string[];
+    expression?: string;
+    returnType: string;
+    returnTypeId: number;
+    hasCommandBlock: boolean;
+    commandBlockType?: string;
+    commandBlockStatements?: string[];
+    lineNumber: number;
+    source: string;
+    sourceFile?: string;
+}
+
+export interface VariableDefinition {
+    name: string;
+    expression?: string;
+    type: string;
+    typeId: number;
+    lineNumber: number;
+    source: string;
+    sourceFile?: string;
+}
+
+export interface CustomUnitDefinition {
+    name: string;
+    expression?: string;
+    lineNumber: number;
+    source: string;
+    sourceFile?: string;
+}
+
+// Type IDs for variables and function return types
+export enum CalcpadTypeId {
+    Unknown = 0,
+    Value = 1,
+    Vector = 2,
+    Matrix = 3,
+    StringVariable = 4,
+    Various = 5,
+    Function = 6,
+    InlineMacro = 7,
+    MultilineMacro = 8,
+    CustomUnit = 9
 }

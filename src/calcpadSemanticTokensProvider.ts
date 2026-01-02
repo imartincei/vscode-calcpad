@@ -75,31 +75,45 @@ export const semanticTokensLegend = new vscode.SemanticTokensLegend(
  * Semantic token provider that fetches tokens from the Calcpad server
  */
 export class CalcpadSemanticTokensProvider implements vscode.DocumentSemanticTokensProvider {
-    private outputChannel: vscode.OutputChannel;
+    private debugChannel: vscode.OutputChannel;
     private settingsManager: CalcpadSettingsManager;
+    private requestId = 0;
 
-    constructor(settingsManager: CalcpadSettingsManager, outputChannel: vscode.OutputChannel) {
+    constructor(settingsManager: CalcpadSettingsManager, debugChannel: vscode.OutputChannel) {
         this.settingsManager = settingsManager;
-        this.outputChannel = outputChannel;
+        this.debugChannel = debugChannel;
     }
 
     async provideDocumentSemanticTokens(
         document: vscode.TextDocument,
-        token: vscode.CancellationToken
+        cancellationToken: vscode.CancellationToken
     ): Promise<vscode.SemanticTokens | null> {
         const content = document.getText();
+        const reqId = ++this.requestId;
+        const startTime = Date.now();
+
+        this.debugChannel.appendLine('[Highlight #' + reqId + '] Request started for ' + document.fileName + ' (scheme: ' + document.uri.scheme + ', lang: ' + document.languageId + ', ' + content.length + ' chars)');
 
         // Skip empty documents
         if (!content.trim()) {
+            this.debugChannel.appendLine('[Highlight #' + reqId + '] Skipped - empty document');
             return null;
         }
 
         try {
-            const tokens = await this.fetchHighlightTokens(content);
+            const tokens = await this.fetchHighlightTokens(content, cancellationToken, reqId);
 
-            if (!tokens || token.isCancellationRequested) {
+            if (cancellationToken.isCancellationRequested) {
+                this.debugChannel.appendLine('[Highlight #' + reqId + '] Cancelled after ' + (Date.now() - startTime) + 'ms');
                 return null;
             }
+
+            if (!tokens) {
+                this.debugChannel.appendLine('[Highlight #' + reqId + '] No tokens returned after ' + (Date.now() - startTime) + 'ms');
+                return null;
+            }
+
+            this.debugChannel.appendLine('[Highlight #' + reqId + '] Received ' + tokens.length + ' tokens in ' + (Date.now() - startTime) + 'ms');
 
             const builder = new vscode.SemanticTokensBuilder(semanticTokensLegend);
 
@@ -111,6 +125,7 @@ export class CalcpadSemanticTokensProvider implements vscode.DocumentSemanticTok
                 return a.column - b.column;
             });
 
+            let validCount = 0;
             for (const tok of tokens) {
                 // Skip None type (typeId 0)
                 if (tok.typeId === CalcpadTokenType.None) {
@@ -120,12 +135,14 @@ export class CalcpadSemanticTokensProvider implements vscode.DocumentSemanticTok
                 const tokenType = this.mapTokenType(tok.typeId);
                 if (tokenType >= 0) {
                     builder.push(tok.line, tok.column, tok.length, tokenType, 0);
+                    validCount++;
                 }
             }
 
+            this.debugChannel.appendLine('[Highlight #' + reqId + '] Built ' + validCount + ' semantic tokens, total time: ' + (Date.now() - startTime) + 'ms');
             return builder.build();
         } catch (error) {
-            this.outputChannel.appendLine('[SemanticTokens] Error: ' + (error instanceof Error ? error.message : 'Unknown error'));
+            this.debugChannel.appendLine('[Highlight #' + reqId + '] Error after ' + (Date.now() - startTime) + 'ms: ' + (error instanceof Error ? error.message : 'Unknown error'));
             return null;
         }
     }
@@ -144,11 +161,16 @@ export class CalcpadSemanticTokensProvider implements vscode.DocumentSemanticTok
     /**
      * Fetch highlight tokens from the server
      */
-    private async fetchHighlightTokens(content: string): Promise<HighlightToken[] | null> {
+    private async fetchHighlightTokens(
+        content: string,
+        cancellationToken: vscode.CancellationToken,
+        reqId: number
+    ): Promise<HighlightToken[] | null> {
         const settings = this.settingsManager.getSettings();
         const apiBaseUrl = settings.server.url;
 
         if (!apiBaseUrl) {
+            this.debugChannel.appendLine('[Highlight #' + reqId + '] No server URL configured');
             return null;
         }
 
@@ -159,20 +181,44 @@ export class CalcpadSemanticTokensProvider implements vscode.DocumentSemanticTok
             includeText: false
         };
 
+        // Create an AbortController to cancel the request if VS Code cancels
+        const abortController = new AbortController();
+        const cancelListener = cancellationToken.onCancellationRequested(() => {
+            this.debugChannel.appendLine('[Highlight #' + reqId + '] Request cancelled by VS Code');
+            abortController.abort();
+        });
+
         try {
+            this.debugChannel.appendLine('[Highlight #' + reqId + '] Sending request to server...');
             const response = await axios.post<HighlightResponse>(
                 url,
                 request,
                 {
                     headers: { 'Content-Type': 'application/json' },
-                    timeout: 5000
+                    timeout: 30000,  // 30 seconds for large files
+                    signal: abortController.signal
                 }
             );
 
+            this.debugChannel.appendLine('[Highlight #' + reqId + '] Server responded with ' + response.data.tokens.length + ' tokens');
             return response.data.tokens;
         } catch (error) {
-            // Silently fail - syntax highlighting is non-critical
+            if (axios.isAxiosError(error)) {
+                if (error.code === 'ERR_CANCELED') {
+                    this.debugChannel.appendLine('[Highlight #' + reqId + '] Request was aborted');
+                } else if (error.code === 'ECONNREFUSED') {
+                    this.debugChannel.appendLine('[Highlight #' + reqId + '] Server connection refused');
+                } else if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
+                    this.debugChannel.appendLine('[Highlight #' + reqId + '] Request timed out');
+                } else {
+                    this.debugChannel.appendLine('[Highlight #' + reqId + '] API error: ' + error.message);
+                }
+            } else {
+                this.debugChannel.appendLine('[Highlight #' + reqId + '] Unknown error: ' + String(error));
+            }
             return null;
+        } finally {
+            cancelListener.dispose();
         }
     }
 }

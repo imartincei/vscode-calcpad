@@ -119,6 +119,7 @@ Lint Calcpad source code and return diagnostics (errors and warnings).
 interface LintRequest {
   content: string;                           // The Calcpad source code to lint
   includeFiles?: Record<string, string>;     // Optional dictionary of include file contents (filename -> content)
+  clientFileCache?: Record<string, string>;  // Optional client file cache (filename -> base64-encoded content)
 }
 ```
 
@@ -238,8 +239,232 @@ interface LintDiagnostic {
 
 2. **Include files** - For the linter to properly validate code with `#include` statements, pass the include file contents in the `includeFiles` dictionary. The key should match the filename used in the `#include` statement.
 
-3. **Token positions** - For syntax highlighting, use `column` and `length` to determine the exact span of each token for colorization.
+3. **Client file cache** - An alternative to `includeFiles` for resolving `#include` and `#read` directives. Files are passed as base64-encoded content, which is useful when the client has files cached in memory that the server cannot access directly. The cache is checked after `includeFiles` - if a file exists in both, `includeFiles` takes precedence.
 
-4. **Error ranges** - For the linter, use `column` and `endColumn` to underline or highlight the problematic code region.
+4. **Token positions** - For syntax highlighting, use `column` and `length` to determine the exact span of each token for colorization.
 
-5. **Incremental updates** - Use `/highlight-line` for real-time syntax highlighting as the user types, then periodically call `/lint` for full validation.
+5. **Error ranges** - For the linter, use `column` and `endColumn` to underline or highlight the problematic code region.
+
+6. **Incremental updates** - Use `/highlight-line` for real-time syntax highlighting as the user types, then periodically call `/lint` for full validation.
+
+---
+
+## Definitions Endpoint
+
+### POST /definitions
+
+Get detailed definitions (macros, functions, variables, custom units) from Calcpad source code. Returns type information, parameters, return types, and source locations.
+
+**Request:**
+```typescript
+interface DefinitionsRequest {
+  content: string;                           // The Calcpad source code to analyze
+  includeFiles?: Record<string, string>;     // Optional dictionary of include file contents (filename -> content)
+  clientFileCache?: Record<string, string>;  // Optional client file cache (filename -> base64-encoded content)
+}
+```
+
+**Response:**
+```typescript
+interface DefinitionsResponse {
+  macros: MacroDefinitionDto[];
+  functions: FunctionDefinitionDto[];
+  variables: VariableDefinitionDto[];
+  customUnits: CustomUnitDefinitionDto[];
+}
+
+interface MacroDefinitionDto {
+  name: string;              // Macro name (including $ suffix)
+  parameters: string[];      // Parameter names
+  isMultiline: boolean;      // True if multiline macro (#def...#end def), false if inline
+  content: string[];         // Macro content lines
+  lineNumber: number;        // Zero-based line number where defined
+  source: string;            // "local" or "include"
+  sourceFile?: string;       // Source file path if from include
+}
+
+interface FunctionDefinitionDto {
+  name: string;                       // Function name
+  parameters: string[];               // Parameter names
+  expression?: string;                // Function body expression (right side of =)
+  returnType: string;                 // Inferred return type name
+  returnTypeId: number;               // Return type ID for efficient processing
+  hasCommandBlock: boolean;           // True if uses $Inline, $Block, or $While
+  commandBlockType?: string;          // "Inline", "Block", or "While" (if applicable)
+  commandBlockStatements?: string[];  // Statements inside command block (if applicable)
+  lineNumber: number;                 // Zero-based line number where defined
+  source: string;                     // "local" or "include"
+  sourceFile?: string;                // Source file path if from include
+}
+
+interface VariableDefinitionDto {
+  name: string;          // Variable name
+  expression?: string;   // Initial expression (right side of first assignment)
+  type: string;          // Inferred type name
+  typeId: number;        // Type ID for efficient processing
+  lineNumber: number;    // Zero-based line number where first defined
+  source: string;        // "local" or "include"
+  sourceFile?: string;   // Source file path if from include
+}
+
+interface CustomUnitDefinitionDto {
+  name: string;          // Unit name (without leading dot)
+  expression?: string;   // Unit definition expression
+  lineNumber: number;    // Zero-based line number where defined
+  source: string;        // "local" or "include"
+  sourceFile?: string;   // Source file path if from include
+}
+```
+
+**Type IDs (typeId / returnTypeId):**
+| ID | Type | Description |
+|----|------|-------------|
+| 0 | Unknown | Type could not be determined |
+| 1 | Value | Scalar numeric value |
+| 2 | Vector | Vector (1D array) |
+| 3 | Matrix | Matrix (2D array) |
+| 4 | StringVariable | String value |
+| 5 | Various | Type varies (assigned different types in different places) |
+| 6 | Function | Function type |
+| 7 | InlineMacro | Inline macro |
+| 8 | MultilineMacro | Multiline macro |
+| 9 | CustomUnit | Custom unit definition |
+
+**Example Request:**
+```json
+{
+  "content": "#def double$(x$) = 2*x$\nmyFunc(a; b) = a + b\nvec = [1; 2; 3]\n.ksi = 1000*psi"
+}
+```
+
+**Example Response:**
+```json
+{
+  "macros": [
+    {
+      "name": "double$",
+      "parameters": ["x$"],
+      "isMultiline": false,
+      "content": ["2*x$"],
+      "lineNumber": 0,
+      "source": "local",
+      "sourceFile": null
+    }
+  ],
+  "functions": [
+    {
+      "name": "myFunc",
+      "parameters": ["a", "b"],
+      "expression": "a + b",
+      "returnType": "Value",
+      "returnTypeId": 1,
+      "hasCommandBlock": false,
+      "commandBlockType": null,
+      "commandBlockStatements": null,
+      "lineNumber": 1,
+      "source": "local",
+      "sourceFile": null
+    }
+  ],
+  "variables": [
+    {
+      "name": "vec",
+      "expression": "[1; 2; 3]",
+      "type": "Vector",
+      "typeId": 2,
+      "lineNumber": 2,
+      "source": "local",
+      "sourceFile": null
+    }
+  ],
+  "customUnits": [
+    {
+      "name": "ksi",
+      "expression": "1000*psi",
+      "lineNumber": 3,
+      "source": "local",
+      "sourceFile": null
+    }
+  ]
+}
+```
+
+**Command Block Functions Example:**
+
+Note: Command blocks use function syntax like `if()`, `$Repeat{}`, etc. instead of `#if`, `#for` directives.
+
+```json
+{
+  "content": "filterVec(v; val) = $Inline{result = vector(0); $Repeat{result = if(v.(i) > val; join(result; v.(i)); result) @ i = 1 : len(v)}; result}"
+}
+```
+
+Response includes:
+```json
+{
+  "functions": [
+    {
+      "name": "filterVec",
+      "parameters": ["v", "val"],
+      "expression": "$Inline{result = vector(0); ...}",
+      "returnType": "Vector",
+      "returnTypeId": 2,
+      "hasCommandBlock": true,
+      "commandBlockType": "Inline",
+      "commandBlockStatements": [
+        "result = vector(0)",
+        "$Repeat{result = if(v.(i) > val; join(result; v.(i)); result) @ i = 1 : len(v)}",
+        "result"
+      ],
+      "lineNumber": 0,
+      "source": "local",
+      "sourceFile": null
+    }
+  ]
+}
+```
+
+---
+
+## Convert Endpoint
+
+### POST /convert
+
+Convert Calcpad source code to HTML (or PDF). Processes macros, includes, and calculations.
+
+**Request:**
+```typescript
+interface CalcpadRequest {
+  content: string;                           // The Calcpad source code to convert
+  settings?: Settings;                       // Optional Calcpad settings (math, plot, units, auth)
+  forceUnwrappedCode?: boolean;              // If true, return code without calculation (default: false)
+  theme?: string;                            // "light" or "dark" (default: "light")
+  outputFormat?: string;                     // "html" or "pdf" (default: "html")
+  pdfSettings?: PdfSettings;                 // PDF generation settings (only if outputFormat is "pdf")
+  clientFileCache?: Record<string, string>;  // Optional client file cache (filename -> base64-encoded content)
+}
+```
+
+**Response:** HTML content (text/html) or PDF file (application/pdf) depending on `outputFormat`.
+
+**Example Request with Client File Cache:**
+```json
+{
+  "content": "#include helper.cpd\na = helperFunc(5)",
+  "clientFileCache": {
+    "helper.cpd": "aGVscGVyRnVuYyh4KSA9IHggKiAy"
+  }
+}
+```
+
+The base64 content above decodes to: `helperFunc(x) = x * 2`
+
+---
+
+### POST /convert-unwrapped
+
+Convert Calcpad source code to HTML without calculation (shows raw code with syntax highlighting).
+
+**Request:** Same as `/convert` (uses `CalcpadRequest`)
+
+**Response:** HTML content (text/html)
