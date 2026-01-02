@@ -2,7 +2,7 @@
   "name": "vscode-calcpad",
   "displayName": "VS Code CalcPad",
   "description": "Calculator extension for VS Code",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "imartincei",
   "repository": "https://github.com/imartincei/vscode-calcpad",
   "icon": "calcpad-icon.png",
