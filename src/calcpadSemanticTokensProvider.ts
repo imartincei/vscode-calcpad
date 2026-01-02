@@ -25,6 +25,7 @@ import { HighlightRequest, HighlightResponse, HighlightToken, CalcpadTokenType }
  * 15: Format -> decorator
  * 16: LocalVariable -> parameter (function params, #for vars, command scope vars)
  * 17: FilePath -> string (file paths in #read, #write, #append)
+ * 18: DataExchangeKeyword -> keyword (sub-keywords: from, to, sep, type)
  */
 const TOKEN_TYPE_MAP: Record<number, string> = {
     [CalcpadTokenType.Const]: 'number',
@@ -44,6 +45,7 @@ const TOKEN_TYPE_MAP: Record<number, string> = {
     [CalcpadTokenType.Format]: 'decorator',
     [CalcpadTokenType.LocalVariable]: 'parameter',
     [CalcpadTokenType.FilePath]: 'string',
+    [CalcpadTokenType.DataExchangeKeyword]: 'keyword',
 };
 
 // Build unique token types list (preserving order for legend)

@@ -487,7 +487,8 @@
     "configurationDefaults": {
       "[calcpad]": {
         "editor.semanticHighlighting.enabled": true,
-        "editor.bracketPairColorization.enabled": false
+        "editor.bracketPairColorization.enabled": false,
+        "editor.matchBrackets": "never"
       }
     }
   },

@@ -78,8 +78,9 @@ export enum CalcpadTokenType {
     Macro = 13,
     HtmlComment = 14,
     Format = 15,
-    LocalVariable = 16,  // Local variables scoped to expressions (function params, #for vars, command scope vars)
-    FilePath = 17        // File paths in data exchange keywords (#read, #write, #append)
+    LocalVariable = 16,       // Local variables scoped to expressions (function params, #for vars, command scope vars)
+    FilePath = 17,            // File paths in data exchange keywords (#read, #write, #append)
+    DataExchangeKeyword = 18  // Sub-keywords in data exchange statements (from, to, sep, type)
 }
 
 // ============================================
@@ -104,7 +105,7 @@ export interface MacroDefinition {
     parameters: string[];
     isMultiline: boolean;
     content: string[];
-    lineNumber: number;
+    lineNumber: number;  // Zero-based line number
     source: string;
     sourceFile?: string;
 }
@@ -118,7 +119,7 @@ export interface FunctionDefinition {
     hasCommandBlock: boolean;
     commandBlockType?: string;
     commandBlockStatements?: string[];
-    lineNumber: number;
+    lineNumber: number;  // Zero-based line number
     source: string;
     sourceFile?: string;
 }
@@ -128,7 +129,7 @@ export interface VariableDefinition {
     expression?: string;
     type: string;
     typeId: number;
-    lineNumber: number;
+    lineNumber: number;  // Zero-based line number
     source: string;
     sourceFile?: string;
 }
@@ -136,7 +137,7 @@ export interface VariableDefinition {
 export interface CustomUnitDefinition {
     name: string;
     expression?: string;
-    lineNumber: number;
+    lineNumber: number;  // Zero-based line number
     source: string;
     sourceFile?: string;
 }

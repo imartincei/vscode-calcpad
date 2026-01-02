@@ -61,6 +61,7 @@ interface HighlightToken {
 | 15 | Format | Format specifiers (e.g., :f2, :e3) |
 | 16 | LocalVariable | Local variables scoped to expressions (function params, #for vars, command scope vars) |
 | 17 | FilePath | File paths in data exchange keywords (#read, #write, #append) |
+| 18 | DataExchangeKeyword | Sub-keywords in data exchange statements (from, to, sep, type) |
 
 **Example Request:**
 ```json

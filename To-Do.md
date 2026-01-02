@@ -17,17 +17,15 @@
 - Add hotkeys for HTML/markdown formatting. Add toggle for HTML vs markdown in the settings.
 - Package extension for further testing within the company. Publish to Open VSX but not Visual Studio Marketplace unless I need a personal Azure account for other reasons
 - Add more line continuation logic per 7.5.1/7.5.2: Left bracket '(' is enabled to serve as line continuation, besides '{' and ';' and without the need to add ' _' symbol at the end of the line. Made all opening brackets and delimiters to be line continuation symbols.
--Line continuation error mapping has some issues
 
 ### Bugs
-Fix syntax highlighting for local variables
-Add line continuation mapping for error underlining
 
 ## Calcpad.Server
 - Finish adding CalcpadAuth to Calcpad.Server.
 - CalcpadS3 should remain its own project (with a frontend built into vs code). However, make config in Calcpad.Core that allows #include and #read to directly pull files from s3. Example: #include myfile.cpd should check 1. Local files, 2. File cache sent from client. 3. CalcpadS3 if config is available.
+- Write/Append should prompt a ZIP download when using Calcpad.Server with the Linux build rather than appending to the local filepath (for Docker, this makes no sense). However, for Windows build, it works as-is. Make an endpoint to do this and add a button to vscode. Add an ENV variable to control the behavior.
 - Make Docker config that allows using MinIO or external S3 provider. 
-- Add password or OAuth to Docker. 
+- Add password or OAuth to Docker.
 - Add cloudflare tunnel config as option in Docker.
 - Note that Windows version will only support localhost with no auth, S3, or custom routing.
 - Refactor CalcpadAuth routing to work with <service:endpoint> structure and make router.json config to work with any API calls (such as GET vs POST and auth/content type headers). Body is passed from Calcpad itself.
@@ -42,7 +40,7 @@ Add line continuation mapping for error underlining
 ## Calcpad.Highlighter
 - Double check builtin function return types are correct. Have Claude run the comprehensive check to see what is returned.
 - Have the linter check when a macro parameter is used as a string and do type checking in this case.
-- Add parsing of metadata lines for macro descriptions and parameter descriptions/type hinting. Metadata lines contain inline or multiline JSON that external programs can pull from cpd files but are ignored by the parser.
+- Add parsing of metadata lines for macro descriptions and parameter descriptions/type hinting. Metadata lines contain inline or multiline JSON that external programs can pull from cpd files but are ignored by the parser. Metadata lines occur when there is JSON in an HTML comment
 
 ### Bugs
 
@@ -51,4 +49,3 @@ Add line continuation mapping for error underlining
 ### Bugs
 
 ## Calcpad.Core
-- Add logic that ignore metadata lines that start with ~ or blocks between ~~~.

@@ -12,6 +12,7 @@ import { CalcpadInsertManager } from './calcpadInsertManager';
 import { CalcpadDefinitionsService } from './calcpadDefinitionsService';
 import { AutoIndenter } from './autoIndenter';
 import { buildClientFileCacheFromContent } from './clientFileCacheHelper';
+import { CalcpadDefinitionProvider } from './calcpadDefinitionProvider';
 
 let activePreviewPanel: vscode.WebviewPanel | unknown = undefined;
 let activePreviewType: 'regular' | 'unwrapped' | undefined = undefined;
@@ -754,6 +755,10 @@ export function activate(context: vscode.ExtensionContext) {
         outputChannel.appendLine('Initializing autocomplete provider...');
         const completionProviderDisposable = CalcpadCompletionProvider.register(definitionsService, outputChannel);
 
+        // Initialize definition provider (Go to Definition)
+        outputChannel.appendLine('Initializing definition provider...');
+        const definitionProviderDisposable = CalcpadDefinitionProvider.register(definitionsService, outputChannel);
+
     // Unified document processing function
     async function processDocument(document: vscode.TextDocument) {
         if (document.languageId !== 'calcpad' && document.languageId !== 'plaintext') {
@@ -929,7 +934,8 @@ export function activate(context: vscode.ExtensionContext) {
             operatorReplacerDisposable,
             quickTyperDisposable,
             autoIndenterDisposable,
-            completionProviderDisposable
+            completionProviderDisposable,
+            definitionProviderDisposable
         );
         
         outputChannel.appendLine('CalcPad extension activation completed successfully');
