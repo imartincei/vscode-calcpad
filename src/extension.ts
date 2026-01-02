@@ -775,6 +775,8 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     const insertManager = CalcpadInsertManager.getInstance();
+    insertManager.setSettingsManager(settingsManager);
+    insertManager.setOutputChannel(outputChannel);
 
     // Register webview provider for CalcPad Vue UI panel (NEW)
     const vueUiProvider = new CalcpadVueUIProvider(context.extensionUri, context, settingsManager, insertManager);

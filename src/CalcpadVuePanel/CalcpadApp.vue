@@ -16,7 +16,7 @@
     <div class="tab-content">
       <CalcpadInsertTab
         v-if="activeTab === 'insert'"
-        :insert-data="insertData"
+        :insert-items="insertItems"
         @insert-text="handleInsertText"
       />
       <CalcpadSettingsTab
@@ -57,11 +57,11 @@ import CalcpadVariablesTab from './components/CalcpadVariablesTab.vue'
 import CalcpadFilesTab from './components/CalcpadFilesTab.vue'
 import CalcpadPdfTab from './components/CalcpadPdfTab.vue'
 import { postMessage } from './services/vscode'
-import type { Tab, InsertData, Settings, VariablesData, PdfSettings } from './types'
+import type { Tab, InsertItem, Settings, VariablesData, PdfSettings } from './types'
 
 // State
 const activeTab = ref('insert')
-const insertData = ref<InsertData>({})
+const insertItems = ref<InsertItem[]>([])
 const settings = ref<Settings>()
 const previewTheme = ref('system')
 const enableQuickTyping = ref(true)
@@ -170,7 +170,7 @@ const handleMessage = (event: MessageEvent) => {
 
   switch (message.type) {
     case 'insertDataResponse':
-      insertData.value = message.data
+      insertItems.value = message.items || []
       break
     case 'settingsResponse':
       settings.value = message.settings

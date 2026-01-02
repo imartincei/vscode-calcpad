@@ -20,12 +20,21 @@ export class CalcpadCompletionProvider implements vscode.CompletionItemProvider 
         context: vscode.CompletionContext
     ): Promise<vscode.CompletionItem[]> {
         const completionItems: vscode.CompletionItem[] = [];
-        
+
         // Get the word being typed
         const wordRange = document.getWordRangeAtPosition(position);
         const word = wordRange ? document.getText(wordRange) : '';
-        
-        this.outputChannel.appendLine(`[COMPLETION] Word: "${word}" at position ${position.line}:${position.character}`);
+
+        this.outputChannel.appendLine('[COMPLETION] Word: "' + word + '" at position ' + position.line + ':' + position.character);
+
+        // Ensure snippets are loaded
+        if (!this.insertManager.isLoaded()) {
+            try {
+                await this.insertManager.loadSnippets();
+            } catch (error) {
+                this.outputChannel.appendLine('[COMPLETION] Failed to load snippets: ' + error);
+            }
+        }
 
         // Get user-defined content from cached definitions (highest priority)
         try {

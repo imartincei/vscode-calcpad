@@ -462,6 +462,99 @@ The base64 content above decodes to: `helperFunc(x) = x * 2`
 
 ---
 
+## Snippets Endpoint
+
+### GET /snippets
+
+Get all available snippets for autocomplete/intellisense. Returns snippet definitions with insert text, descriptions, categories, and parameter info.
+
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| category | string | Optional. Filter snippets by category prefix (e.g., "Functions", "Functions/Trigonometric") |
+
+**Response:**
+```typescript
+interface SnippetsResponse {
+  count: number;           // Total number of snippets returned
+  snippets: SnippetDto[];  // Array of snippet definitions
+}
+
+interface SnippetDto {
+  insert: string;                  // Text to insert (use '§' as cursor placeholder)
+  description: string;             // Description shown in tooltips
+  label?: string;                  // Optional display label (defaults to description)
+  category: string;                // Category path (e.g., "Functions/Trigonometric")
+  parameters?: SnippetParameterDto[]; // Parameter info for functions (null for non-functions)
+}
+
+interface SnippetParameterDto {
+  name: string;         // Parameter name (e.g., "x", "M", "v")
+  description?: string; // Description of the parameter's purpose
+}
+```
+
+**Snippet Categories:**
+| Category | Description |
+|----------|-------------|
+| Constants | Mathematical constants (e, pi, etc.) |
+| Operators | Arithmetic and comparison operators |
+| Functions/Trigonometric | sin, cos, tan, etc. |
+| Functions/Hyperbolic | sinh, cosh, tanh, etc. |
+| Functions/Exponential | exp, ln, log, etc. |
+| Functions/Rounding | round, floor, ceil, trunc |
+| Functions/Aggregate | min, max, sum, average, etc. |
+| Functions/Conditional | if, switch, and, or, not |
+| Functions/Other | abs, sign, random, etc. |
+| Functions/Vector | len, range, join, fill, etc. |
+| Functions/Matrix | matrix, identity, transpose, etc. |
+| Program Flow Control | #if, #else, #for, #while, etc. |
+| Modules and Macros | #include, #def, #local |
+| Commands | $Plot, $Root, $Sum, etc. |
+| Units | Length, mass, time units |
+
+**Example Request:**
+```
+GET /api/calcpad/snippets
+GET /api/calcpad/snippets?category=Functions/Trigonometric
+```
+
+**Example Response:**
+```json
+{
+  "count": 3,
+  "snippets": [
+    {
+      "insert": "sin(§)",
+      "description": "Sine of angle in radians",
+      "label": null,
+      "category": "Functions/Trigonometric",
+      "parameters": [
+        { "name": "x", "description": "Angle in radians" }
+      ]
+    },
+    {
+      "insert": "min(§; §)",
+      "description": "Minimum of multiple scalar values",
+      "label": null,
+      "category": "Functions/Aggregate",
+      "parameters": [
+        { "name": "values", "description": "Scalar values" }
+      ]
+    },
+    {
+      "insert": "#if",
+      "description": "Conditional block",
+      "label": null,
+      "category": "Program Flow Control",
+      "parameters": null
+    }
+  ]
+}
+```
+
+---
+
 ### POST /convert-unwrapped
 
 Convert Calcpad source code to HTML without calculation (shows raw code with syntax highlighting).

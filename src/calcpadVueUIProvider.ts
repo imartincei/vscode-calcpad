@@ -214,15 +214,24 @@ export class CalcpadVueUIProvider implements vscode.WebviewViewProvider {
         this._sendInitialData();
     }
 
-    private _sendInitialData() {
+    private async _sendInitialData() {
         if (!this._view) return;
 
-        // Send insert data
-        const insertData = this._insertManager.getInsertData();
-        this._outputChannel.appendLine(`Sending insert data with ${Object.keys(insertData || {}).length} categories`);
+        // Ensure snippets are loaded
+        if (!this._insertManager.isLoaded()) {
+            try {
+                await this._insertManager.loadSnippets();
+            } catch (error) {
+                this._outputChannel.appendLine('[Vue UI] Failed to load snippets: ' + error);
+            }
+        }
+
+        // Send insert items as flat array
+        const insertItems = this._insertManager.getAllItems();
+        this._outputChannel.appendLine('Sending ' + insertItems.length + ' insert items');
         this._view.webview.postMessage({
             type: 'insertDataResponse',
-            data: insertData
+            items: insertItems
         });
     }
 

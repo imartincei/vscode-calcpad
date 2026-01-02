@@ -1,6 +1,0 @@
-' Helper functions and variables
-' These should show "Included file (helpers.cpd)"
-
-helper_var = 100
-helper_func(x) = x * 10
-multiply(a; b) = a * b

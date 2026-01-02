@@ -21,16 +21,11 @@
         :key="item.tag"
         @click="insertItem(item)"
         class="insert-item"
+        :title="buildTooltip(item)"
       >
-        <div class="item-tag">{{ item.tag }}</div>
-        <div v-if="item.label && item.label !== item.tag" class="item-label">
-          {{ item.label }}
-        </div>
+        <div class="item-display">{{ formatDisplayText(item) }}</div>
         <div v-if="item.description" class="item-description">
           {{ item.description }}
-        </div>
-        <div v-if="item.quickType" class="item-quicktype">
-          Quick type: {{ item.quickType }}
         </div>
         <div v-if="item.categoryPath" class="item-category">
           {{ item.categoryPath }}
@@ -55,11 +50,11 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
-import type { InsertItem, InsertData, InsertCategory } from '../types'
+import type { InsertItem } from '../types'
 
 // Props
 interface Props {
-  insertData: InsertData
+  insertItems: InsertItem[]
 }
 
 const props = defineProps<Props>()
@@ -71,7 +66,6 @@ const emit = defineEmits<{
 
 // State
 const searchTerm = ref('')
-const allItems = ref<InsertItem[]>([])
 
 // Computed
 const filteredItems = computed(() => {
@@ -81,13 +75,13 @@ const filteredItems = computed(() => {
 
   const term = searchTerm.value.toLowerCase()
 
-  const itemMatches = allItems.value.filter((item: InsertItem) =>
+  const itemMatches = props.insertItems.filter((item: InsertItem) =>
     item.label?.toLowerCase().includes(term) ||
     item.tag?.toLowerCase().includes(term) ||
     item.description?.toLowerCase().includes(term)
   )
 
-  const categoryMatches = allItems.value.filter((item: InsertItem) =>
+  const categoryMatches = props.insertItems.filter((item: InsertItem) =>
     item.categoryPath?.toLowerCase().includes(term) &&
     !itemMatches.includes(item)
   )
@@ -99,53 +93,126 @@ const displayItems = computed(() => {
   if (searchTerm.value.trim()) {
     return filteredItems.value
   }
-  return allItems.value
+  return props.insertItems
 })
 
-// Methods
-const flattenItems = (data: InsertData, currentPath: string[] = [], result: InsertItem[] = []): InsertItem[] => {
-  Object.keys(data).forEach(categoryKey => {
-    const categoryData = data[categoryKey]
-    const newPath = [...currentPath, categoryKey]
+// Types for tree structure built from flat items
+interface TreeNode {
+  [key: string]: TreeNode | InsertItem[]
+}
 
-    if (Array.isArray(categoryData)) {
-      categoryData.forEach(item => {
-        result.push({
-          ...item,
-          categoryPath: newPath.join(' > ')
-        })
-      })
-    } else if (typeof categoryData === 'object' && categoryData !== null) {
-      if (categoryData.direct && Array.isArray(categoryData.direct)) {
-        categoryData.direct.forEach(item => {
-          result.push({
-            ...item,
-            categoryPath: newPath.join(' > ')
-          })
-        })
-      }
+// Build tree structure from flat items grouped by categoryPath
+const buildTreeFromItems = (items: InsertItem[]): TreeNode => {
+  const tree: TreeNode = {}
 
-      Object.keys(categoryData).forEach(subKey => {
-        if (subKey !== 'direct') {
-          const subValue = categoryData[subKey]
-          if (subValue) {
-            const subData = { [subKey]: subValue } as InsertData
-            flattenItems(subData, newPath, result)
-          }
+  for (const item of items) {
+    const path = item.categoryPath || 'Uncategorized'
+    const parts = path.split(' > ')
+    let current: TreeNode = tree
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i]
+      const isLast = i === parts.length - 1
+
+      if (isLast) {
+        if (!current[part]) {
+          current[part] = []
         }
-      })
+        const arr = current[part]
+        if (Array.isArray(arr)) {
+          arr.push(item)
+        }
+      } else {
+        if (!current[part]) {
+          current[part] = {}
+        }
+        const next = current[part]
+        if (!Array.isArray(next)) {
+          current = next
+        }
+      }
     }
-  })
+  }
+
+  return tree
+}
+
+// Helper: Replace § placeholders with parameter names in a given text
+const replaceParamPlaceholders = (text: string, item: InsertItem): string => {
+  if (!item.parameters || item.parameters.length === 0) {
+    return text
+  }
+
+  // Count § placeholders
+  const placeholderCount = (text.match(/§/g) || []).length
+  if (placeholderCount === 0) {
+    return text
+  }
+
+  // Build replacement array
+  const replacements: string[] = []
+  for (let i = 0; i < placeholderCount; i++) {
+    if (i < item.parameters.length) {
+      replacements.push(item.parameters[i].name)
+    } else {
+      // Variadic case: more placeholders than parameters, use ellipsis
+      replacements.push('...')
+    }
+  }
+
+  // Replace § with parameter names in order
+  let result = text
+  for (const replacement of replacements) {
+    result = result.replace('§', replacement)
+  }
 
   return result
 }
 
-const initializeItems = () => {
-  allItems.value = flattenItems(props.insertData)
+// Helper: Format display text (uses label if available, falls back to tag)
+const formatDisplayText = (item: InsertItem): string => {
+  const baseText = item.label || item.tag
+  return replaceParamPlaceholders(baseText, item)
 }
 
+// Helper: Format insert text (always uses tag as base)
+const formatInsertText = (item: InsertItem): string => {
+  return replaceParamPlaceholders(item.tag, item)
+}
+
+// Helper: Build tooltip with description and parameter breakdown
+const buildTooltip = (item: InsertItem): string => {
+  const lines: string[] = []
+
+  // Main description
+  if (item.description) {
+    lines.push(item.description)
+  }
+
+  // Parameter breakdown
+  if (item.parameters && item.parameters.length > 0) {
+    lines.push('')
+    lines.push('Parameters:')
+    for (const param of item.parameters) {
+      const paramLine = param.description
+        ? '  ' + param.name + ': ' + param.description
+        : '  ' + param.name
+      lines.push(paramLine)
+    }
+  }
+
+  // Quick type shortcut
+  if (item.quickType) {
+    lines.push('')
+    lines.push('Quick type: ' + item.quickType)
+  }
+
+  return lines.join('\n')
+}
+
+// Methods
 const insertItem = (item: InsertItem) => {
-  emit('insertText', item.tag)
+  emit('insertText', formatInsertText(item))
 }
 
 const collapseAll = () => {
@@ -162,7 +229,7 @@ const buildTreeStructure = () => {
   // Clear existing content
   treeContainer.innerHTML = ''
 
-  if (Object.keys(props.insertData).length === 0) {
+  if (props.insertItems.length === 0) {
     treeContainer.innerHTML = '<div class="tree-placeholder">No insert data available</div>'
     return
   }
@@ -171,10 +238,11 @@ const buildTreeStructure = () => {
   treeRoot.className = 'tree'
   treeContainer.appendChild(treeRoot)
 
-  buildTreeStructureRecursive(props.insertData, treeRoot, 0)
+  const treeData = buildTreeFromItems(props.insertItems)
+  buildTreeStructureRecursive(treeData, treeRoot, 0)
 }
 
-const buildTreeStructureRecursive = (data: InsertData, parentUl: HTMLUListElement, level: number) => {
+const buildTreeStructureRecursive = (data: TreeNode, parentUl: HTMLUListElement, level: number) => {
   if (level >= 5) return // Prevent infinite recursion
 
   Object.keys(data).forEach(categoryKey => {
@@ -183,7 +251,7 @@ const buildTreeStructureRecursive = (data: InsertData, parentUl: HTMLUListElemen
     if (Array.isArray(categoryData)) {
       const { li, ul } = createTreeSection(categoryKey, level)
 
-      categoryData.forEach(item => {
+      categoryData.forEach((item: InsertItem) => {
         const itemLi = createTreeItem(item)
         ul.appendChild(itemLi)
       })
@@ -191,7 +259,7 @@ const buildTreeStructureRecursive = (data: InsertData, parentUl: HTMLUListElemen
       parentUl.appendChild(li)
     } else if (typeof categoryData === 'object' && categoryData !== null) {
       const { li, ul } = createTreeSection(categoryKey, level)
-      buildTreeStructureRecursive(categoryData as InsertData, ul, level + 1)
+      buildTreeStructureRecursive(categoryData as TreeNode, ul, level + 1)
       parentUl.appendChild(li)
     }
   })
@@ -234,19 +302,11 @@ const createTreeItem = (item: InsertItem) => {
   const button = document.createElement('button')
   button.className = 'tree-item'
 
-  // Build tooltip with description and quickType
-  let tooltip = item.description || ''
-  if (item.quickType) {
-    tooltip += tooltip ? ` (Quick type: ${item.quickType})` : `Quick type: ${item.quickType}`
-  }
-  button.title = tooltip
+  // Use description for tooltip with parameter breakdown
+  button.title = buildTooltip(item)
 
-  // Build button text
-  let text = item.label ? item.label + ' - ' + (item.description || '') : (item.description || '')
-  if (item.quickType) {
-    text += ` [${item.quickType}]`
-  }
-  button.textContent = text
+  // Use insert (or label) as display text with § replaced by param names
+  button.textContent = formatDisplayText(item)
 
   button.addEventListener('click', () => {
     insertItem(item)
@@ -256,11 +316,10 @@ const createTreeItem = (item: InsertItem) => {
   return li
 }
 
-// Watch for insertData changes
+// Watch for insertItems changes
 watch(
-  () => props.insertData,
+  () => props.insertItems,
   () => {
-    initializeItems()
     nextTick(() => {
       buildTreeStructure()
     })
@@ -337,30 +396,17 @@ watch(
   background: var(--vscode-list-hoverBackground);
 }
 
-.item-tag {
+.item-display {
   font-weight: bold;
   color: var(--vscode-editor-foreground);
   font-size: 12px;
-}
-
-.item-label {
-  font-size: 11px;
-  color: var(--vscode-descriptionForeground);
-  margin-top: 2px;
+  font-family: monospace;
 }
 
 .item-description {
   font-size: 11px;
   color: var(--vscode-descriptionForeground);
   margin-top: 2px;
-}
-
-.item-quicktype {
-  font-size: 10px;
-  color: var(--vscode-textLink-foreground);
-  margin-top: 2px;
-  font-family: monospace;
-  font-weight: 600;
 }
 
 .item-category {

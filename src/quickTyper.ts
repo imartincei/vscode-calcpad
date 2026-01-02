@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import insertData from './insertLoader';
 
 /**
  * Handles automatic replacement of quick typing shortcuts with Unicode symbols
@@ -15,48 +14,78 @@ export class QuickTyper {
     }
 
     /**
-     * Build the quick type replacement map from insert.json
+     * Build the quick type replacement map with hardcoded shortcuts
      */
     private buildQuickTypeMap(): void {
         this.quickTypeMap.clear();
-        this.extractQuickTypes(insertData);
+
+        // Special Symbols
+        this.quickTypeMap.set('~%', '‰');      // Per Mille
+        this.quickTypeMap.set('~%%', '‱');     // Per Ten Thousand
+        this.quickTypeMap.set('~0', '°');      // Degree Symbol
+        this.quickTypeMap.set("~'", '′');      // Prime
+        this.quickTypeMap.set('~"', '″');      // Double Prime
+        this.quickTypeMap.set("~'''", '‴');    // Triple Prime
+        this.quickTypeMap.set("~''''", '⁗');   // Quadruple Prime
+        this.quickTypeMap.set('~/o', 'ø');     // Lowercase Diameter
+        this.quickTypeMap.set('~/O', 'Ø');     // Uppercase Diameter
+
+        // Greek Letters (Lowercase)
+        this.quickTypeMap.set('~a', 'α');      // Alpha
+        this.quickTypeMap.set('~b', 'β');      // Beta
+        this.quickTypeMap.set('~g', 'γ');      // Gamma
+        this.quickTypeMap.set('~d', 'δ');      // Delta
+        this.quickTypeMap.set('~e', 'ε');      // Epsilon
+        this.quickTypeMap.set('~z', 'ζ');      // Zeta
+        this.quickTypeMap.set('~h', 'η');      // Eta
+        this.quickTypeMap.set('~q', 'θ');      // Theta
+        this.quickTypeMap.set('~i', 'ι');      // Iota
+        this.quickTypeMap.set('~k', 'κ');      // Kappa
+        this.quickTypeMap.set('~l', 'λ');      // Lambda
+        this.quickTypeMap.set('~m', 'μ');      // Mu
+        this.quickTypeMap.set('~n', 'ν');      // Nu
+        this.quickTypeMap.set('~x', 'ξ');      // Xi
+        this.quickTypeMap.set('~o', 'ο');      // Omicron
+        this.quickTypeMap.set('~p', 'π');      // Pi
+        this.quickTypeMap.set('~r', 'ρ');      // Rho
+        this.quickTypeMap.set('~j', 'ς');      // Final Sigma
+        this.quickTypeMap.set('~s', 'σ');      // Sigma
+        this.quickTypeMap.set('~t', 'τ');      // Tau
+        this.quickTypeMap.set('~u', 'υ');      // Upsilon
+        this.quickTypeMap.set('~f', 'φ');      // Phi
+        this.quickTypeMap.set('~c', 'χ');      // Chi
+        this.quickTypeMap.set('~y', 'ψ');      // Psi
+        this.quickTypeMap.set('~w', 'ω');      // Omega
+
+        // Greek Letters (Uppercase)
+        this.quickTypeMap.set('~A', 'Α');      // Alpha
+        this.quickTypeMap.set('~B', 'Β');      // Beta
+        this.quickTypeMap.set('~G', 'Γ');      // Gamma
+        this.quickTypeMap.set('~D', 'Δ');      // Delta
+        this.quickTypeMap.set('~E', 'Ε');      // Epsilon
+        this.quickTypeMap.set('~Z', 'Ζ');      // Zeta
+        this.quickTypeMap.set('~H', 'Η');      // Eta
+        this.quickTypeMap.set('~Q', 'Θ');      // Theta
+        this.quickTypeMap.set('~I', 'Ι');      // Iota
+        this.quickTypeMap.set('~K', 'Κ');      // Kappa
+        this.quickTypeMap.set('~L', 'Λ');      // Lambda
+        this.quickTypeMap.set('~M', 'Μ');      // Mu
+        this.quickTypeMap.set('~N', 'Ν');      // Nu
+        this.quickTypeMap.set('~X', 'Ξ');      // Xi
+        this.quickTypeMap.set('~O', 'Ο');      // Omicron
+        this.quickTypeMap.set('~P', 'Π');      // Pi
+        this.quickTypeMap.set('~R', 'Ρ');      // Rho
+        this.quickTypeMap.set('~S', 'Σ');      // Sigma
+        this.quickTypeMap.set('~T', 'Τ');      // Tau
+        this.quickTypeMap.set('~U', 'Υ');      // Upsilon
+        this.quickTypeMap.set('~F', 'Φ');      // Phi
+        this.quickTypeMap.set('~C', 'Χ');      // Chi
+        this.quickTypeMap.set('~Y', 'Ψ');      // Psi
+        this.quickTypeMap.set('~W', 'Ω');      // Omega
 
         this.outputChannel.appendLine(
-            `[QUICK TYPER] Loaded ${this.quickTypeMap.size} quick type shortcuts`
+            '[QUICK TYPER] Loaded ' + this.quickTypeMap.size + ' quick type shortcuts'
         );
-    }
-
-    /**
-     * Recursively extract quick type mappings from insert data
-     */
-    private extractQuickTypes(data: unknown): void {
-        if (typeof data !== 'object' || data === null) return;
-
-        if (Array.isArray(data)) {
-            // Process array of items
-            data.forEach(item => {
-                if (this.isQuickTypeItem(item)) {
-                    this.quickTypeMap.set(item.quickType, item.tag);
-                }
-            });
-        } else {
-            // Process object properties recursively
-            Object.values(data as Record<string, unknown>).forEach(value => {
-                this.extractQuickTypes(value);
-            });
-        }
-    }
-
-    /**
-     * Check if an item has a quickType property
-     */
-    private isQuickTypeItem(item: unknown): item is { tag: string; quickType: string } {
-        return typeof item === 'object' &&
-               item !== null &&
-               'tag' in item &&
-               'quickType' in item &&
-               typeof (item as { tag: string; quickType: string }).tag === 'string' &&
-               typeof (item as { tag: string; quickType: string }).quickType === 'string';
     }
 
     /**
