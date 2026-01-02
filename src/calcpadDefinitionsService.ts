@@ -1,13 +1,9 @@
 import * as vscode from 'vscode';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import { CalcpadSettingsManager } from './calcpadSettings';
 import {
     DefinitionsRequest,
     DefinitionsResponse,
-    MacroDefinition,
-    FunctionDefinition,
-    VariableDefinition,
-    CustomUnitDefinition,
     ClientFileCache
 } from './api/calcpadApiTypes';
 import { buildClientFileCacheFromContent } from './clientFileCacheHelper';
@@ -80,48 +76,6 @@ export class CalcpadDefinitionsService {
     }
 
     /**
-     * Clear cached definitions for a document.
-     */
-    public clearCache(documentUri: string): void {
-        this.cache.delete(documentUri);
-    }
-
-    /**
-     * Clear all cached definitions.
-     */
-    public clearAllCache(): void {
-        this.cache.clear();
-    }
-
-    /**
-     * Get macros from cache.
-     */
-    public getMacros(documentUri: string): MacroDefinition[] {
-        return this.cache.get(documentUri)?.macros || [];
-    }
-
-    /**
-     * Get functions from cache.
-     */
-    public getFunctions(documentUri: string): FunctionDefinition[] {
-        return this.cache.get(documentUri)?.functions || [];
-    }
-
-    /**
-     * Get variables from cache.
-     */
-    public getVariables(documentUri: string): VariableDefinition[] {
-        return this.cache.get(documentUri)?.variables || [];
-    }
-
-    /**
-     * Get custom units from cache.
-     */
-    public getCustomUnits(documentUri: string): CustomUnitDefinition[] {
-        return this.cache.get(documentUri)?.customUnits || [];
-    }
-
-    /**
      * Fetch definitions from the server.
      */
     private async fetchDefinitions(content: string, reqId: number, clientFileCache?: ClientFileCache): Promise<DefinitionsResponse | null> {
@@ -155,13 +109,12 @@ export class CalcpadDefinitionsService {
             return response.data;
         } catch (error) {
             if (axios.isAxiosError(error)) {
-                const axiosError = error as AxiosError;
-                if (axiosError.code === 'ECONNREFUSED') {
+                if (error.code === 'ECONNREFUSED') {
                     this.debugChannel.appendLine('[Definitions #' + reqId + '] Server connection refused');
-                } else if (axiosError.code === 'ETIMEDOUT' || axiosError.code === 'ECONNABORTED') {
+                } else if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
                     this.debugChannel.appendLine('[Definitions #' + reqId + '] Request timed out');
                 } else {
-                    this.debugChannel.appendLine('[Definitions #' + reqId + '] API error: ' + axiosError.message);
+                    this.debugChannel.appendLine('[Definitions #' + reqId + '] API error: ' + error.message);
                 }
             } else {
                 this.debugChannel.appendLine('[Definitions #' + reqId + '] Unknown error: ' + String(error));

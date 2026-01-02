@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import { CalcpadSettingsManager } from './calcpadSettings';
 import { LintRequest, LintResponse, LintDiagnostic, ClientFileCache } from './api/calcpadApiTypes';
 import { buildClientFileCacheFromContent } from './clientFileCacheHelper';
@@ -98,13 +98,12 @@ export class CalcpadServerLinter {
             return response.data;
         } catch (error) {
             if (axios.isAxiosError(error)) {
-                const axiosError = error as AxiosError;
-                if (axiosError.code === 'ECONNREFUSED') {
+                if (error.code === 'ECONNREFUSED') {
                     this.debugChannel.appendLine('[Lint #' + reqId + '] Server connection refused');
-                } else if (axiosError.code === 'ETIMEDOUT' || axiosError.code === 'ECONNABORTED') {
+                } else if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
                     this.debugChannel.appendLine('[Lint #' + reqId + '] Request timed out');
                 } else {
-                    this.debugChannel.appendLine('[Lint #' + reqId + '] API error: ' + axiosError.message);
+                    this.debugChannel.appendLine('[Lint #' + reqId + '] API error: ' + error.message);
                 }
             } else {
                 this.debugChannel.appendLine('[Lint #' + reqId + '] Unexpected error: ' + (error instanceof Error ? error.message : String(error)));
@@ -139,13 +138,6 @@ export class CalcpadServerLinter {
 
             return diagnostic;
         });
-    }
-
-    /**
-     * Clear diagnostics for a document
-     */
-    public clearDiagnostics(document: vscode.TextDocument): void {
-        this.diagnosticCollection.delete(document.uri);
     }
 
     /**

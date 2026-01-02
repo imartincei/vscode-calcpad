@@ -122,43 +122,6 @@ function getEffectivePreviewTheme(): 'light' | 'dark' {
     }
 }
 
-function getPreviewHtml(): string {
-    return `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>CalcPad Preview</title>
-            <style>
-                .loading {
-                    text-align: center;
-                    color: #666;
-                    padding: 40px;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="loading">Loading preview...</div>
-            <script>
-                const vscode = acquireVsCodeApi();
-
-                // Listen for messages from the extension
-                window.addEventListener('message', event => {
-                    const message = event.data;
-
-                    switch (message.type) {
-                        case 'updateContent':
-                            document.body.innerHTML = message.content;
-                            break;
-                    }
-                });
-            </script>
-        </body>
-        </html>
-    `;
-}
-
 function getErrorNavigationScript(): string {
     return `
         <script>
@@ -319,10 +282,9 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string,
         // Use the entire API response as the webview HTML
         const apiResponse = response.data;
 
-        // Log to dedicated HTML output channel
+        // Log to dedicated HTML output channel (without stealing focus)
         calcpadOutputHtmlChannel.clear();
         calcpadOutputHtmlChannel.appendLine(apiResponse);
-        calcpadOutputHtmlChannel.show(true);
 
         outputChannel.appendLine(`HTML Length: ${apiResponse.length} characters`);
 
@@ -332,10 +294,9 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string,
         // Inject the script before closing body tag
         const htmlWithScript = apiResponse.replace('</body>', errorNavigationScript + '</body>');
 
-        // Log processed HTML to webview channel
+        // Log processed HTML to webview channel (without stealing focus)
         calcpadWebviewHtmlChannel.clear();
         calcpadWebviewHtmlChannel.appendLine(htmlWithScript);
-        calcpadWebviewHtmlChannel.show(true);
 
         panel.webview.html = htmlWithScript;
 

@@ -102,7 +102,7 @@ function parseReadDirective(line: string): string | null {
  * Handles filenames with spaces.
  * Extracts from entire source document (does not strip #local blocks from source).
  */
-export function extractReferencedFilenames(content: string): string[] {
+function extractReferencedFilenames(content: string): string[] {
     const filenames: Set<string> = new Set();
     const lines = content.split('\n');
 
