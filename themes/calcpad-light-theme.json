@@ -17,6 +17,21 @@
     "editorBracketMatch.background": "#0064001a",
     "editorBracketMatch.border": "#b9b9b9"
   },
+  "semanticHighlighting": true,
+  "semanticTokenColors": {
+    "number": "#000000",
+    "type": "#008B8B",
+    "operator": "#DAA520",
+    "variable": "#0000FF",
+    "function": { "foreground": "#000000", "bold": true },
+    "keyword": "#FF00FF",
+    "macro": "#8B008B",
+    "punctuation": "#FF1493",
+    "comment": "#228B22",
+    "string": "#228B22",
+    "parameter": "#DC143C",
+    "decorator": "#A9A9A9"
+  },
   "tokenColors": [
     {
       "name": "Comments",

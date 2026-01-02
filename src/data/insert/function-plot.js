@@ -1,3 +1,5 @@
+// Auto-generated from function-plot.json
+export default 
 {
   "Function Plot": [
     {
@@ -21,4 +23,4 @@
       "description": " 2 D Color Map"
     }
   ]
-}
+};

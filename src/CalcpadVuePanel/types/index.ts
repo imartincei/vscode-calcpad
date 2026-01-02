@@ -58,6 +58,7 @@ export interface VariablesData {
   macros: VariableItem[]
   variables: VariableItem[]
   functions: VariableItem[]
+  customUnits: VariableItem[]
 }
 
 export interface S3User {

@@ -1,0 +1,65 @@
+#local
+#include Helper.cpd
+#global
+hide$
+#read CMU_8in from 8 Masonry.csv@R5C1:R10C6 TYPE=R SEP=','
+#read CMU_10in from 10 Masonry.csv@R5C1:R10C6 TYPE=R SEP=','
+#read CMU_12in from 12 Masonry.csv@R5C1:R10C6 TYPE=R SEP=','
+unhide$
+#def CMU$(thickness$; grout_spacing$; Suffix$)
+	hide$
+	valid = 1
+	#if thickness$ ≡ 8in
+		data = CMU_8in
+	#else if thickness$ ≡ 10in
+		data = CMU_10in
+	#else if thickness$ ≡ 12in
+		data = CMU_12in
+	#else
+		valid = 0
+	#end if
+	#if valid ≡ 1
+		index_v = find_eq(join(extract_cols(data; [1])); grout_spacing$/1in; 1)
+		#if index_v
+			index = take(1; index_v)'
+			A_nSuffix$ = take(2; row(data; index))*1in^2
+			b_effSuffix$ = take(3; row(data; index))*1in
+			rSuffix$ = take(4; row(data; index))*1in
+			WT_cmuSuffix$ = take(5; row(data; index))*lbf/ft
+			I_NSuffix$ = take(6; row(data; index))*in^4
+			unhide$
+			A_nSuffix$', 'b_effSuffix$', 'rSuffix$', 'WT_cmuSuffix$', 'I_NSuffix$
+		#else
+			'Error: grout spacing not supported'
+		#end if
+	#else
+		#show
+		'Error: thickness not supported'
+	#end if
+#end def
+'<!-- Use grout_spacing = 0 for solid, -1in for unreinforced-->'
+#def CMUTenStress$(f_a$; mortar$; direction$; runningBond$; grout_spacing$)
+	'<!-- TMS 402-16 Table 8.2.4.2-->
+	normal = [53psi; 40psi; 32psi; 20psi|33psi; 25psi; 20psi; 12psi|65psi; 63psi; 61psi; 58psi]
+	parallel,rb = [106psi; 80psi; 64psi; 40psi|66psi; 50psi; 40psi; 25psi|106psi; 80psi; 64psi; 40psi]
+	#if direction$ ≡ 1
+		#if grout_spacing$ ≡ 0in
+			f_a$ = normal.(1; mortar$)
+		#else if grout_spacing$ < 0in
+			f_a$ = normal.(2; mortar$)
+		#else if grout_spacing$ ≥ 8in
+			ratio = 8in/grout_spacing$
+			f_a$ = interpolate$(ratio; 0; 1; normal.(2; mortar$); normal.(3; mortar$))
+		#end if
+		parallel,st = 133psi
+	#else if direction$ ≡ 2
+		'This is not coded yet'
+	#end if
+	f_a$
+#end def
+#def MortarTypes$ = '["Portland M/S", "Portland N", "Masonry/Air Entrained M/S", "Masonry/Air Entrained N"]'
+#def CMULoadDirection$ = '["Normal to Bed Joints","Parallel to Bed Joints"]'
+#def runningBond$ = '["Running Bond", "Stacked CMU", "Stacked CMU with Cont. Grout Parallel to Bed Joints"]'
+
+#local
+CMU$(10in; 24in; ,suffix)

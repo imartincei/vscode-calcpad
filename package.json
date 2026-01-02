@@ -3,7 +3,9 @@
   "displayName": "VS Code CalcPad",
   "description": "Calculator extension for VS Code",
   "version": "0.0.1",
+  "publisher": "imartincei",
   "repository": "https://github.com/imartincei/vscode-calcpad",
+  "icon": "calcpad-icon.png",
   "engines": {
     "vscode": "^1.74.0"
   },
@@ -11,7 +13,7 @@
     "Other"
   ],
   "activationEvents": [],
-  "main": "./out/extension.js",
+  "main": "./dist/extension.js",
   "contributes": {
     "languages": [
       {
@@ -27,11 +29,28 @@
         "configuration": "./language-configuration.json"
       }
     ],
-    "grammars": [
+    "semanticTokenTypes": [
       {
-        "language": "calcpad",
-        "scopeName": "source.calcpad",
-        "path": "./syntaxes/calcpad.tmLanguage.json"
+        "id": "punctuation",
+        "description": "Brackets and punctuation characters"
+      }
+    ],
+    "semanticTokenScopes": [
+      {
+        "scopes": {
+          "number": ["constant.numeric.calcpad"],
+          "type": ["support.type.units.calcpad"],
+          "operator": ["keyword.operator.arithmetic.calcpad"],
+          "variable": ["variable.other.calcpad"],
+          "function": ["support.function.builtin.calcpad"],
+          "keyword": ["keyword.control.calcpad"],
+          "macro": ["variable.parameter.macro.calcpad"],
+          "punctuation": ["punctuation.section.brackets.calcpad"],
+          "comment": ["comment.line.single-quote.calcpad"],
+          "string": ["string.quoted.double.calcpad"],
+          "parameter": ["variable.language.input.calcpad"],
+          "decorator": ["meta.format.calcpad"]
+        }
       }
     ],
     "themes": [
@@ -118,10 +137,10 @@
     "configuration": {
       "title": "CalcPad",
       "properties": {
-        "calcpad.apiBaseUrl": {
-          "type": "string",
-          "default": "http://localhost:9420",
-          "description": "Base URL for the CalcPad API server"
+        "calcpad.enableQuickTyping": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable quick typing shortcuts (e.g., ~a → α, ~' → ′). Works everywhere including comments."
         },
         "calcpad.previewTheme": {
           "type": "string",
@@ -138,24 +157,47 @@
           ],
           "description": "Theme to use for CalcPad preview"
         },
-        "calcpad.enableQuickTyping": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable quick typing shortcuts (e.g., ~a → α, ~' → ′). Works everywhere including comments."
-        },
         "calcpad.settings": {
           "type": "object",
           "description": "CalcPad calculation and rendering settings",
-          "default": {},
+          "default": {
+            "math": {
+              "decimals": 2,
+              "degrees": 0,
+              "isComplex": false,
+              "substitute": true,
+              "formatEquations": true,
+              "zeroSmallMatrixElements": true,
+              "maxOutputCount": 20,
+              "formatString": ""
+            },
+            "plot": {
+              "isAdaptive": true,
+              "screenScaleFactor": 2,
+              "imagePath": "",
+              "imageUri": "",
+              "vectorGraphics": false,
+              "colorScale": "Rainbow",
+              "smoothScale": false,
+              "shadows": true,
+              "lightDirection": "NorthWest"
+            },
+            "server": {
+              "url": "http://localhost:9420"
+            },
+            "units": "m"
+          },
           "properties": {
             "math": {
               "type": "object",
+              "description": "Mathematical calculation settings",
               "properties": {
                 "decimals": {
                   "type": "integer",
-                  "default": 6,
+                  "default": 2,
                   "minimum": 0,
-                  "maximum": 15
+                  "maximum": 15,
+                  "description": "Number of decimal places for results"
                 },
                 "degrees": {
                   "type": "integer",
@@ -164,25 +206,78 @@
                     0,
                     1,
                     2
-                  ]
+                  ],
+                  "enumDescriptions": [
+                    "Radians",
+                    "Degrees",
+                    "Gradians"
+                  ],
+                  "description": "Angle unit mode"
                 },
                 "isComplex": {
                   "type": "boolean",
-                  "default": false
+                  "default": false,
+                  "description": "Enable complex number calculations"
                 },
                 "substitute": {
                   "type": "boolean",
-                  "default": true
+                  "default": true,
+                  "description": "Substitute variables in equations"
                 },
                 "formatEquations": {
                   "type": "boolean",
-                  "default": true
+                  "default": true,
+                  "description": "Format equations for display"
+                },
+                "zeroSmallMatrixElements": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Zero out very small matrix elements"
+                },
+                "maxOutputCount": {
+                  "type": "integer",
+                  "default": 20,
+                  "minimum": 1,
+                  "description": "Maximum number of output items to display"
+                },
+                "formatString": {
+                  "type": "string",
+                  "default": "",
+                  "description": "Custom format string for numeric output"
                 }
               }
             },
             "plot": {
               "type": "object",
+              "description": "Plot and visualization settings",
               "properties": {
+                "isAdaptive": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Use adaptive resolution for plots"
+                },
+                "screenScaleFactor": {
+                  "type": "number",
+                  "default": 2,
+                  "minimum": 1,
+                  "maximum": 4,
+                  "description": "Screen scale factor for high-DPI displays"
+                },
+                "imagePath": {
+                  "type": "string",
+                  "default": "",
+                  "description": "Path for saving plot images"
+                },
+                "imageUri": {
+                  "type": "string",
+                  "default": "",
+                  "description": "URI for plot images"
+                },
+                "vectorGraphics": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Use vector graphics for plots"
+                },
                 "colorScale": {
                   "type": "string",
                   "default": "Rainbow",
@@ -193,11 +288,44 @@
                     "Cool",
                     "Jet",
                     "Parula"
-                  ]
+                  ],
+                  "description": "Color scale for 3D plots and heatmaps"
+                },
+                "smoothScale": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Apply smooth scaling to plots"
                 },
                 "shadows": {
                   "type": "boolean",
-                  "default": true
+                  "default": true,
+                  "description": "Enable shadows in 3D plots"
+                },
+                "lightDirection": {
+                  "type": "string",
+                  "default": "NorthWest",
+                  "enum": [
+                    "NorthWest",
+                    "North",
+                    "NorthEast",
+                    "West",
+                    "East",
+                    "SouthWest",
+                    "South",
+                    "SouthEast"
+                  ],
+                  "description": "Light direction for 3D plots"
+                }
+              }
+            },
+            "server": {
+              "type": "object",
+              "description": "Server connection settings",
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "default": "http://localhost:9420",
+                  "description": "Base URL for the CalcPad API server"
                 }
               }
             },
@@ -208,71 +336,133 @@
                 "m",
                 "i",
                 "u"
-              ]
-            },
-            "output": {
-              "type": "object",
-              "properties": {
-                "format": {
-                  "type": "string",
-                  "default": "html",
-                  "enum": [
-                    "html",
-                    "pdf",
-                    "docx"
-                  ]
-                },
-                "silent": {
-                  "type": "boolean",
-                  "default": true
-                }
-              }
+              ],
+              "enumDescriptions": [
+                "Metric (SI)",
+                "Imperial",
+                "US Customary"
+              ],
+              "description": "Default unit system"
             }
           }
         },
-        "calcpad.s3.apiUrl": {
+        "calcpad.pdf.enableHeader": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable PDF header"
+        },
+        "calcpad.pdf.documentTitle": {
           "type": "string",
-          "default": "http://localhost:5000",
-          "description": "Base URL for the CalcPad S3 API server"
+          "default": "",
+          "description": "PDF document title (defaults to file name if empty)"
         },
-        "calcpad.routing.config": {
-          "type": "object",
-          "description": "Routing configuration for different API endpoints",
-          "default": {
-            "s3": {
-              "BaseUrl": "http://localhost:5000",
-              "Auth": "jwt",
-              "Endpoints": {
-                "download": "/api/blobstorage/download/:fileName",
-                "upload": "/api/blobstorage/upload/:fileName",
-                "list": "/api/blobstorage/list"
-              }
-            },
-            "github": {
-              "BaseUrl": "https://api.github.com",
-              "Auth": "jwt",
-              "Endpoints": {
-                "raw_file": "/repos/:owner/:repo/contents/:fileName",
-                "download": "/repos/:owner/:repo/zipball/:ref"
-              }
-            },
-            "public_api": {
-              "BaseUrl": "https://api.example.com",
-              "Auth": "public",
-              "Endpoints": {
-                "data": "/v1/data/:fileName",
-                "export": "/v1/export/:fileName.csv"
-              }
-            },
-            "internal": {
-              "BaseUrl": "https://internal-api.company.com",
-              "Auth": "jwt",
-              "Endpoints": {
-                "reports": "/api/reports/:fileName",
-                "templates": "/api/templates/:fileName.cpd"
-              }
-            }
-          }
+        "calcpad.pdf.documentSubtitle": {
+          "type": "string",
+          "default": "",
+          "description": "PDF document subtitle"
+        },
+        "calcpad.pdf.headerCenter": {
+          "type": "string",
+          "default": "",
+          "description": "Text to display in PDF header center"
+        },
+        "calcpad.pdf.author": {
+          "type": "string",
+          "default": "",
+          "description": "PDF document author"
+        },
+        "calcpad.pdf.enableFooter": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable PDF footer"
+        },
+        "calcpad.pdf.footerCenter": {
+          "type": "string",
+          "default": "",
+          "description": "Text to display in PDF footer center"
+        },
+        "calcpad.pdf.company": {
+          "type": "string",
+          "default": "",
+          "description": "Company name for PDF footer"
+        },
+        "calcpad.pdf.project": {
+          "type": "string",
+          "default": "",
+          "description": "Project name for PDF footer"
+        },
+        "calcpad.pdf.showPageNumbers": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show page numbers in PDF footer"
+        },
+        "calcpad.pdf.format": {
+          "type": "string",
+          "default": "A4",
+          "enum": [
+            "A4",
+            "A3",
+            "A5",
+            "Letter",
+            "Legal"
+          ],
+          "description": "PDF page format"
+        },
+        "calcpad.pdf.orientation": {
+          "type": "string",
+          "default": "portrait",
+          "enum": [
+            "portrait",
+            "landscape"
+          ],
+          "description": "PDF page orientation"
+        },
+        "calcpad.pdf.marginTop": {
+          "type": "string",
+          "default": "2cm",
+          "description": "PDF top margin (e.g., '2cm', '1in')"
+        },
+        "calcpad.pdf.marginBottom": {
+          "type": "string",
+          "default": "2cm",
+          "description": "PDF bottom margin (e.g., '2cm', '1in')"
+        },
+        "calcpad.pdf.marginLeft": {
+          "type": "string",
+          "default": "1.5cm",
+          "description": "PDF left margin (e.g., '1.5cm', '0.5in')"
+        },
+        "calcpad.pdf.marginRight": {
+          "type": "string",
+          "default": "1.5cm",
+          "description": "PDF right margin (e.g., '1.5cm', '0.5in')"
+        },
+        "calcpad.pdf.printBackground": {
+          "type": "boolean",
+          "default": true,
+          "description": "Print background graphics in PDF"
+        },
+        "calcpad.pdf.scale": {
+          "type": "number",
+          "default": 1.0,
+          "minimum": 0.1,
+          "maximum": 2.0,
+          "description": "PDF content scale factor"
+        },
+        "calcpad.pdf.headerTemplate": {
+          "type": "string",
+          "default": "default",
+          "description": "PDF header template (handled server-side)"
+        },
+        "calcpad.pdf.footerTemplate": {
+          "type": "string",
+          "default": "default",
+          "description": "PDF footer template (handled server-side)"
+        },
+        "calcpad.pdf.backgroundSvgPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to background SVG file for PDF"
         }
       }
     },
@@ -293,31 +483,44 @@
           "icon": "./calcpad-icon.png"
         }
       ]
+    },
+    "configurationDefaults": {
+      "[calcpad]": {
+        "editor.semanticHighlighting.enabled": true,
+        "editor.bracketPairColorization.enabled": false,
+        "editor.matchBrackets": "never"
+      }
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "npm run build:vue && tsc -p ./",
-    "watch": "concurrently \"npm run watch:vue\" \"tsc -watch -p ./\"",
+    "vscode:prepublish": "npm run package",
+    "compile": "npm run build:vue && rollup -c",
+    "watch": "concurrently \"npm run watch:vue\" \"rollup -c -w\"",
+    "package": "npm run build:vue && rollup -c --sourcemap",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
     "build:vue": "vite build",
     "watch:vue": "vite build --watch",
     "dev:vue": "vite build --watch --mode development",
     "type-check:vue": "vue-tsc --noEmit --project tsconfig.vue.json"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^29.0.0",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-typescript": "^12.3.0",
     "@types/node": "^20.19.16",
     "@types/vscode": "^1.74.0",
     "@vitejs/plugin-vue": "^5.2.4",
     "@vue/compiler-sfc": "^3.5.21",
     "concurrently": "^9.2.1",
-    "terser": "^5.44.0",
+    "rollup": "^4.53.3",
     "typescript": "^5.9.2",
     "vite": "^5.4.20",
     "vue-tsc": "^2.2.12"
   },
   "dependencies": {
     "axios": "^1.11.0",
-    "package.json": "^0.0.0",
     "vue": "^3.5.21"
   }
 }

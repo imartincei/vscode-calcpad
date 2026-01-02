@@ -1,3 +1,5 @@
+// Auto-generated from html-ui.json
+export default 
 {
   "Html UI": [
     {
@@ -13,4 +15,4 @@
       "description": "Checkbox"
     }
   ]
-}
+};

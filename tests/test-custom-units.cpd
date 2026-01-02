@@ -1,0 +1,18 @@
+' Test custom units functionality
+
+' Define custom units
+.customUnit = 1in
+.myLength = 2.5cm
+.pressure = 100Pa
+
+' Use custom units
+length1 = 3customUnit
+length2 = 5myLength
+pressure1 = 2pressure
+
+' Test with calculations
+total = length1 + length2
+combined = 10customUnit + 20myLength
+
+' Test invalid unit (should show error)
+invalid = 5unknownUnit

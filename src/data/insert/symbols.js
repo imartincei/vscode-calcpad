@@ -1,3 +1,5 @@
+// Auto-generated from symbols.json
+export default 
 {
   "Symbols": {
     "Special Symbols": [
@@ -297,4 +299,4 @@
       }
     ]
   }
-}
+};

@@ -1,3 +1,5 @@
+// Auto-generated from iteration.json
+export default 
 {
   "Iteration": [
     {
@@ -21,4 +23,4 @@
       "description": "Conditional While Loop"
     }
   ]
-}
+};

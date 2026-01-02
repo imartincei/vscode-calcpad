@@ -1,0 +1,10 @@
+﻿Description,Net Cross-sectional area of masonry,Effective Width,radius of gyration,Weight per foot of wall,Moment of inertia of net cross-sectional area of a member
+Unit,in^2,in,in,lbf/ft,in^4
+Reference,TEK 14-01B,TEK 14-01B,TEK 14-01B,TEK 14-01B,TEK 14-01B
+Variable,A_n,b_eff,r,w_gt,I_n
+8,115.5,9.63,2.78,103,891.7
+16,72.8,6.07,2.96,71,710.8
+24,58.5,4.88,3.1,60,650.55
+32,51.4,4.28,3.19,54,620.4
+40,47.1,3.93,3.25,51,602.3
+48,44.3,3.69,3.29,49,590.2

@@ -170,15 +170,6 @@ export class CalcpadSettingsManager {
     public async getApiSettings(): Promise<unknown> {
         const storedS3JWT = await this.getStoredS3JWT();
 
-        // Read S3 URL and routing config from VS Code settings
-        const config = vscode.workspace.getConfiguration('calcpad');
-        const s3ApiUrl = config.get<string>('s3.apiUrl');
-        const routingConfig = config.get<unknown>('routing.config');
-
-        if (!s3ApiUrl) {
-            throw new Error('calcpad.s3.apiUrl not found in VS Code settings');
-        }
-
         const apiSettings = {
             math: {
                 decimals: this._settings.math.decimals,
@@ -202,9 +193,8 @@ export class CalcpadSettingsManager {
                 lightDirection: this.lightDirectionToEnum(this._settings.plot.lightDirection)
             },
             auth: {
-                url: s3ApiUrl,
-                jwt: storedS3JWT,
-                routingConfig: routingConfig || null
+                url: this._settings.server.url,
+                jwt: storedS3JWT
             },
             units: this._settings.units
         };
@@ -212,7 +202,7 @@ export class CalcpadSettingsManager {
         // Debug logging
         const outputChannel = getOutputChannel();
         outputChannel.appendLine('API settings being sent:');
-        outputChannel.appendLine(`  S3 Storage URL: ${s3ApiUrl}`);
+        outputChannel.appendLine(`  Server URL: ${this._settings.server.url}`);
         outputChannel.appendLine(`  S3 JWT: ${storedS3JWT ? `${storedS3JWT.substring(0, 20)}...` : 'EMPTY'}`);
         outputChannel.appendLine(`  S3 JWT Length: ${storedS3JWT ? storedS3JWT.length : 0}`);
         outputChannel.appendLine(`  ColorScale: "${this._settings.plot.colorScale}" -> ${apiSettings.plot.colorScale}`);

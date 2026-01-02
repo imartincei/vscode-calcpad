@@ -1,4 +1,3 @@
-import * as vscode from 'vscode';
 import insertData from './insertLoader';
 
 export interface InsertItem {

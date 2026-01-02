@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import { CalcpadSettingsManager } from './calcpadSettings';
 import { CalcpadInsertManager } from './calcpadInsertManager';
 import axios from 'axios';
@@ -227,9 +226,9 @@ export class CalcpadVueUIProvider implements vscode.WebviewViewProvider {
         });
     }
 
-    public updateVariables(data: { macros: any[], variables: any[], functions: any[] }) {
+    public updateVariables(data: { macros: any[], variables: any[], functions: any[], customUnits: any[] }) {
         if (this._view) {
-            this._outputChannel.appendLine(`Updating variables: ${data.macros.length} macros, ${data.variables.length} variables, ${data.functions.length} functions`);
+            this._outputChannel.appendLine(`Updating variables: ${data.macros.length} macros, ${data.variables.length} variables, ${data.functions.length} functions, ${data.customUnits.length} custom units`);
             this._view.webview.postMessage({
                 type: 'updateVariables',
                 data: data

@@ -1,3 +1,5 @@
+// Auto-generated from data-import-export.json
+export default 
 {
   "Data import/export": [
     {
@@ -25,4 +27,4 @@
       "description": "Append Excel File"
     }
   ]
-}
+};

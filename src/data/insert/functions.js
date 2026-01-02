@@ -1,3 +1,5 @@
+// Auto-generated from functions.json
+export default 
 {
   "Functions": {
     "Trigonometric": [
@@ -899,4 +901,4 @@
       }
     }
   }
-}
+};
