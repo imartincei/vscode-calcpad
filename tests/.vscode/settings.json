@@ -22,7 +22,7 @@
             "lightDirection": "NorthWest"
         },
         "server": {
-            "url": "http://localhost:9421"
+            "url": "http://localhost:9420"
         },
         "units": "m"
     }

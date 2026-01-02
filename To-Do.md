@@ -11,9 +11,6 @@
     - Macros get flagged with undefined variable when a parameter is set in a macro
     - Macros with strings get interpreted as a unit
     - ignore some checks in include and read parameters (and add proper checks)
-- Add recent features added to Calcpad to linting/insert tab
-    -Inline and Block, HP vectors/matricies, markdown, find anything else that might be missing
-- Remove final #fetch reference and resolve associated !!! comments
 - Add quick typing for macros (~1 macro 1, ~2 macro 2, etc.). Add macro mapping to vscode config using json object {macroMapping:{"1": "macroName$", ...}}. Have VS code set cursor position to within () and before first param.
 - Add hotkeys for HTML/markdown formatting. Add toggle for HTML vs markdown in the settings.
 - Package extension for further testing within the company. Publish to Open VSX but not Visual Studio Marketplace unless I need a personal Azure account for other reasons
@@ -42,6 +39,10 @@
 - Double check builtin function return types are correct. Have Claude run the comprehensive check to see what is returned.
 - Have the linter check when a macro parameter is used as a string and do type checking in this case.
 - Add parsing of metadata lines for macro descriptions and parameter descriptions/type hinting. Metadata lines contain inline or multiline JSON that external programs can pull from cpd files but are ignored by the parser. Metadata lines occur when there is JSON in an HTML comment
+- Design snippet nomenclature for variadic functions (switch, gcd, lcm, min, max, sum, etc.) - functions accepting dynamic number of parameters
+- Design snippet nomenclature for polymorphic functions (take, line, spline) - functions accepting different types (scalar/vector/matrix)
+- Test snippets and linter
+- Verify all functions/features are present in snippets and they are implemented correctly.
 
 ### Bugs
 
