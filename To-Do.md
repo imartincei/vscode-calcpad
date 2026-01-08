@@ -4,6 +4,7 @@
 
 ### Enhancements
 - Finish enhanced PDF generation
+- Add search in output HTML
 - Re-factor builtins and function signatures to serve purposes for both linting and passing info to the Insert tab in VS Code. Add an endpoint to get the built-ins data as a one-time startup operation once the server is connected.
 - See if intellisense can be improved
 - Implement user defined variable, units, function, and macro definitions using html comment before the #def line (e.g. cmt$({"description": "This macro does this.\nparam1 is the thing..."})). Add tooltip for these that uses the description.
@@ -18,6 +19,9 @@
 - Refactor tokens to use all colors for different ones.
 
 ### Bugs
+- Fix include reading around #{0}... syntax - test fix
+- Fix insert reload to occur when server refreshes - test fix
+- Add refresh when settings are changed.
 
 ## Calcpad.Server
 - Finish adding CalcpadAuth to Calcpad.Server.
@@ -35,19 +39,36 @@
 - Test Windows build with esbuild instead of caxa
 - Make keyword arguments in functions and macros. If a keyword argument is used, have the linter check the macro against the default values for type mismatch errors.
 
+### Bugs
+
+
+### Testing
+
+- Test snippet updates
+
+
 ## Calcpad.Highlighter
 - Double check builtin function return types are correct. Have Claude run the comprehensive check to see what is returned.
 - Have the linter check when a macro parameter is used as a string and do type checking in this case.
 - Add parsing of metadata lines for macro descriptions and parameter descriptions/type hinting. Metadata lines contain inline or multiline JSON that external programs can pull from cpd files but are ignored by the parser. Metadata lines occur when there is JSON in an HTML comment
-- Design snippet nomenclature for variadic functions (switch, gcd, lcm, min, max, sum, etc.) - functions accepting dynamic number of parameters
 - Design snippet nomenclature for polymorphic functions (take, line, spline) - functions accepting different types (scalar/vector/matrix)
 - Test snippets and linter
+- Fix max, min, etc. to work with values, vectors, and matricies. Vectors and Matrices are expanded as values.
 - Verify all functions/features are present in snippets and they are implemented correctly.
+- Improve linting for commands $Repeat{i*j @90 i=1:10} should be invalid
+- Add tokenization of JS, CSS, and SVG in comments. Tokenize HTML within tags differently than comments.
+- Add property to use snippet as a keyword for the linter or if it just needs passed as example syntax to the UI.
 
 ### Bugs
+
+- Fix tokenizer to detect variables and units in expressions with macros:
+Wt_DAF = 2*37.5kipnote$('Weight of both DAF units')
+P_D = -Wt_DAFnote$('Dead Load')
 
 ## Calcpad.Wpf
 
 ### Bugs
 
 ## Calcpad.Core
+
+- Use task instead of async for read operations - Completed but NEEDS TESTED

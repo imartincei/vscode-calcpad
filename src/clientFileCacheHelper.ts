@@ -1,5 +1,35 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { ClientFileCache } from './api/calcpadApiTypes';
+
+/**
+ * Expand environment variables in a path.
+ * Handles both Windows (%VAR%) and Unix ($VAR) syntax.
+ */
+function expandEnvironmentVariables(filePath: string): string {
+    // Expand Windows-style %VAR%
+    let result = filePath.replace(/%([^%]+)%/g, (_, varName) => {
+        return process.env[varName] || process.env[varName.toUpperCase()] || '%' + varName + '%';
+    });
+
+    // Expand Unix-style $VAR or ${VAR}
+    result = result.replace(/\$\{([^}]+)\}/g, (_, varName) => {
+        return process.env[varName] || '${' + varName + '}';
+    });
+    result = result.replace(/\$([A-Za-z_][A-Za-z0-9_]*)/g, (_, varName) => {
+        return process.env[varName] || '$' + varName;
+    });
+
+    return result;
+}
+
+/**
+ * Check if a path is absolute (after expanding environment variables).
+ */
+function isAbsolutePath(filePath: string): boolean {
+    const expanded = expandEnvironmentVariables(filePath);
+    return path.isAbsolute(expanded);
+}
 
 // Regex to remove #local...#global blocks (content inside should not be sent to server)
 const LOCAL_BLOCK_REGEX = /^#local\s*$[\s\S]*?^#global\s*$/gm;
@@ -23,7 +53,8 @@ function stripLocalBlocks(content: string): string {
 /**
  * Parse #include directive and extract filename.
  * Returns null if not a valid #include or uses API routing (<...>).
- * Format: #include filename.cpd (may have spaces in filename)
+ * Format: #include filename.cpd or #include filename.txt (may have spaces in filename)
+ * Also handles: #include filename.cpd #{3} (input values after # are ignored)
  */
 function parseIncludeDirective(line: string): string | null {
     const trimmed = line.trim();
@@ -31,19 +62,38 @@ function parseIncludeDirective(line: string): string | null {
         return null;
     }
 
-    const rest = trimmed.substring(9).trim(); // After "#include "
+    let rest = trimmed.substring(9).trim(); // After "#include "
 
     // Skip API routing syntax (starts with <)
     if (rest.startsWith('<')) {
         return null;
     }
 
-    // Must end with .cpd
-    if (!rest.endsWith('.cpd')) {
-        return null;
+    // Remove everything after # (input values like #{3})
+    const hashIndex = rest.indexOf(' #');
+    if (hashIndex !== -1) {
+        rest = rest.substring(0, hashIndex).trim();
     }
 
-    return rest;
+    // Check for .cpd or .txt extension
+    const cpdIndex = rest.indexOf('.cpd');
+    const txtIndex = rest.indexOf('.txt');
+
+    let extIndex = -1;
+    let extLength = 0;
+
+    if (cpdIndex !== -1) {
+        extIndex = cpdIndex;
+        extLength = 4; // ".cpd"
+    } else if (txtIndex !== -1) {
+        extIndex = txtIndex;
+        extLength = 4; // ".txt"
+    } else {
+        return null; // No valid extension found
+    }
+
+    // Return just the filename portion (up to and including extension)
+    return rest.substring(0, extIndex + extLength).trim();
 }
 
 /**
@@ -166,19 +216,48 @@ export async function buildClientFileCache(
         processedFiles.add(filename);
 
         try {
-            // Search for the file in the workspace
-            const pattern = '**/' + filename;
-            const foundFiles = await vscode.workspace.findFiles(pattern, '**/node_modules/**', 1);
+            let fileUri: vscode.Uri | undefined;
+            let contentString: string | undefined;
 
-            if (foundFiles.length > 0) {
-                const fileUri = foundFiles[0];
-                const fileContent = await vscode.workspace.fs.readFile(fileUri);
-                const contentString = Buffer.from(fileContent).toString('utf-8');
+            // Expand environment variables in the filename
+            const expandedFilename = expandEnvironmentVariables(filename);
 
+            // Check if the path is absolute (after expansion)
+            if (isAbsolutePath(filename)) {
+                // Try to read directly from the absolute path
+                try {
+                    fileUri = vscode.Uri.file(expandedFilename);
+                    const fileContent = await vscode.workspace.fs.readFile(fileUri);
+                    contentString = Buffer.from(fileContent).toString('utf-8');
+
+                    if (debugChannel) {
+                        debugChannel.appendLine(logPrefix + ' Found absolute path: ' + expandedFilename);
+                    }
+                } catch {
+                    // File doesn't exist at absolute path
+                    fileUri = undefined;
+                    if (debugChannel) {
+                        debugChannel.appendLine(logPrefix + ' Absolute path not accessible: ' + expandedFilename);
+                    }
+                }
+            } else {
+                // Search for the file in the workspace (relative filename)
+                const pattern = '**/' + filename;
+                const foundFiles = await vscode.workspace.findFiles(pattern, '**/node_modules/**', 1);
+
+                if (foundFiles.length > 0) {
+                    fileUri = foundFiles[0];
+                    const fileContent = await vscode.workspace.fs.readFile(fileUri);
+                    contentString = Buffer.from(fileContent).toString('utf-8');
+                }
+            }
+
+            if (fileUri && contentString !== undefined) {
                 // Strip #local...#global blocks before encoding
                 const strippedContent = stripLocalBlocks(contentString);
                 const contentBase64 = Buffer.from(strippedContent, 'utf-8').toString('base64');
 
+                // Cache with the original filename (as it appears in the source)
                 cache[filename] = contentBase64;
 
                 if (debugChannel) {
@@ -199,7 +278,7 @@ export async function buildClientFileCache(
                 }
             } else {
                 if (debugChannel) {
-                    debugChannel.appendLine(logPrefix + ' File not found in workspace: ' + filename);
+                    debugChannel.appendLine(logPrefix + ' File not found: ' + filename + (filename !== expandedFilename ? ' (expanded: ' + expandedFilename + ')' : ''));
                 }
             }
         } catch (error) {

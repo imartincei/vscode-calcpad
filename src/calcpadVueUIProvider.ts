@@ -17,6 +17,12 @@ export class CalcpadVueUIProvider implements vscode.WebviewViewProvider {
     ) {
         this._outputChannel = vscode.window.createOutputChannel('CalcPad Vue');
         this._outputChannel.appendLine('CalcPad Vue UI Provider initialized');
+
+        // Register callback to refresh UI when snippets are loaded from server
+        this._insertManager.onSnippetsLoaded(() => {
+            this._outputChannel.appendLine('Snippets loaded - refreshing Vue UI');
+            this._sendInitialData();
+        });
     }
 
     public resolveWebviewView(

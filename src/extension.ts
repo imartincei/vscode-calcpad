@@ -774,6 +774,41 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }
 
+    // Centralized refresh function for when settings change
+    async function refreshAllComponents() {
+        outputChannel.appendLine('[Settings] Refreshing all components after settings change');
+
+        // Reload snippets from server
+        try {
+            await insertManager.reloadSnippets();
+            outputChannel.appendLine('[Settings] Snippets reloaded');
+        } catch (error) {
+            outputChannel.appendLine('[Settings] Failed to reload snippets: ' + error);
+        }
+
+        // Refresh semantic tokens for all visible editors
+        vscode.window.visibleTextEditors.forEach(editor => {
+            if (editor.document.languageId === 'calcpad' || editor.document.languageId === 'plaintext') {
+                semanticTokensProvider.refresh();
+            }
+        });
+
+        // Reprocess active document (linting + definitions)
+        const activeEditor = vscode.window.activeTextEditor;
+        if (activeEditor) {
+            await processDocument(activeEditor.document);
+        }
+
+        // Refresh preview if open
+        if (activePreviewPanel && activeEditor) {
+            const unwrapped = activePreviewType === 'unwrapped';
+            await updatePreviewContent(activePreviewPanel as vscode.WebviewPanel, activeEditor.document.getText(), unwrapped);
+            outputChannel.appendLine('[Settings] Preview refreshed');
+        }
+
+        outputChannel.appendLine('[Settings] All components refreshed');
+    }
+
     const insertManager = CalcpadInsertManager.getInstance();
     insertManager.setSettingsManager(settingsManager);
     insertManager.setOutputChannel(outputChannel);
@@ -870,6 +905,15 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
+    // Refresh all components when calcpad settings change
+    const onDidChangeConfiguration = vscode.workspace.onDidChangeConfiguration(async event => {
+        // Check if any calcpad settings changed
+        if (event.affectsConfiguration('calcpad')) {
+            outputChannel.appendLine('[Settings] Calcpad settings changed - triggering refresh');
+            await refreshAllComponents();
+        }
+    });
+
     // Process all open calcpad documents on activation
     vscode.workspace.textDocuments.forEach(async document => {
         await processDocument(document);
@@ -894,11 +938,13 @@ export function activate(context: vscode.ExtensionContext) {
             onDidOpenTextDocument,
             onDidSaveTextDocument,
             onDidChangeActiveTextEditor,
+            onDidChangeConfiguration,
             operatorReplacerDisposable,
             quickTyperDisposable,
             autoIndenterDisposable,
             completionProviderDisposable,
-            definitionProviderDisposable
+            definitionProviderDisposable,
+            insertManager
         );
         
         outputChannel.appendLine('CalcPad extension activation completed successfully');
