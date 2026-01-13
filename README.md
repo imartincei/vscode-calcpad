@@ -2,15 +2,40 @@
 
 A VS Code extension for CalcPad files with live preview and comprehensive linting.
 
-## Requirements
+## Installation
 
-**Calcpad.Server is required** for this extension to function. The extension connects to Calcpad.Server for:
-- Live HTML preview rendering
-- Syntax linting and validation
-- PDF generation
-- Semantic token highlighting
+### 1. Install Calcpad.Server
 
-Without a running Calcpad.Server instance, preview and linting features will not work.
+**Calcpad.Server is required** for this extension to function. Download the latest release from:
+
+[https://github.com/imartincei/vscode-calcpad/releases](https://github.com/imartincei/vscode-calcpad/releases)
+
+Extract the Calcpad.Server zip file to any folder where you want to run the server.
+
+### 2. Install the VS Code Extension
+
+Download the `.vsix` file from the [releases page](https://github.com/imartincei/vscode-calcpad/releases).
+
+Install the extension in VS Code:
+- Open VS Code
+- Go to Extensions view (Ctrl+Shift+X)
+- Click the "..." menu at the top of Extensions view
+- Select "Install from VSIX..."
+- Choose the downloaded `.vsix` file
+
+For more details, see the [VS Code extension installation guide](https://code.visualstudio.com/docs/configure/extensions/extension-marketplace).
+
+### 3. Configure the Server Port
+
+The default port for Calcpad.Server on Windows is **9421**. To configure the extension:
+
+1. Click the CalcPad icon in the left sidebar
+2. Open the Settings tab
+3. Set the Server URL to: `http://localhost:9421`
+
+### 4. Start Calcpad.Server
+
+Run the Calcpad.Server executable from the extracted folder before using the extension.
 
 ## Features
 

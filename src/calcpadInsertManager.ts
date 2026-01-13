@@ -151,11 +151,35 @@ export class CalcpadInsertManager {
             this._isLoaded = true;
 
             this.log('Snippets loaded and cached successfully');
+
+            // Notify all listeners that snippets have been loaded
+            this.notifySnippetsLoaded();
         } catch (error) {
             this.log('Failed to load snippets: ' + (error instanceof Error ? error.message : String(error)));
             // Reset promise so it can be retried
             this._loadPromise = null;
             throw error;
+        }
+    }
+
+    /**
+     * Register a callback to be called when snippets are loaded
+     */
+    public onSnippetsLoaded(callback: SnippetsLoadedCallback): void {
+        this._onSnippetsLoadedCallbacks.push(callback);
+    }
+
+    /**
+     * Notify all registered callbacks that snippets have been loaded
+     */
+    private notifySnippetsLoaded(): void {
+        this.log('Notifying ' + this._onSnippetsLoadedCallbacks.length + ' listeners that snippets loaded');
+        for (const callback of this._onSnippetsLoadedCallbacks) {
+            try {
+                callback();
+            } catch (error) {
+                this.log('Error in snippets loaded callback: ' + (error instanceof Error ? error.message : String(error)));
+            }
         }
     }
 

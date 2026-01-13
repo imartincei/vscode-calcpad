@@ -80,10 +80,20 @@ export class CalcpadSemanticTokensProvider implements vscode.DocumentSemanticTok
     private debugChannel: vscode.OutputChannel;
     private settingsManager: CalcpadSettingsManager;
     private requestId = 0;
+    private _onDidChangeSemanticTokens = new vscode.EventEmitter<void>();
+    public readonly onDidChangeSemanticTokens = this._onDidChangeSemanticTokens.event;
 
     constructor(settingsManager: CalcpadSettingsManager, debugChannel: vscode.OutputChannel) {
         this.settingsManager = settingsManager;
         this.debugChannel = debugChannel;
+    }
+
+    /**
+     * Trigger a refresh of semantic tokens for all documents
+     */
+    public refresh(): void {
+        this.debugChannel.appendLine('[Highlight] Manual refresh triggered');
+        this._onDidChangeSemanticTokens.fire();
     }
 
     async provideDocumentSemanticTokens(
