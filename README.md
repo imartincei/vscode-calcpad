@@ -35,7 +35,8 @@ The default port for Calcpad.Server on Windows is **9421**. To configure the ext
 
 ### 4. Start Calcpad.Server
 
-Run the Calcpad.Server executable from the extracted folder before using the extension.
+- Run the Calcpad.Server executable (Calcpad.Server.exe) from the extracted folder before using the extension. 
+- You may need to unblock the app by going into Properties -> Check "Unblock" if Windows has security settings that blocks the executable. You may also need to unblock pdf-service.exe.
 
 ## Features
 
