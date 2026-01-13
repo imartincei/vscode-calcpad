@@ -17,6 +17,9 @@
 - Package extension for further testing within the company. Publish to Open VSX but not Visual Studio Marketplace unless I need a personal Azure account for other reasons
 - Add more line continuation logic per 7.5.1/7.5.2: Left bracket '(' is enabled to serve as line continuation, besides '{' and ';' and without the need to add ' _' symbol at the end of the line. Made all opening brackets and delimiters to be line continuation symbols.
 - Refactor tokens to use all colors for different ones.
+- Remove warning for unicode symbols in variable names (e.g. ℓ and ρ)
+- Fix line links to use source line mapping
+- Add refactoring
 
 ### Bugs
 - Fix include reading around #{0}... syntax - test fix
@@ -58,12 +61,15 @@
 - Improve linting for commands $Repeat{i*j @90 i=1:10} should be invalid
 - Add tokenization of JS, CSS, and SVG in comments. Tokenize HTML within tags differently than comments.
 - Add property to use snippet as a keyword for the linter or if it just needs passed as example syntax to the UI.
+- Add incomplete expression linting (w_D,ext = )
+- Add unused variable warning
 
 ### Bugs
 
 - Fix tokenizer to detect variables and units in expressions with macros:
 Wt_DAF = 2*37.5kipnote$('Weight of both DAF units')
 P_D = -Wt_DAFnote$('Dead Load')
+- Fix multiple assignments check to only apply when there is not strings between variable definitions
 
 ## Calcpad.Wpf
 
