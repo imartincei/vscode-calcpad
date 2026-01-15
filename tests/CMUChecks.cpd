@@ -45,7 +45,7 @@ CMU$(8in; 32in; )
 	#if w_ht$/r_g$ ≤ 99
 		P_n$ = (0.25*f′_m*A_n$ + 0.65*A_s$*F_s*(1 - (w_ht$/(140*r_g$))^2))
 	#else
-		P_n$ = (0.25*f′_m*A_n$ + 0.65*A_s$*F_s*(70*r_g$/w_ht$)^2
+		P_n$ = (0.25*f′_m*A_n$ + 0.65*A_s$*F_s*(70*r_g$/w_ht$)^2)
 	#end if
 #end def
 '

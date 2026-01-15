@@ -62,25 +62,101 @@ export interface HighlightToken {
 // ============================================
 
 export enum CalcpadTokenType {
+    // ===== Core Syntax =====
+
+    /** Whitespace or unknown content */
     None = 0,
+
+    /** Numeric constants (e.g., 123, 3.14, 1e-5) */
     Const = 1,
-    Units = 2,
-    Operator = 3,
-    Variable = 4,
-    Function = 5,
-    Keyword = 6,
-    Command = 7,
-    Bracket = 8,
-    Comment = 9,
-    Tag = 10,
-    Input = 11,
-    Include = 12,
-    Macro = 13,
-    HtmlComment = 14,
-    Format = 15,
-    LocalVariable = 16,       // Local variables scoped to expressions (function params, #for vars, command scope vars)
-    FilePath = 17,            // File paths in data exchange keywords (#read, #write, #append)
-    DataExchangeKeyword = 18  // Sub-keywords in data exchange statements (from, to, sep, type)
+
+    /** Operators (e.g., +, -, *, /, =, ≤, ≥) */
+    Operator = 2,
+
+    /** Brackets: (), [], {} */
+    Bracket = 3,
+
+    /** Line continuation marker (underscore _ at end of line) */
+    LineContinuation = 4,
+
+    // ===== Identifiers =====
+
+    /** Variable identifiers */
+    Variable = 5,
+
+    /** Local variables scoped to a single expression or command block (function params, #for vars, command scope vars) */
+    LocalVariable = 6,
+
+    /** Function names (built-in or user-defined) */
+    Function = 7,
+
+    /** Macro names (ending with $) */
+    Macro = 8,
+
+    /** Macro parameters in #def statements (e.g., param1$, param2$ in #def macro$(param1$; param2$)) */
+    MacroParameter = 9,
+
+    /** Unit identifiers (e.g., m, kg, N/m²) */
+    Units = 10,
+
+    /** Special setting variables (PlotHeight, PlotWidth, PlotSVG, Precision, Tol, etc.) */
+    Setting = 11,
+
+    // ===== Keywords and Commands =====
+
+    /** Keywords starting with # (e.g., #if, #else, #def) */
+    Keyword = 12,
+
+    /** Control block keywords (#if, #repeat, #for, #while, #def, #else, #else if, #break, #continue) */
+    ControlBlockKeyword = 13,
+
+    /** End keywords that close control blocks (#end if, #end def, #loop) */
+    EndKeyword = 14,
+
+    /** Commands starting with $ (e.g., $plot, $find, $sum) */
+    Command = 15,
+
+    // ===== File and Data Exchange =====
+
+    /** Include file paths */
+    Include = 16,
+
+    /** File paths in data exchange keywords (#read, #write, #append) */
+    FilePath = 17,
+
+    /** Sub-keywords in data exchange statements (from, to, sep, type) */
+    DataExchangeKeyword = 18,
+
+    // ===== Comments and Documentation =====
+
+    /** Plain text comments enclosed in ' or " without HTML content */
+    Comment = 19,
+
+    /** HTML comments (<!-- ... -->) */
+    HtmlComment = 20,
+
+    /** HTML tags within comments */
+    Tag = 21,
+
+    /** HTML content (text between HTML tags) */
+    HtmlContent = 22,
+
+    /** JavaScript code within script tags in comments */
+    JavaScript = 23,
+
+    /** CSS code within style tags in comments */
+    Css = 24,
+
+    /** SVG markup within svg tags in comments */
+    Svg = 25,
+
+    // ===== Special =====
+
+    /** Input markers (? or #{...}) */
+    Input = 26,
+
+    /** Format specifiers (e.g., :f2, :e3) */
+    Format = 27
 }
 
 // ============================================

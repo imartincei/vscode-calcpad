@@ -30,26 +30,58 @@
       }
     ],
     "semanticTokenTypes": [
-      {
-        "id": "punctuation",
-        "description": "Brackets and punctuation characters"
-      }
+      { "id": "const", "description": "Numeric constants" },
+      { "id": "bracket", "description": "Brackets: (), [], {}" },
+      { "id": "lineContinuation", "description": "Line continuation marker" },
+      { "id": "localVariable", "description": "Local variables (function params, loop vars)" },
+      { "id": "macroParameter", "description": "Macro parameters in #def statements" },
+      { "id": "units", "description": "Unit identifiers" },
+      { "id": "setting", "description": "Setting variables" },
+      { "id": "controlBlockKeyword", "description": "Control block keywords (#if, #for, etc.)" },
+      { "id": "endKeyword", "description": "End keywords (#end if, #loop)" },
+      { "id": "command", "description": "Commands starting with $" },
+      { "id": "include", "description": "Include file paths" },
+      { "id": "filePath", "description": "File paths in data exchange" },
+      { "id": "dataExchangeKeyword", "description": "Sub-keywords (from, to, sep, type)" },
+      { "id": "htmlComment", "description": "HTML comments" },
+      { "id": "tag", "description": "HTML tags" },
+      { "id": "htmlContent", "description": "HTML content" },
+      { "id": "javascript", "description": "JavaScript code in comments" },
+      { "id": "css", "description": "CSS code in comments" },
+      { "id": "svg", "description": "SVG markup in comments" },
+      { "id": "input", "description": "Input markers" },
+      { "id": "format", "description": "Format specifiers" }
     ],
     "semanticTokenScopes": [
       {
         "scopes": {
-          "number": ["constant.numeric.calcpad"],
-          "type": ["support.type.units.calcpad"],
-          "operator": ["keyword.operator.arithmetic.calcpad"],
+          "const": ["constant.numeric.calcpad"],
+          "operator": ["keyword.operator.calcpad"],
+          "bracket": ["punctuation.bracket.calcpad"],
+          "lineContinuation": ["punctuation.separator.continuation.calcpad"],
           "variable": ["variable.other.calcpad"],
-          "function": ["support.function.builtin.calcpad"],
+          "localVariable": ["variable.parameter.calcpad"],
+          "function": ["support.function.calcpad"],
+          "macro": ["entity.name.function.macro.calcpad"],
+          "macroParameter": ["variable.parameter.macro.calcpad"],
+          "units": ["support.type.units.calcpad"],
+          "setting": ["variable.other.setting.calcpad"],
           "keyword": ["keyword.control.calcpad"],
-          "macro": ["variable.parameter.macro.calcpad"],
-          "punctuation": ["punctuation.section.brackets.calcpad"],
-          "comment": ["comment.line.single-quote.calcpad"],
-          "string": ["string.quoted.double.calcpad"],
-          "parameter": ["variable.language.input.calcpad"],
-          "decorator": ["meta.format.calcpad"]
+          "controlBlockKeyword": ["keyword.control.block.calcpad"],
+          "endKeyword": ["keyword.control.end.calcpad"],
+          "command": ["support.function.command.calcpad"],
+          "include": ["string.unquoted.include.calcpad"],
+          "filePath": ["string.unquoted.filepath.calcpad"],
+          "dataExchangeKeyword": ["keyword.other.dataexchange.calcpad"],
+          "comment": ["comment.line.calcpad"],
+          "htmlComment": ["comment.block.html.calcpad"],
+          "tag": ["entity.name.tag.calcpad"],
+          "htmlContent": ["string.unquoted.html.calcpad"],
+          "javascript": ["source.js.embedded.calcpad"],
+          "css": ["source.css.embedded.calcpad"],
+          "svg": ["text.xml.svg.embedded.calcpad"],
+          "input": ["variable.language.input.calcpad"],
+          "format": ["meta.format.calcpad"]
         }
       }
     ],
@@ -63,6 +95,11 @@
         "label": "CalcPad Dark",
         "uiTheme": "vs-dark",
         "path": "./themes/calcpad-dark-theme.json"
+      },
+      {
+        "label": "CalcPad Token Test",
+        "uiTheme": "vs-dark",
+        "path": "./themes/calcpad-test-theme.json"
       }
     ],
     "commands": [

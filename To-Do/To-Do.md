@@ -5,8 +5,6 @@
 ### Enhancements
 - Finish enhanced PDF generation
 - Add search in output HTML
-- Re-factor builtins and function signatures to serve purposes for both linting and passing info to the Insert tab in VS Code. Add an endpoint to get the built-ins data as a one-time startup operation once the server is connected.
-- See if intellisense can be improved
 - Implement user defined variable, units, function, and macro definitions using html comment before the #def line (e.g. cmt$({"description": "This macro does this.\nparam1 is the thing..."})). Add tooltip for these that uses the description.
 - Test linter for advanced issues
     - Macros get flagged with undefined variable when a parameter is set in a macro
@@ -15,16 +13,20 @@
 - Add quick typing for macros (~1 macro 1, ~2 macro 2, etc.). Add macro mapping to vscode config using json object {macroMapping:{"1": "macroName$", ...}}. Have VS code set cursor position to within () and before first param.
 - Add hotkeys for HTML/markdown formatting. Add toggle for HTML vs markdown in the settings.
 - Package extension for further testing within the company. Publish to Open VSX but not Visual Studio Marketplace unless I need a personal Azure account for other reasons
-- Add more line continuation logic per 7.5.1/7.5.2: Left bracket '(' is enabled to serve as line continuation, besides '{' and ';' and without the need to add ' _' symbol at the end of the line. Made all opening brackets and delimiters to be line continuation symbols.
 - Refactor tokens to use all colors for different ones.
 - Remove warning for unicode symbols in variable names (e.g. ℓ and ρ)
 - Fix line links to use source line mapping
 - Add refactoring
+- Fix preview theme to use light mode
+- Add format command that does the same thing as eat space. However, the automatic behavior is not preferred.
+- Add refresh button for server
 
 ### Bugs
 - Fix include reading around #{0}... syntax - test fix
 - Fix insert reload to occur when server refreshes - test fix
 - Add refresh when settings are changed.
+- HTML tags in JS string literals should be tokenized as JS.
+
 
 ## Calcpad.Server
 - Finish adding CalcpadAuth to Calcpad.Server.
@@ -54,22 +56,19 @@
 - Double check builtin function return types are correct. Have Claude run the comprehensive check to see what is returned.
 - Have the linter check when a macro parameter is used as a string and do type checking in this case.
 - Add parsing of metadata lines for macro descriptions and parameter descriptions/type hinting. Metadata lines contain inline or multiline JSON that external programs can pull from cpd files but are ignored by the parser. Metadata lines occur when there is JSON in an HTML comment
-- Design snippet nomenclature for polymorphic functions (take, line, spline) - functions accepting different types (scalar/vector/matrix)
 - Test snippets and linter
-- Fix max, min, etc. to work with values, vectors, and matricies. Vectors and Matrices are expanded as values.
-- Verify all functions/features are present in snippets and they are implemented correctly.
-- Improve linting for commands $Repeat{i*j @90 i=1:10} should be invalid
-- Add tokenization of JS, CSS, and SVG in comments. Tokenize HTML within tags differently than comments.
-- Add property to use snippet as a keyword for the linter or if it just needs passed as example syntax to the UI.
-- Add incomplete expression linting (w_D,ext = )
-- Add unused variable warning
+- Verify all functions/features are present in snippets and they are implemented correctly. To do this, make a very large cpd that has all of Wpfs functions in the proper categories and tell Claude to update the snippets from that. This will also be very helpful for testing purposes.
+- Verify linter uses snippet data types everywhere it is needed
+- Improve HTML/JS/CSS/SVG tokenization to use JS library. Use the node instance in Calcpad.Server
+- Add HTML/JS/CSS/SVG linting using a JS library.
 
 ### Bugs
 
 - Fix tokenizer to detect variables and units in expressions with macros:
 Wt_DAF = 2*37.5kipnote$('Weight of both DAF units')
 P_D = -Wt_DAFnote$('Dead Load')
-- Fix multiple assignments check to only apply when there is not strings between variable definitions
+- Fix multiple assignments check to only apply when there is not strings between variable definitions. It should be run at the expression level. h=5', 'g=6 is valid.
+- Fix tokenization of macro parameters and unused variable checks in complex cases. The attempted solution is to expand macro definitions in Stage 2 when nested macros are present.
 
 ## Calcpad.Wpf
 
@@ -77,4 +76,4 @@ P_D = -Wt_DAFnote$('Dead Load')
 
 ## Calcpad.Core
 
-- Use task instead of async for read operations - Completed but NEEDS TESTED
+- Add features in JSUpdates.md, pending approval from Ned

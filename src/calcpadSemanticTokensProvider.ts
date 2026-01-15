@@ -4,65 +4,82 @@ import { CalcpadSettingsManager } from './calcpadSettings';
 import { HighlightRequest, HighlightResponse, HighlightToken, CalcpadTokenType } from './api/calcpadApiTypes';
 
 /**
- * VS Code semantic token types mapped from server typeId
- *
- * Server token types (from API_SCHEMA.md):
- * 0: None (skip)
- * 1: Const -> number
- * 2: Units -> type
- * 3: Operator -> operator
- * 4: Variable -> variable
- * 5: Function -> function
- * 6: Keyword -> keyword
- * 7: Command -> macro
- * 8: Bracket -> punctuation (custom)
- * 9: Comment -> comment
- * 10: Tag -> string (HTML in comments)
- * 11: Input -> parameter
- * 12: Include -> string
- * 13: Macro -> macro
- * 14: HtmlComment -> comment
- * 15: Format -> decorator
- * 16: LocalVariable -> parameter (function params, #for vars, command scope vars)
- * 17: FilePath -> string (file paths in #read, #write, #append)
- * 18: DataExchangeKeyword -> keyword (sub-keywords: from, to, sep, type)
+ * Semantic token types matching C# server TokenType enum (1:1 mapping)
+ * Each token type has a unique VS Code semantic token for proper theming
+ */
+const SEMANTIC_TOKEN_TYPES = [
+    // Core Syntax (1-4)
+    'const',              // 1: Numeric constants
+    'operator',           // 2: Operators
+    'bracket',            // 3: Brackets
+    'lineContinuation',   // 4: Line continuation marker
+
+    // Identifiers (5-11)
+    'variable',           // 5: Variable identifiers
+    'localVariable',      // 6: Local variables (function params, loop vars)
+    'function',           // 7: Function names
+    'macro',              // 8: Macro names
+    'macroParameter',     // 9: Macro parameters in #def statements
+    'units',              // 10: Unit identifiers
+    'setting',            // 11: Setting variables
+
+    // Keywords and Commands (12-15)
+    'keyword',            // 12: Keywords starting with #
+    'controlBlockKeyword', // 13: Control block keywords (#if, #for, etc.)
+    'endKeyword',         // 14: End keywords (#end if, #loop)
+    'command',            // 15: Commands starting with $
+
+    // File and Data Exchange (16-18)
+    'include',            // 16: Include file paths
+    'filePath',           // 17: File paths in data exchange
+    'dataExchangeKeyword', // 18: Sub-keywords (from, to, sep, type)
+
+    // Comments and Documentation (19-25)
+    'comment',            // 19: Plain text comments
+    'htmlComment',        // 20: HTML comments
+    'tag',                // 21: HTML tags
+    'htmlContent',        // 22: HTML content
+    'javascript',         // 23: JavaScript code
+    'css',                // 24: CSS code
+    'svg',                // 25: SVG markup
+
+    // Special (26-27)
+    'input',              // 26: Input markers
+    'format',             // 27: Format specifiers
+];
+
+/**
+ * Map server typeId to semantic token type name (1:1 with C# enum)
  */
 const TOKEN_TYPE_MAP: Record<number, string> = {
-    [CalcpadTokenType.Const]: 'number',
-    [CalcpadTokenType.Units]: 'type',
+    [CalcpadTokenType.Const]: 'const',
     [CalcpadTokenType.Operator]: 'operator',
+    [CalcpadTokenType.Bracket]: 'bracket',
+    [CalcpadTokenType.LineContinuation]: 'lineContinuation',
     [CalcpadTokenType.Variable]: 'variable',
+    [CalcpadTokenType.LocalVariable]: 'localVariable',
     [CalcpadTokenType.Function]: 'function',
-    [CalcpadTokenType.Keyword]: 'keyword',
-    [CalcpadTokenType.Command]: 'macro',
-    [CalcpadTokenType.Bracket]: 'punctuation',
-    [CalcpadTokenType.Comment]: 'comment',
-    [CalcpadTokenType.Tag]: 'string',
-    [CalcpadTokenType.Input]: 'parameter',
-    [CalcpadTokenType.Include]: 'string',
     [CalcpadTokenType.Macro]: 'macro',
-    [CalcpadTokenType.HtmlComment]: 'comment',
-    [CalcpadTokenType.Format]: 'decorator',
-    [CalcpadTokenType.LocalVariable]: 'parameter',
-    [CalcpadTokenType.FilePath]: 'string',
-    [CalcpadTokenType.DataExchangeKeyword]: 'keyword',
+    [CalcpadTokenType.MacroParameter]: 'macroParameter',
+    [CalcpadTokenType.Units]: 'units',
+    [CalcpadTokenType.Setting]: 'setting',
+    [CalcpadTokenType.Keyword]: 'keyword',
+    [CalcpadTokenType.ControlBlockKeyword]: 'controlBlockKeyword',
+    [CalcpadTokenType.EndKeyword]: 'endKeyword',
+    [CalcpadTokenType.Command]: 'command',
+    [CalcpadTokenType.Include]: 'include',
+    [CalcpadTokenType.FilePath]: 'filePath',
+    [CalcpadTokenType.DataExchangeKeyword]: 'dataExchangeKeyword',
+    [CalcpadTokenType.Comment]: 'comment',
+    [CalcpadTokenType.HtmlComment]: 'htmlComment',
+    [CalcpadTokenType.Tag]: 'tag',
+    [CalcpadTokenType.HtmlContent]: 'htmlContent',
+    [CalcpadTokenType.JavaScript]: 'javascript',
+    [CalcpadTokenType.Css]: 'css',
+    [CalcpadTokenType.Svg]: 'svg',
+    [CalcpadTokenType.Input]: 'input',
+    [CalcpadTokenType.Format]: 'format',
 };
-
-// Build unique token types list (preserving order for legend)
-const SEMANTIC_TOKEN_TYPES = [
-    'number',       // Const
-    'type',         // Units
-    'operator',     // Operator
-    'variable',     // Variable
-    'function',     // Function
-    'keyword',      // Keyword
-    'macro',        // Command, Macro
-    'punctuation',  // Bracket (custom type)
-    'comment',      // Comment, HtmlComment
-    'string',       // Tag, Include
-    'parameter',    // Input
-    'decorator',    // Format
-];
 
 // Semantic token modifiers (none needed currently)
 const SEMANTIC_TOKEN_MODIFIERS: string[] = [];
