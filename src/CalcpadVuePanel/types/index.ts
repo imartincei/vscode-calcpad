@@ -1,5 +1,10 @@
 // Type definitions for CalcpadVuePanel
 
+export interface SnippetParameter {
+  name: string
+  description?: string
+}
+
 export interface InsertItem {
   label?: string
   tag: string
@@ -7,6 +12,7 @@ export interface InsertItem {
   categoryPath?: string
   category?: string
   quickType?: string
+  parameters?: SnippetParameter[]
 }
 
 export interface InsertCategory {
@@ -58,6 +64,7 @@ export interface VariablesData {
   macros: VariableItem[]
   variables: VariableItem[]
   functions: VariableItem[]
+  customUnits: VariableItem[]
 }
 
 export interface S3User {

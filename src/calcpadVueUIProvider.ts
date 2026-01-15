@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import { CalcpadSettingsManager } from './calcpadSettings';
 import { CalcpadInsertManager } from './calcpadInsertManager';
 import axios from 'axios';
@@ -18,6 +17,12 @@ export class CalcpadVueUIProvider implements vscode.WebviewViewProvider {
     ) {
         this._outputChannel = vscode.window.createOutputChannel('CalcPad Vue');
         this._outputChannel.appendLine('CalcPad Vue UI Provider initialized');
+
+        // Register callback to refresh UI when snippets are loaded from server
+        this._insertManager.onSnippetsLoaded(() => {
+            this._outputChannel.appendLine('Snippets loaded - refreshing Vue UI');
+            this._sendInitialData();
+        });
     }
 
     public resolveWebviewView(
@@ -215,21 +220,30 @@ export class CalcpadVueUIProvider implements vscode.WebviewViewProvider {
         this._sendInitialData();
     }
 
-    private _sendInitialData() {
+    private async _sendInitialData() {
         if (!this._view) return;
 
-        // Send insert data
-        const insertData = this._insertManager.getInsertData();
-        this._outputChannel.appendLine(`Sending insert data with ${Object.keys(insertData || {}).length} categories`);
+        // Ensure snippets are loaded
+        if (!this._insertManager.isLoaded()) {
+            try {
+                await this._insertManager.loadSnippets();
+            } catch (error) {
+                this._outputChannel.appendLine('[Vue UI] Failed to load snippets: ' + error);
+            }
+        }
+
+        // Send insert items as flat array
+        const insertItems = this._insertManager.getAllItems();
+        this._outputChannel.appendLine('Sending ' + insertItems.length + ' insert items');
         this._view.webview.postMessage({
             type: 'insertDataResponse',
-            data: insertData
+            items: insertItems
         });
     }
 
-    public updateVariables(data: { macros: any[], variables: any[], functions: any[] }) {
+    public updateVariables(data: { macros: any[], variables: any[], functions: any[], customUnits: any[] }) {
         if (this._view) {
-            this._outputChannel.appendLine(`Updating variables: ${data.macros.length} macros, ${data.variables.length} variables, ${data.functions.length} functions`);
+            this._outputChannel.appendLine(`Updating variables: ${data.macros.length} macros, ${data.variables.length} variables, ${data.functions.length} functions, ${data.customUnits.length} custom units`);
             this._view.webview.postMessage({
                 type: 'updateVariables',
                 data: data

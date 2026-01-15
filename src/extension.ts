@@ -1,21 +1,25 @@
 import * as vscode from 'vscode';
 import axios from 'axios';
 import * as path from 'path';
-import * as fs from 'fs';
-import * as os from 'os';
-import { CalcpadLinter } from './calcpadLinter';
+import { CalcpadServerLinter } from './calcpadServerLinter';
+import { CalcpadSemanticTokensProvider, semanticTokensLegend } from './calcpadSemanticTokensProvider';
 import { CalcpadVueUIProvider } from './calcpadVueUIProvider';
 import { CalcpadSettingsManager } from './calcpadSettings';
 import { OperatorReplacer } from './operatorReplacer';
 import { QuickTyper } from './quickTyper';
 import { CalcpadCompletionProvider } from './calcpadCompletionProvider';
 import { CalcpadInsertManager } from './calcpadInsertManager';
+import { CalcpadDefinitionsService } from './calcpadDefinitionsService';
+import { AutoIndenter } from './autoIndenter';
+import { buildClientFileCacheFromContent } from './clientFileCacheHelper';
+import { CalcpadDefinitionProvider } from './calcpadDefinitionProvider';
 
 let activePreviewPanel: vscode.WebviewPanel | unknown = undefined;
 let activePreviewType: 'regular' | 'unwrapped' | undefined = undefined;
 let previewUpdateTimeout: NodeJS.Timeout | unknown = undefined;
 let previewSourceEditor: vscode.TextEditor | undefined = undefined;
-let linter: CalcpadLinter;
+let linter: CalcpadServerLinter;
+let definitionsService: CalcpadDefinitionsService;
 let outputChannel: vscode.OutputChannel;
 let calcpadOutputHtmlChannel: vscode.OutputChannel;
 let calcpadWebviewHtmlChannel: vscode.OutputChannel;
@@ -116,43 +120,6 @@ function getEffectivePreviewTheme(): 'light' | 'dark' {
         return colorTheme.kind === vscode.ColorThemeKind.Dark ||
                colorTheme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light';
     }
-}
-
-function getPreviewHtml(): string {
-    return `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>CalcPad Preview</title>
-            <style>
-                .loading {
-                    text-align: center;
-                    color: #666;
-                    padding: 40px;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="loading">Loading preview...</div>
-            <script>
-                const vscode = acquireVsCodeApi();
-
-                // Listen for messages from the extension
-                window.addEventListener('message', event => {
-                    const message = event.data;
-
-                    switch (message.type) {
-                        case 'updateContent':
-                            document.body.innerHTML = message.content;
-                            break;
-                    }
-                });
-            </script>
-        </body>
-        </html>
-    `;
 }
 
 function getErrorNavigationScript(): string {
@@ -289,6 +256,9 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string,
         outputChannel.appendLine(`Server URL: ${apiBaseUrl}`);
         outputChannel.appendLine(`Settings retrieved: ${JSON.stringify(settings)}`);
 
+        // Build client file cache for referenced files
+        const clientFileCache = await buildClientFileCacheFromContent(content, outputChannel, '[Convert]');
+
         // Select API endpoint based on unwrapped parameter
         const endpoint = unwrapped ? '/api/calcpad/convert-unwrapped' : '/api/calcpad/convert';
         outputChannel.appendLine(`Making API call to ${endpoint}...`);
@@ -299,7 +269,8 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string,
                 content: content,
                 settings: settings,
                 theme: theme,
-                forceUnwrappedCode: unwrapped
+                forceUnwrappedCode: unwrapped,
+                clientFileCache: clientFileCache
             },
             {
                 headers: { 'Content-Type': 'application/json' },
@@ -311,10 +282,9 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string,
         // Use the entire API response as the webview HTML
         const apiResponse = response.data;
 
-        // Log to dedicated HTML output channel
+        // Log to dedicated HTML output channel (without stealing focus)
         calcpadOutputHtmlChannel.clear();
         calcpadOutputHtmlChannel.appendLine(apiResponse);
-        calcpadOutputHtmlChannel.show(true);
 
         outputChannel.appendLine(`HTML Length: ${apiResponse.length} characters`);
 
@@ -324,10 +294,9 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string,
         // Inject the script before closing body tag
         const htmlWithScript = apiResponse.replace('</body>', errorNavigationScript + '</body>');
 
-        // Log processed HTML to webview channel
+        // Log processed HTML to webview channel (without stealing focus)
         calcpadWebviewHtmlChannel.clear();
         calcpadWebviewHtmlChannel.appendLine(htmlWithScript);
-        calcpadWebviewHtmlChannel.show(true);
 
         panel.webview.html = htmlWithScript;
 
@@ -377,19 +346,15 @@ async function generatePdf(panel: vscode.WebviewPanel, content: string) {
         const settingsManager = CalcpadSettingsManager.getInstance(extensionContext);
         const settings = await settingsManager.getApiSettings();
 
-        // Add hardcoded output format for PDF
-        const pdfSettings = {
-            ...(settings as Record<string, unknown>),
-            output: {
-                format: 'pdf',
-                silent: false
-            }
-        };
+        // Build client file cache for referenced files
+        const clientFileCache = await buildClientFileCacheFromContent(content, outputChannel, '[PDF]');
 
         const response = await axios.post(`${apiBaseUrl}/api/calcpad/convert`,
             {
                 content,
-                settings: pdfSettings
+                settings: settings,
+                outputFormat: 'pdf',
+                clientFileCache: clientFileCache
             },
             {
                 headers: { 'Content-Type': 'application/json' },
@@ -445,18 +410,9 @@ async function printToPdf() {
         const pdfSettings = getPdfSettings();
         
         // Get the active editor to determine the filename and directory
-        let defaultPath: string;
-        
-        if (activeEditor && activeEditor.document.fileName !== 'Untitled-1') {
-            // Use the same directory as the current file
-            const currentDir = path.dirname(activeEditor.document.fileName);
-            const baseFilename = path.basename(activeEditor.document.fileName, path.extname(activeEditor.document.fileName));
-            defaultPath = path.join(currentDir, `${baseFilename}.pdf`);
-        } else {
-            // Use user's home directory as fallback
-            const homeDir = os.homedir();
-            defaultPath = path.join(homeDir, 'calcpad-preview.pdf');
-        }
+        const currentDir = path.dirname(activeEditor.document.fileName);
+        const baseFilename = path.basename(activeEditor.document.fileName, path.extname(activeEditor.document.fileName));
+        const defaultPath = path.join(currentDir, baseFilename + '.pdf');
 
         // Show save dialog
         const saveUri = await vscode.window.showSaveDialog({
@@ -492,23 +448,21 @@ async function printToPdf() {
                     throw new Error('Document is empty. Please add some CalcPad content first.');
                 }
 
+                progress.report({ increment: 10, message: "Loading referenced files..." });
+
+                // Build client file cache for referenced files
+                const clientFileCache = await buildClientFileCacheFromContent(documentContent, outputChannel, '[PDF]');
+
                 progress.report({ increment: 20, message: "Calling PDF generation API..." });
 
-                // Add hardcoded output format for PDF and merge with PDF-specific settings
-                const settingsWithPdf = {
-                    ...(settings as Record<string, unknown>),
-                    output: {
-                        format: 'pdf',
-                        silent: false
-                    }
-                };
-
-                // Call the server's PDF generation API
+                // Call the server's PDF generation API with outputFormat at top level
                 const response = await axios.post(`${apiBaseUrl}/api/calcpad/convert`,
                     {
                         content: documentContent,
-                        settings: settingsWithPdf,
-                        pdfSettings: pdfSettings
+                        settings: settings,
+                        outputFormat: 'pdf',
+                        pdfSettings: pdfSettings,
+                        clientFileCache: clientFileCache
                     },
                     {
                         headers: { 'Content-Type': 'application/json' },
@@ -722,11 +676,26 @@ export function activate(context: vscode.ExtensionContext) {
         calcpadWebviewHtmlChannel = vscode.window.createOutputChannel('Calcpad Webview HTML');
         calcpadWebviewConsoleChannel = vscode.window.createOutputChannel('Calcpad Webview Console');
 
+        // Create debug channel for linter/highlighter
+        const serverDebugChannel = vscode.window.createOutputChannel('CalcPad Server Debug');
+
         outputChannel.appendLine('Initializing settings manager...');
         const settingsManager = CalcpadSettingsManager.getInstance(context);
-        
+
         outputChannel.appendLine('Initializing linter...');
-        linter = new CalcpadLinter(settingsManager);
+        linter = new CalcpadServerLinter(settingsManager, serverDebugChannel);
+
+        outputChannel.appendLine('Initializing definitions service...');
+        definitionsService = new CalcpadDefinitionsService(settingsManager, serverDebugChannel);
+
+        // Initialize semantic token provider
+        outputChannel.appendLine('Initializing semantic token provider...');
+        const semanticTokensProvider = new CalcpadSemanticTokensProvider(settingsManager, serverDebugChannel);
+        const semanticTokensDisposable = vscode.languages.registerDocumentSemanticTokensProvider(
+            { language: 'calcpad' },
+            semanticTokensProvider,
+            semanticTokensLegend
+        );
 
         // Initialize operator replacer
         outputChannel.appendLine('Initializing operator replacer...');
@@ -738,9 +707,18 @@ export function activate(context: vscode.ExtensionContext) {
         const quickTyper = new QuickTyper(outputChannel);
         const quickTyperDisposable = quickTyper.registerDocumentChangeListener(context);
 
+        // Initialize auto-indenter
+        outputChannel.appendLine('Initializing auto-indenter...');
+        const autoIndenter = new AutoIndenter(outputChannel);
+        const autoIndenterDisposable = autoIndenter.registerDocumentChangeListener(context);
+
         // Initialize autocomplete provider
         outputChannel.appendLine('Initializing autocomplete provider...');
-        const completionProviderDisposable = CalcpadCompletionProvider.register(settingsManager, outputChannel);
+        const completionProviderDisposable = CalcpadCompletionProvider.register(definitionsService, outputChannel);
+
+        // Initialize definition provider (Go to Definition)
+        outputChannel.appendLine('Initializing definition provider...');
+        const definitionProviderDisposable = CalcpadDefinitionProvider.register(definitionsService, outputChannel);
 
     // Unified document processing function
     async function processDocument(document: vscode.TextDocument) {
@@ -748,53 +726,92 @@ export function activate(context: vscode.ExtensionContext) {
             return;
         }
 
-        outputChannel.appendLine(`[processDocument] Processing document: ${document.uri.fsPath}`);
+        outputChannel.appendLine('[processDocument] Processing document: ' + document.uri.fsPath);
 
         // Run linting
         await linter.lintDocument(document);
 
-        // Extract macros and send to UI
+        // Fetch definitions from server and send to UI
         try {
-            const contentResolver = linter.getContentResolver();
-            const text = document.getText();
-            const lines = text.split('\n');
-            
-            await contentResolver.preCacheContent(lines);
-            const resolvedContent = contentResolver.getCompiledContent(document);
-            
-            outputChannel.appendLine(`[processDocument] Found ${resolvedContent.allMacros.length} macros, ${resolvedContent.variablesWithDefinitions.length} variables, ${resolvedContent.functionsWithParams.length} functions`);
-            
-            // Send all user-defined content to UI providers
-            // uiProvider.updateVariables({
-            //     macros: resolvedContent.allMacros,
-            //     variables: resolvedContent.variablesWithDefinitions,
-            //     functions: resolvedContent.functionsWithParams
-            // });
-            // Cast to rich types with source info for Vue UI
-            const variables = resolvedContent.variablesWithDefinitions as import('./types/calcpad').VariableDefinition[];
-            const functions = resolvedContent.functionsWithParams as import('./types/calcpad').FunctionDefinition[];
+            const definitions = await definitionsService.refreshDefinitions(document);
 
-            vueUiProvider.updateVariables({
-                macros: resolvedContent.allMacros,
-                variables: variables.map(v => ({
-                    name: v.name,
-                    definition: v.definition,
-                    source: v.source,
-                    sourceFile: v.sourceFile
-                })),
-                functions: functions.map(f => ({
-                    name: f.name,
-                    params: f.params.join('; '),
-                    source: f.source,
-                    sourceFile: f.sourceFile
-                }))
-            });
+            if (definitions) {
+                outputChannel.appendLine('[processDocument] Found ' + definitions.macros.length + ' macros, ' + definitions.variables.length + ' variables, ' + definitions.functions.length + ' functions, ' + definitions.customUnits.length + ' custom units');
+
+                // Send definitions to Vue UI provider
+                vueUiProvider.updateVariables({
+                    macros: definitions.macros.map(m => ({
+                        name: m.name,
+                        params: m.parameters.length > 0 ? m.parameters.join('; ') : undefined,
+                        definition: m.content.join('\n'),
+                        source: m.source as 'local' | 'include',
+                        sourceFile: m.sourceFile
+                    })),
+                    variables: definitions.variables.map(v => ({
+                        name: v.name,
+                        definition: v.expression,
+                        source: v.source as 'local' | 'include',
+                        sourceFile: v.sourceFile
+                    })),
+                    functions: definitions.functions.map(f => ({
+                        name: f.name,
+                        params: f.parameters.join('; '),
+                        source: f.source as 'local' | 'include',
+                        sourceFile: f.sourceFile
+                    })),
+                    customUnits: definitions.customUnits.map(u => ({
+                        name: u.name,
+                        definition: u.expression,
+                        source: u.source as 'local' | 'include',
+                        sourceFile: u.sourceFile
+                    }))
+                });
+            } else {
+                outputChannel.appendLine('[processDocument] No definitions returned from server');
+            }
         } catch (error) {
-            outputChannel.appendLine(`Error extracting macros: ${error}`);
+            outputChannel.appendLine('Error fetching definitions: ' + error);
         }
     }
 
+    // Centralized refresh function for when settings change
+    async function refreshAllComponents() {
+        outputChannel.appendLine('[Settings] Refreshing all components after settings change');
+
+        // Reload snippets from server
+        try {
+            await insertManager.reloadSnippets();
+            outputChannel.appendLine('[Settings] Snippets reloaded');
+        } catch (error) {
+            outputChannel.appendLine('[Settings] Failed to reload snippets: ' + error);
+        }
+
+        // Refresh semantic tokens for all visible editors
+        vscode.window.visibleTextEditors.forEach(editor => {
+            if (editor.document.languageId === 'calcpad' || editor.document.languageId === 'plaintext') {
+                semanticTokensProvider.refresh();
+            }
+        });
+
+        // Reprocess active document (linting + definitions)
+        const activeEditor = vscode.window.activeTextEditor;
+        if (activeEditor) {
+            await processDocument(activeEditor.document);
+        }
+
+        // Refresh preview if open
+        if (activePreviewPanel && activeEditor) {
+            const unwrapped = activePreviewType === 'unwrapped';
+            await updatePreviewContent(activePreviewPanel as vscode.WebviewPanel, activeEditor.document.getText(), unwrapped);
+            outputChannel.appendLine('[Settings] Preview refreshed');
+        }
+
+        outputChannel.appendLine('[Settings] All components refreshed');
+    }
+
     const insertManager = CalcpadInsertManager.getInstance();
+    insertManager.setSettingsManager(settingsManager);
+    insertManager.setOutputChannel(outputChannel);
 
     // Register webview provider for CalcPad Vue UI panel (NEW)
     const vueUiProvider = new CalcpadVueUIProvider(context.extensionUri, context, settingsManager, insertManager);
@@ -888,6 +905,15 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
+    // Refresh all components when calcpad settings change
+    const onDidChangeConfiguration = vscode.workspace.onDidChangeConfiguration(async event => {
+        // Check if any calcpad settings changed
+        if (event.affectsConfiguration('calcpad')) {
+            outputChannel.appendLine('[Settings] Calcpad settings changed - triggering refresh');
+            await refreshAllComponents();
+        }
+    });
+
     // Process all open calcpad documents on activation
     vscode.workspace.textDocuments.forEach(async document => {
         await processDocument(document);
@@ -905,14 +931,20 @@ export function activate(context: vscode.ExtensionContext) {
             vueUiProviderDisposable,
             vueUiProvider, // Add the provider itself for disposal
             linter,
+            semanticTokensDisposable,
             outputChannel,
+            serverDebugChannel,
             onDidChangeTextDocument,
             onDidOpenTextDocument,
             onDidSaveTextDocument,
             onDidChangeActiveTextEditor,
+            onDidChangeConfiguration,
             operatorReplacerDisposable,
             quickTyperDisposable,
-            completionProviderDisposable
+            autoIndenterDisposable,
+            completionProviderDisposable,
+            definitionProviderDisposable,
+            insertManager
         );
         
         outputChannel.appendLine('CalcPad extension activation completed successfully');

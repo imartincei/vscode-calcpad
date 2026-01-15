@@ -4,7 +4,7 @@
       <input
         v-model="searchTerm"
         type="text"
-        placeholder="Search variables, macros, functions..."
+        placeholder="Search variables, macros, functions, custom units..."
         class="search-input"
       />
     </div>
@@ -106,6 +106,35 @@
             </div>
           </div>
         </div>
+
+        <!-- Custom Units Section -->
+        <div v-if="filteredCustomUnits.length > 0" class="variables-section">
+          <div
+            class="variables-header"
+            :class="{ collapsed: collapsedSections.customUnits }"
+            @click="toggleSection('customUnits')"
+          >
+            <span>Custom Units ({{ filteredCustomUnits.length }})</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div
+            class="variables-content"
+            :class="{ collapsed: collapsedSections.customUnits }"
+          >
+            <div
+              v-for="unit in filteredCustomUnits"
+              :key="`unit-${unit.name}`"
+              class="variable-item"
+              :title="`Custom unit: .${unit.name} = ${unit.definition}. Click to insert.`"
+              @click="insertCustomUnit(unit)"
+            >
+              <div class="variable-name">.{{ unit.name }}</div>
+              <div class="variable-type">Custom Unit</div>
+              <div v-if="unit.definition" class="variable-content">{{ unit.definition }}</div>
+              <div class="variable-source source-local">{{ getSourceLabel(unit.source) }}</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -125,7 +154,8 @@ const props = withDefaults(defineProps<Props>(), {
   variablesData: () => ({
     macros: [],
     variables: [],
-    functions: []
+    functions: [],
+    customUnits: []
   }),
   loading: false
 })
@@ -140,14 +170,16 @@ const searchTerm = ref('')
 const collapsedSections = ref({
   macros: false,
   variables: false,
-  functions: false
+  functions: false,
+  customUnits: false
 })
 
 // Computed
 const hasVariables = computed(() => {
   return props.variablesData.macros.length > 0 ||
          props.variablesData.variables.length > 0 ||
-         props.variablesData.functions.length > 0
+         props.variablesData.functions.length > 0 ||
+         props.variablesData.customUnits.length > 0
 })
 
 const filteredMacros = computed(() => {
@@ -180,14 +212,25 @@ const filteredFunctions = computed(() => {
   )
 })
 
+const filteredCustomUnits = computed(() => {
+  if (!searchTerm.value.trim()) {
+    return props.variablesData.customUnits
+  }
+  const term = searchTerm.value.toLowerCase()
+  return props.variablesData.customUnits.filter(unit =>
+    unit.name.toLowerCase().includes(term)
+  )
+})
+
 const hasFilteredResults = computed(() => {
   return filteredMacros.value.length > 0 ||
          filteredVariables.value.length > 0 ||
-         filteredFunctions.value.length > 0
+         filteredFunctions.value.length > 0 ||
+         filteredCustomUnits.value.length > 0
 })
 
 // Methods
-const toggleSection = (section: 'macros' | 'variables' | 'functions') => {
+const toggleSection = (section: 'macros' | 'variables' | 'functions' | 'customUnits') => {
   collapsedSections.value[section] = !collapsedSections.value[section]
 }
 
@@ -196,15 +239,20 @@ const insertVariable = (name: string) => {
 }
 
 const insertMacro = (macro: VariableItem) => {
-  // Insert macro with definition if available
-  const macroText = macro.definition ? macro.definition : macro.name
-  emit('insertText', macroText)
+  // Insert macro with parameters if available, similar to functions
+  const macroCall = macro.params ? `${macro.name}(${macro.params})` : macro.name
+  emit('insertText', macroCall)
 }
 
 const insertFunction = (func: VariableItem) => {
   // Insert function with parameters if available
   const functionCall = func.params ? `${func.name}(${func.params})` : `${func.name}()`
   emit('insertText', functionCall)
+}
+
+const insertCustomUnit = (unit: VariableItem) => {
+  // Insert custom unit name WITHOUT the dot prefix (for usage)
+  emit('insertText', unit.name)
 }
 
 const getSourceLabel = (source: string | undefined): string => {
@@ -218,6 +266,11 @@ const getSourceLabel = (source: string | undefined): string => {
     default:
       return source
   }
+}
+
+const getMacroTooltip = (macro: VariableItem): string => {
+  const macroCall = macro.params ? `${macro.name}(${macro.params})` : macro.name
+  return `Click to insert: ${macroCall}`
 }
 
 const getFunctionTooltip = (func: VariableItem): string => {

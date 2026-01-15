@@ -1,0 +1,41 @@
+{
+  "name": "CalcPad Token Test",
+  "type": "dark",
+  "colors": {
+    "editor.background": "#1a1a2e",
+    "editor.foreground": "#ffffff",
+    "editorLineNumber.foreground": "#666666",
+    "editorLineNumber.activeForeground": "#ffffff"
+  },
+  "semanticHighlighting": true,
+  "semanticTokenColors": {
+    "const": "#FF0000",
+    "operator": "#FF8C00",
+    "bracket": "#FFD700",
+    "lineContinuation": "#FFFF00",
+    "variable": "#ADFF2F",
+    "localVariable": "#00FF00",
+    "function": "#00FA9A",
+    "macro": "#00FFFF",
+    "macroParameter": "#7FFFD4",
+    "units": "#00BFFF",
+    "setting": "#1E90FF",
+    "keyword": "#6495ED",
+    "controlBlockKeyword": "#8A2BE2",
+    "endKeyword": "#9400D3",
+    "command": "#FF00FF",
+    "include": "#FF69B4",
+    "filePath": "#DC143C",
+    "dataExchangeKeyword": "#FF6347",
+    "comment": "#808080",
+    "htmlComment": "#A9A9A9",
+    "tag": "#DDA0DD",
+    "htmlContent": "#F5DEB3",
+    "javascript": "#F0E68C",
+    "css": "#E6E6FA",
+    "svg": "#98FB98",
+    "input": "#FF4500",
+    "format": "#40E0D0"
+  },
+  "tokenColors": []
+}
