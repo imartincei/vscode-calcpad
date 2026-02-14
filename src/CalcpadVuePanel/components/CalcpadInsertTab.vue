@@ -9,6 +9,12 @@
       />
     </div>
 
+    <div class="image-insert-container">
+      <button @click="insertImage" class="image-insert-btn" title="Insert an image from file">
+        Insert Image
+      </button>
+    </div>
+
     <div v-if="searchTerm && filteredItems.length === 0" class="no-items">
       No items found for "{{ searchTerm }}"
     </div>
@@ -62,6 +68,7 @@ const props = defineProps<Props>()
 // Emits
 const emit = defineEmits<{
   insertText: [text: string]
+  insertImage: []
 }>()
 
 // State
@@ -211,6 +218,10 @@ const buildTooltip = (item: InsertItem): string => {
 }
 
 // Methods
+const insertImage = () => {
+  emit('insertImage')
+}
+
 const insertItem = (item: InsertItem) => {
   emit('insertText', formatInsertText(item))
 }
@@ -367,6 +378,26 @@ watch(
 .search-input:focus {
   outline: none;
   border-color: var(--vscode-focusBorder);
+}
+
+.image-insert-container {
+  margin-bottom: 12px;
+}
+
+.image-insert-btn {
+  width: 100%;
+  padding: 6px 8px;
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: var(--vscode-font-family);
+}
+
+.image-insert-btn:hover {
+  background: var(--vscode-button-hoverBackground);
 }
 
 .no-items {

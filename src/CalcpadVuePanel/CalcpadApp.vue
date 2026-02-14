@@ -18,15 +18,20 @@
         v-if="activeTab === 'insert'"
         :insert-items="insertItems"
         @insert-text="handleInsertText"
+        @insert-image="handleInsertImage"
       />
       <CalcpadSettingsTab
         v-else-if="activeTab === 'settings'"
         :settings="settings"
         :initial-preview-theme="previewTheme"
         :initial-enable-quick-typing="enableQuickTyping"
+        :initial-comment-format="commentFormat"
+        :initial-enable-formatting-hotkeys="enableFormattingHotkeys"
         @update-settings="handleUpdateSettings"
         @update-preview-theme="handleUpdatePreviewTheme"
         @update-quick-typing="handleUpdateQuickTyping"
+        @update-comment-format="handleUpdateCommentFormat"
+        @update-formatting-hotkeys="handleUpdateFormattingHotkeys"
         @reset-settings="handleResetSettings"
       />
       <CalcpadVariablesTab
@@ -65,6 +70,8 @@ const insertItems = ref<InsertItem[]>([])
 const settings = ref<Settings>()
 const previewTheme = ref('system')
 const enableQuickTyping = ref(true)
+const commentFormat = ref('auto')
+const enableFormattingHotkeys = ref(true)
 const variablesData = ref<VariablesData>({
   macros: [],
   variables: [],
@@ -118,6 +125,10 @@ const handleInsertText = (text: string) => {
   })
 }
 
+const handleInsertImage = () => {
+  postMessage({ type: 'insertImage' })
+}
+
 const handleUpdateSettings = (newSettings: Settings) => {
   postMessage({
     type: 'updateSettings',
@@ -135,6 +146,20 @@ const handleUpdatePreviewTheme = (theme: string) => {
 const handleUpdateQuickTyping = (enabled: boolean) => {
   postMessage({
     type: 'updateQuickTyping',
+    enabled
+  })
+}
+
+const handleUpdateCommentFormat = (format: string) => {
+  postMessage({
+    type: 'updateCommentFormat',
+    format
+  })
+}
+
+const handleUpdateFormattingHotkeys = (enabled: boolean) => {
+  postMessage({
+    type: 'updateFormattingHotkeys',
     enabled
   })
 }
@@ -175,6 +200,8 @@ const handleMessage = (event: MessageEvent) => {
     case 'settingsResponse':
       settings.value = message.settings
       previewTheme.value = message.previewTheme || 'system'
+      commentFormat.value = message.commentFormat || 'auto'
+      enableFormattingHotkeys.value = message.enableFormattingHotkeys !== false
       break
     case 'settingsReset':
       settings.value = message.settings

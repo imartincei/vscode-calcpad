@@ -19,33 +19,33 @@
   },
   "semanticHighlighting": true,
   "semanticTokenColors": {
-    "const": "#b5cea8",
-    "operator": "#D7BA7D",
-    "bracket": "#DA70D6",
-    "lineContinuation": "#D7BA7D",
-    "variable": "#9CDCFE",
-    "localVariable": "#7FDBFF",
-    "function": { "foreground": "#DCDCDC", "bold": true },
-    "macro": "#D19AD1",
-    "macroParameter": "#E9B0E9",
-    "units": "#4EC9B0",
+    "const": "#D4D4D4",
+    "operator": "#ECC860",
+    "bracket": "#FF69B4",
+    "lineContinuation": "#ECC860",
+    "variable": "#6B9FFF",
+    "localVariable": "#8BB4FF",
+    "function": { "foreground": "#D4D4D4", "bold": true },
+    "macro": "#D355D3",
+    "macroParameter": "#E07BE0",
+    "units": "#00CED1",
     "setting": "#4FC1FF",
-    "keyword": "#C586C0",
-    "controlBlockKeyword": "#C586C0",
-    "endKeyword": "#C586C0",
-    "command": "#C586C0",
-    "include": "#CE9178",
-    "filePath": "#CE9178",
-    "dataExchangeKeyword": "#C586C0",
-    "comment": "#6A9955",
-    "htmlComment": "#808080",
-    "tag": "#DDA0DD",
-    "htmlContent": "#CE9178",
-    "javascript": "#DCDCAA",
-    "css": "#9CDCFE",
-    "svg": "#4EC9B0",
-    "input": "#F44747",
-    "format": "#808080"
+    "keyword": "#FF80FF",
+    "controlBlockKeyword": "#FF80FF",
+    "endKeyword": "#FF80FF",
+    "command": "#FF80FF",
+    "include": "#9B6BCC",
+    "filePath": "#9B6BCC",
+    "dataExchangeKeyword": "#FF80FF",
+    "comment": "#57A64A",
+    "htmlComment": "#A0A0A0",
+    "tag": "#CC66FF",
+    "htmlContent": "#57A64A",
+    "javascript": "#ECC860",
+    "css": "#6B9FFF",
+    "svg": "#00CED1",
+    "input": "#FF5555",
+    "format": "#A9A9A9"
   },
   "tokenColors": [
     {
@@ -55,7 +55,7 @@
         "comment.block.double-quote.calcpad"
       ],
       "settings": {
-        "foreground": "#6A9955",
+        "foreground": "#57A64A",
         "fontStyle": ""
       }
     },
@@ -63,7 +63,7 @@
       "name": "HTML Comments",
       "scope": "comment.block.html.calcpad",
       "settings": {
-        "foreground": "#808080",
+        "foreground": "#A0A0A0",
         "fontStyle": ""
       }
     },
@@ -74,7 +74,7 @@
         "keyword.other.calcpad"
       ],
       "settings": {
-        "foreground": "#C586C0",
+        "foreground": "#FF80FF",
         "fontStyle": ""
       }
     },
@@ -82,7 +82,7 @@
       "name": "Commands",
       "scope": "support.function.command.calcpad",
       "settings": {
-        "foreground": "#C586C0",
+        "foreground": "#FF80FF",
         "fontStyle": ""
       }
     },
@@ -90,7 +90,7 @@
       "name": "Functions",
       "scope": "support.function.builtin.calcpad",
       "settings": {
-        "foreground": "#DCDCDC",
+        "foreground": "#D4D4D4",
         "fontStyle": "bold"
       }
     },
@@ -101,7 +101,7 @@
         "constant.numeric.complex.calcpad"
       ],
       "settings": {
-        "foreground": "#b5cea8",
+        "foreground": "#D4D4D4",
         "fontStyle": ""
       }
     },
@@ -109,7 +109,7 @@
       "name": "Variables",
       "scope": "variable.other.calcpad",
       "settings": {
-        "foreground": "#9CDCFE",
+        "foreground": "#6B9FFF",
         "fontStyle": ""
       }
     },
@@ -117,7 +117,7 @@
       "name": "Units",
       "scope": "support.type.units.calcpad",
       "settings": {
-        "foreground": "#4EC9B0",
+        "foreground": "#00CED1",
         "fontStyle": ""
       }
     },
@@ -130,7 +130,7 @@
         "keyword.operator.assignment.calcpad"
       ],
       "settings": {
-        "foreground": "#D7BA7D",
+        "foreground": "#ECC860",
         "fontStyle": ""
       }
     },
@@ -138,7 +138,7 @@
       "name": "Separators",
       "scope": "punctuation.separator.calcpad",
       "settings": {
-        "foreground": "#D7BA7D",
+        "foreground": "#ECC860",
         "fontStyle": ""
       }
     },
@@ -146,7 +146,7 @@
       "name": "Brackets",
       "scope": "punctuation.section.brackets.calcpad",
       "settings": {
-        "foreground": "#DA70D6",
+        "foreground": "#FF69B4",
         "fontStyle": ""
       }
     },
@@ -159,7 +159,7 @@
         "punctuation.definition.tag.end.html.calcpad"
       ],
       "settings": {
-        "foreground": "#DDA0DD",
+        "foreground": "#CC66FF",
         "fontStyle": ""
       }
     },
@@ -167,7 +167,7 @@
       "name": "HTML Attributes",
       "scope": "entity.other.attribute-name.html.calcpad",
       "settings": {
-        "foreground": "#DDA0DD",
+        "foreground": "#CC66FF",
         "fontStyle": ""
       }
     },
@@ -180,7 +180,7 @@
         "string.quoted.single.html.calcpad"
       ],
       "settings": {
-        "foreground": "#CE9178",
+        "foreground": "#57A64A",
         "fontStyle": ""
       }
     },
@@ -190,7 +190,7 @@
         "constant.character.escape.calcpad"
       ],
       "settings": {
-        "foreground": "#D7BA7D",
+        "foreground": "#ECC860",
         "fontStyle": "bold"
       }
     },
@@ -198,7 +198,7 @@
       "name": "Macros",
       "scope": "variable.parameter.macro.calcpad",
       "settings": {
-        "foreground": "#D19AD1",
+        "foreground": "#D355D3",
         "fontStyle": ""
       }
     },
@@ -209,7 +209,7 @@
         "punctuation.definition.input.calcpad"
       ],
       "settings": {
-        "foreground": "#F44747",
+        "foreground": "#FF5555",
         "fontStyle": ""
       }
     },
@@ -217,7 +217,7 @@
       "name": "Include",
       "scope": "keyword.control.include.calcpad",
       "settings": {
-        "foreground": "#9A4EAE",
+        "foreground": "#9B6BCC",
         "fontStyle": ""
       }
     },
@@ -225,7 +225,7 @@
       "name": "Format",
       "scope": "meta.format.calcpad",
       "settings": {
-        "foreground": "#808080",
+        "foreground": "#A9A9A9",
         "fontStyle": ""
       }
     },
@@ -233,7 +233,7 @@
       "name": "Error",
       "scope": "invalid.illegal.calcpad",
       "settings": {
-        "foreground": "#F44747",
+        "foreground": "#FF4455",
         "fontStyle": ""
       }
     }

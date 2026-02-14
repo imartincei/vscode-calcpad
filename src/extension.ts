@@ -11,8 +11,10 @@ import { CalcpadCompletionProvider } from './calcpadCompletionProvider';
 import { CalcpadInsertManager } from './calcpadInsertManager';
 import { CalcpadDefinitionsService } from './calcpadDefinitionsService';
 import { AutoIndenter } from './autoIndenter';
+import { ImageInserter } from './imageInserter';
 import { buildClientFileCacheFromContent } from './clientFileCacheHelper';
 import { CalcpadDefinitionProvider } from './calcpadDefinitionProvider';
+import { CommentFormatter } from './commentFormatter';
 
 let activePreviewPanel: vscode.WebviewPanel | unknown = undefined;
 let activePreviewType: 'regular' | 'unwrapped' | undefined = undefined;
@@ -122,6 +124,135 @@ function getEffectivePreviewTheme(): 'light' | 'dark' {
     }
 }
 
+const IMAGE_MIME_MAP: Record<string, string> = {
+    'png': 'image/png',
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'gif': 'image/gif',
+    'webp': 'image/webp',
+    'svg': 'image/svg+xml'
+};
+
+/**
+ * Scan HTML for <img src="..."> tags with local file paths, read the files from disk,
+ * and return a cache mapping original src values to base64 data URIs.
+ */
+async function buildImageCache(html: string, documentDir: string): Promise<Record<string, string>> {
+    const cache: Record<string, string> = {};
+    const imgSrcRegex = /<img\s[^>]*?src\s*=\s*["']([^"']+)["'][^>]*>/gi;
+    let match;
+
+    while ((match = imgSrcRegex.exec(html)) !== null) {
+        const src = match[1];
+
+        // Skip data URIs and remote URLs
+        if (src.startsWith('data:') || src.startsWith('http://') || src.startsWith('https://')) {
+            continue;
+        }
+
+        // Skip if already cached (same src used multiple times)
+        if (cache[src]) {
+            continue;
+        }
+
+        try {
+            const absolutePath = path.resolve(documentDir, src);
+            const ext = path.extname(absolutePath).toLowerCase().replace('.', '');
+            const mimeType = IMAGE_MIME_MAP[ext];
+
+            if (!mimeType) {
+                outputChannel.appendLine(`[IMAGE CACHE] Skipping unsupported image type: ${src}`);
+                continue;
+            }
+
+            const fileUri = vscode.Uri.file(absolutePath);
+            const imageData = await vscode.workspace.fs.readFile(fileUri);
+            const b64 = Buffer.from(imageData).toString('base64');
+            cache[src] = `data:${mimeType};base64,${b64}`;
+
+            outputChannel.appendLine(`[IMAGE CACHE] Cached: ${src} (${imageData.length} bytes)`);
+        } catch (error) {
+            outputChannel.appendLine(`[IMAGE CACHE] Could not read image: ${src} (${error instanceof Error ? error.message : 'Unknown error'})`);
+        }
+    }
+
+    return cache;
+}
+
+/**
+ * Generate a <script> block that replaces local image src attributes
+ * with cached base64 data URIs on DOMContentLoaded.
+ */
+function getImageCacheScript(imageCache: Record<string, string>): string {
+    if (Object.keys(imageCache).length === 0) {
+        return '';
+    }
+
+    const cacheJson = JSON.stringify(imageCache);
+    return `
+        <script>
+            (function() {
+                const imageCache = ${cacheJson};
+                document.addEventListener('DOMContentLoaded', function() {
+                    const images = document.querySelectorAll('img');
+                    images.forEach(function(img) {
+                        const src = img.getAttribute('src');
+                        if (src && imageCache[src]) {
+                            img.src = imageCache[src];
+                        }
+                    });
+                });
+            })();
+        </script>
+    `;
+}
+
+/**
+ * Generate a <script> that strips VS Code's auto-injected theme from the webview.
+ * VS Code injects 400+ --vscode-* CSS variables on <html> and sets body classes
+ * (vscode-dark/vscode-light) which override the server-generated theme CSS.
+ * There is no API to disable this: https://github.com/microsoft/vscode/issues/209253
+ * VS Code only re-injects on VS Code theme change, not continuously,
+ * so stripping at DOMContentLoaded is stable.
+ */
+function getThemeOverrideScript(previewTheme: 'light' | 'dark'): string {
+    const bodyClass = previewTheme === 'light' ? 'vscode-light' : 'vscode-dark';
+    const themeKind = previewTheme === 'light' ? 'vscode-light' : 'vscode-dark';
+    const bg = previewTheme === 'light' ? '#ffffff' : '#1a1a2e';
+    return `
+        <script>
+            (function() {
+                // Remove VS Code's injected inline styles (--vscode-* variables) from <html>
+                document.documentElement.removeAttribute('style');
+                // Set explicit background to prevent the webview container's grey from showing through
+                document.documentElement.style.backgroundColor = '${bg}';
+
+                // Set body classes to match the selected preview theme
+                document.body.classList.remove('vscode-light', 'vscode-dark', 'vscode-high-contrast');
+                document.body.classList.add('${bodyClass}');
+                document.body.setAttribute('data-vscode-theme-kind', '${themeKind}');
+                document.body.style.backgroundColor = '${bg}';
+            })();
+        </script>
+    `;
+}
+
+// Escape stray '<' that aren't part of complete HTML tags to prevent
+// malformed user content (e.g. '<h' from Calcpad notes) from breaking the DOM.
+// A complete tag is <...> where the content between < and > contains no nested <.
+function sanitizeServerHtml(html: string): string {
+    const bodyOpen = html.indexOf('<body');
+    const bodyClose = html.lastIndexOf('</body>');
+    if (bodyOpen === -1 || bodyClose === -1) return html;
+
+    const bodyStart = html.indexOf('>', bodyOpen) + 1;
+    const body = html.substring(bodyStart, bodyClose);
+    const sanitized = body.replace(/(<!--[\s\S]*?-->)|(<\/?[a-zA-Z][^<>]*>)|(<)/g,
+        (_match, comment, tag) => comment ?? tag ?? '&lt;');
+
+    return html.substring(0, bodyStart) + sanitized + html.substring(bodyClose);
+}
+
 function getErrorNavigationScript(): string {
     return `
         <script>
@@ -229,12 +360,37 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string,
             <head>
                 <meta charset="UTF-8">
                 <title>CalcPad Preview${unwrapped ? ' Unwrapped' : ''}</title>
+                <style>
+                    body { color: #858585; background: var(--vscode-editor-background); padding: 20px; font-family: var(--vscode-font-family); }
+                    h3 { text-align: center; }
+                    p { text-align: center; }
+                    table { margin: 1em auto; border-collapse: collapse; text-align: left; font-size: 0.9em; }
+                    th, td { padding: 4px 12px; }
+                    th { text-align: right; font-weight: normal; opacity: 0.7; }
+                    td { font-family: var(--vscode-editor-font-family, monospace); }
+                    h4 { text-align: center; margin-top: 1.5em; margin-bottom: 0.3em; }
+                </style>
             </head>
             <body>
-                <div style="color: #858585; background: var(--vscode-editor-background); padding: 20px; text-align: center; font-family: var(--vscode-font-family);">
-                    <h3>Empty Document</h3>
-                    <p>Start typing CalcPad code to see the preview.</p>
-                </div>
+                <h3>Empty Document</h3>
+                <p>Start typing CalcPad code to see the preview.</p>
+                <h4>Formatting Hotkeys</h4>
+                <table>
+                    <tr><th>Bold</th><td>Ctrl+B</td></tr>
+                    <tr><th>Italic</th><td>Ctrl+I</td></tr>
+                    <tr><th>Underline</th><td>Ctrl+U</td></tr>
+                    <tr><th>Subscript</th><td>Ctrl+=</td></tr>
+                    <tr><th>Superscript</th><td>Ctrl+Shift+=</td></tr>
+                    <tr><th>Heading 1-6</th><td>Ctrl+1 ... Ctrl+6</td></tr>
+                    <tr><th>Paragraph</th><td>Ctrl+L</td></tr>
+                    <tr><th>Line Break</th><td>Ctrl+R</td></tr>
+                    <tr><th>Bulleted List</th><td>Ctrl+Shift+L</td></tr>
+                    <tr><th>Numbered List</th><td>Ctrl+Shift+N</td></tr>
+                    <tr><th>Toggle Comment</th><td>Ctrl+Q</td></tr>
+                </table>
+                <h4>Resources</h4>
+                <p><a href="https://github.com/Proektsoftbg/Calcpad">Calcpad on GitHub</a></p>
+                <p><a href="https://calcpad.eu/download/calcpad-readme.pdf">Calcpad README (PDF)</a></p>
             </body>
             </html>
         `;
@@ -288,11 +444,25 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string,
 
         outputChannel.appendLine(`HTML Length: ${apiResponse.length} characters`);
 
+        // Build image cache: read local image files and convert to base64 data URIs
+        let imageCacheScript = '';
+        if (activeEditor && !activeEditor.document.isUntitled) {
+            const documentDir = path.dirname(activeEditor.document.uri.fsPath);
+            const imageCache = await buildImageCache(apiResponse, documentDir);
+            imageCacheScript = getImageCacheScript(imageCache);
+        }
+
         // Inject JavaScript for error link navigation and console interception
         const errorNavigationScript = getErrorNavigationScript();
 
-        // Inject the script before closing body tag
-        const htmlWithScript = apiResponse.replace('</body>', errorNavigationScript + '</body>');
+        // Override VS Code's injected theme to match the selected preview theme
+        const themeOverrideScript = getThemeOverrideScript(theme);
+
+        // Sanitize server HTML to escape stray '<' that aren't part of valid tags
+        const sanitizedResponse = sanitizeServerHtml(apiResponse);
+
+        // Inject scripts before closing body tag (theme override runs last to strip VS Code styles)
+        const htmlWithScript = sanitizedResponse.replace('</body>', imageCacheScript + errorNavigationScript + themeOverrideScript + '</body>');
 
         // Log processed HTML to webview channel (without stealing focus)
         calcpadWebviewHtmlChannel.clear();
@@ -528,7 +698,8 @@ async function createHtmlPreview(context: vscode.ExtensionContext) {
         'CalcPad Preview',
         vscode.ViewColumn.Beside,
         {
-            enableScripts: true
+            enableScripts: true,
+            enableFindWidget: true
         }
     );
 
@@ -589,7 +760,8 @@ async function createHtmlPreviewUnwrapped(context: vscode.ExtensionContext) {
         'CalcPad Preview Unwrapped',
         vscode.ViewColumn.Beside,
         {
-            enableScripts: true
+            enableScripts: true,
+            enableFindWidget: true
         }
     );
 
@@ -711,6 +883,17 @@ export function activate(context: vscode.ExtensionContext) {
         outputChannel.appendLine('Initializing auto-indenter...');
         const autoIndenter = new AutoIndenter(outputChannel);
         const autoIndenterDisposable = autoIndenter.registerDocumentChangeListener(context);
+
+        // Initialize image inserter
+        outputChannel.appendLine('Initializing image inserter...');
+        const imageInserter = new ImageInserter(outputChannel);
+        const imagePasteDisposable = imageInserter.registerPasteProvider();
+        const imageInsertCommandDisposable = imageInserter.registerInsertCommand();
+
+        // Initialize comment formatter
+        outputChannel.appendLine('Initializing comment formatter...');
+        const commentFormatter = new CommentFormatter(outputChannel);
+        const commentFormatterDisposables = commentFormatter.registerCommands();
 
         // Initialize autocomplete provider
         outputChannel.appendLine('Initializing autocomplete provider...');
@@ -942,6 +1125,9 @@ export function activate(context: vscode.ExtensionContext) {
             operatorReplacerDisposable,
             quickTyperDisposable,
             autoIndenterDisposable,
+            imagePasteDisposable,
+            imageInsertCommandDisposable,
+            ...commentFormatterDisposables,
             completionProviderDisposable,
             definitionProviderDisposable,
             insertManager

@@ -204,6 +204,30 @@
         </label>
       </div>
 
+      <div class="setting-group">
+        <label for="commentFormat">Comment Format:</label>
+        <select
+          id="commentFormat"
+          v-model="commentFormat"
+          @change="updateCommentFormat"
+        >
+          <option value="auto">Auto (detect #md on/off)</option>
+          <option value="html">HTML</option>
+          <option value="markdown">Markdown</option>
+        </select>
+      </div>
+
+      <div class="setting-group">
+        <label>
+          <input
+            v-model="enableFormattingHotkeys"
+            type="checkbox"
+            @change="updateFormattingHotkeys"
+          />
+          Enable Formatting Hotkeys (Ctrl+B, Ctrl+I, etc.)
+        </label>
+      </div>
+
       <button @click="resetSettings" class="reset-button">
         Reset Settings
       </button>
@@ -220,6 +244,8 @@ interface Props {
   settings?: Settings
   initialPreviewTheme?: string
   initialEnableQuickTyping?: boolean
+  initialCommentFormat?: string
+  initialEnableFormattingHotkeys?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -251,7 +277,9 @@ const props = withDefaults(defineProps<Props>(), {
     units: 'm'
   }),
   initialPreviewTheme: 'system',
-  initialEnableQuickTyping: true
+  initialEnableQuickTyping: true,
+  initialCommentFormat: 'auto',
+  initialEnableFormattingHotkeys: true
 })
 
 // Emits
@@ -259,6 +287,8 @@ const emit = defineEmits<{
   updateSettings: [settings: Settings]
   updatePreviewTheme: [theme: string]
   updateQuickTyping: [enabled: boolean]
+  updateCommentFormat: [format: string]
+  updateFormattingHotkeys: [enabled: boolean]
   resetSettings: []
 }>()
 
@@ -266,6 +296,8 @@ const emit = defineEmits<{
 const localSettings = ref<Settings>({ ...props.settings })
 const previewTheme = ref(props.initialPreviewTheme)
 const enableQuickTyping = ref(props.initialEnableQuickTyping)
+const commentFormat = ref(props.initialCommentFormat)
+const enableFormattingHotkeys = ref(props.initialEnableFormattingHotkeys)
 
 // Methods
 const updateSettings = () => {
@@ -278,6 +310,14 @@ const updatePreviewTheme = () => {
 
 const updateQuickTyping = () => {
   emit('updateQuickTyping', enableQuickTyping.value)
+}
+
+const updateCommentFormat = () => {
+  emit('updateCommentFormat', commentFormat.value)
+}
+
+const updateFormattingHotkeys = () => {
+  emit('updateFormattingHotkeys', enableFormattingHotkeys.value)
 }
 
 const resetSettings = () => {
@@ -306,6 +346,20 @@ watch(
   () => props.initialEnableQuickTyping,
   (newValue) => {
     enableQuickTyping.value = newValue
+  }
+)
+
+watch(
+  () => props.initialCommentFormat,
+  (newValue) => {
+    commentFormat.value = newValue
+  }
+)
+
+watch(
+  () => props.initialEnableFormattingHotkeys,
+  (newValue) => {
+    enableFormattingHotkeys.value = newValue
   }
 )
 </script>

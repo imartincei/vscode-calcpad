@@ -4,25 +4,21 @@
 
 ### Enhancements
 - Finish enhanced PDF generation
-- Add search in output HTML
 - Implement user defined variable, units, function, and macro definitions using html comment before the #def line (e.g. cmt$({"description": "This macro does this.\nparam1 is the thing..."})). Add tooltip for these that uses the description.
 - Test linter for advanced issues
     - Macros get flagged with undefined variable when a parameter is set in a macro
     - Macros with strings get interpreted as a unit
     - ignore some checks in include and read parameters (and add proper checks)
 - Add quick typing for macros (~1 macro 1, ~2 macro 2, etc.). Add macro mapping to vscode config using json object {macroMapping:{"1": "macroName$", ...}}. Have VS code set cursor position to within () and before first param.
-- Add hotkeys for HTML/markdown formatting. Add toggle for HTML vs markdown in the settings.
 - Package extension for further testing within the company. Publish to Open VSX but not Visual Studio Marketplace unless I need a personal Azure account for other reasons
-- Refactor tokens to use all colors for different ones.
 - Remove warning for unicode symbols in variable names (e.g. ℓ and ρ)
 - Fix line links to use source line mapping
 - Add refactoring
-- Fix preview theme to use light mode
 - Add format command that does the same thing as eat space. However, the automatic behavior is not preferred.
 - Add refresh button for server
-- Add image pasting from clipboard and button to insert image from path.
 - Add PDF conversion to vs code and use the server code as a fallback.
 - Update the extension to have Calcpad.Server.Windows/Linux to be included in the VS code extension for local installs. This will replace Calcpad.Server for windows, as vs-code can run the .csproj directly (it will require dotnet SDK is installed similar to regular Calcpad). A server connection will still be optional as a fallback and for using over the web.
+- Look into using Electron and Monaco with vs code api package for bundled installs with local system access.
 
 ### Bugs
 - Fix include reading around #{0}... syntax - test fix
@@ -56,6 +52,8 @@
 
 
 ## Calcpad.Highlighter
+- I need to go through the entire flow and remove redundancy. Have different modes for the tokenizer that optimizes it. Stage modes and syntax highlighting vs content resolution modes.
+    - Investigate the new #const and ← features
 - Double check builtin function return types are correct. Have Claude run the comprehensive check to see what is returned.
 - Have the linter check when a macro parameter is used as a string and do type checking in this case.
 - Add parsing of metadata lines for macro descriptions and parameter descriptions/type hinting. Metadata lines contain inline or multiline JSON that external programs can pull from cpd files but are ignored by the parser. Metadata lines occur when there is JSON in an HTML comment
@@ -67,11 +65,7 @@
 
 ### Bugs
 
-- Fix tokenizer to detect variables and units in expressions with macros:
 - Fix tokenizer to tokenize inline macro content
-Wt_DAF = 2*37.5kipnote$('Weight of both DAF units')
-P_D = -Wt_DAFnote$('Dead Load')
-- Fix multiple assignments check to only apply when there is not strings between variable definitions. It should be run at the expression level. h=5', 'g=6 is valid.
 - Fix tokenization of macro comment parameters
 - Fix tokenization of macro expression parameters that are comments
 - Fix tokenization of comments and strings across line continuations

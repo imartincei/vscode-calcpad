@@ -58,15 +58,23 @@ export class CalcpadVueUIProvider implements vscode.WebviewViewProvider {
                     }
                     break;
 
+                case 'insertImage':
+                    vscode.commands.executeCommand('vscode-calcpad.insertImage');
+                    break;
+
                 case 'getSettings':
                     const settings = this._settingsManager.getSettings();
                     const config = vscode.workspace.getConfiguration('calcpad');
                     const previewTheme = config.get<string>('previewTheme', 'system');
+                    const commentFormat = config.get<string>('commentFormat', 'auto');
+                    const enableFormattingHotkeys = config.get<boolean>('enableFormattingHotkeys', true);
 
                     webviewView.webview.postMessage({
                         type: 'settingsResponse',
                         settings: settings,
-                        previewTheme: previewTheme
+                        previewTheme: previewTheme,
+                        commentFormat: commentFormat,
+                        enableFormattingHotkeys: enableFormattingHotkeys
                     });
                     break;
 
@@ -86,6 +94,16 @@ export class CalcpadVueUIProvider implements vscode.WebviewViewProvider {
                 case 'updatePreviewTheme':
                     const previewConfig = vscode.workspace.getConfiguration('calcpad');
                     await previewConfig.update('previewTheme', data.theme, vscode.ConfigurationTarget.Global);
+                    break;
+
+                case 'updateCommentFormat':
+                    const commentFormatConfig = vscode.workspace.getConfiguration('calcpad');
+                    await commentFormatConfig.update('commentFormat', data.format, vscode.ConfigurationTarget.Global);
+                    break;
+
+                case 'updateFormattingHotkeys':
+                    const formattingHotkeysConfig = vscode.workspace.getConfiguration('calcpad');
+                    await formattingHotkeysConfig.update('enableFormattingHotkeys', data.enabled, vscode.ConfigurationTarget.Global);
                     break;
 
                 case 'updatePdfSettings':

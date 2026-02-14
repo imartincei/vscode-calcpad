@@ -15,7 +15,8 @@ export class OperatorReplacer {
         '<=': '≤',
         '%%': '⦼',
         '&&': '∧',
-        '||': '∨'
+        '||': '∨',
+        '<*': '←'
     };
 
     constructor(outputChannel: vscode.OutputChannel) {
@@ -63,7 +64,7 @@ export class OperatorReplacer {
      * Check if the character can trigger an operator replacement
      */
     private isOperatorTriggerChar(char: string): boolean {
-        return ['=', '%', '&', '|'].includes(char);
+        return ['=', '%', '&', '|', '*'].includes(char);
     }
 
     /**

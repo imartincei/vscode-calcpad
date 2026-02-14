@@ -34,8 +34,8 @@
     "controlBlockKeyword": "#FF00FF",
     "endKeyword": "#FF00FF",
     "command": "#FF00FF",
-    "include": "#228B22",
-    "filePath": "#228B22",
+    "include": "#4B0082",
+    "filePath": "#4B0082",
     "dataExchangeKeyword": "#FF00FF",
     "comment": "#228B22",
     "htmlComment": "#A0A0A0",
@@ -44,7 +44,7 @@
     "javascript": "#B8860B",
     "css": "#0000CD",
     "svg": "#006400",
-    "input": "#DC143C",
+    "input": "#FF0000",
     "format": "#A9A9A9"
   },
   "tokenColors": [
@@ -209,7 +209,7 @@
         "punctuation.definition.input.calcpad"
       ],
       "settings": {
-        "foreground": "#DC143C",
+        "foreground": "#FF0000",
         "fontStyle": ""
       }
     },
