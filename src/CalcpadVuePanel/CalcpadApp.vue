@@ -27,11 +27,13 @@
         :initial-enable-quick-typing="enableQuickTyping"
         :initial-comment-format="commentFormat"
         :initial-enable-formatting-hotkeys="enableFormattingHotkeys"
+        :initial-linter-min-severity="linterMinSeverity"
         @update-settings="handleUpdateSettings"
         @update-preview-theme="handleUpdatePreviewTheme"
         @update-quick-typing="handleUpdateQuickTyping"
         @update-comment-format="handleUpdateCommentFormat"
         @update-formatting-hotkeys="handleUpdateFormattingHotkeys"
+        @update-linter-min-severity="handleUpdateLinterMinSeverity"
         @reset-settings="handleResetSettings"
       />
       <CalcpadVariablesTab
@@ -72,10 +74,12 @@ const previewTheme = ref('system')
 const enableQuickTyping = ref(true)
 const commentFormat = ref('auto')
 const enableFormattingHotkeys = ref(true)
+const linterMinSeverity = ref('information')
 const variablesData = ref<VariablesData>({
   macros: [],
   variables: [],
-  functions: []
+  functions: [],
+  customUnits: []
 })
 const variablesLoading = ref(false)
 const pdfSettings = ref<PdfSettings>({
@@ -164,6 +168,13 @@ const handleUpdateFormattingHotkeys = (enabled: boolean) => {
   })
 }
 
+const handleUpdateLinterMinSeverity = (severity: string) => {
+  postMessage({
+    type: 'updateLinterMinSeverity',
+    severity
+  })
+}
+
 const handleResetSettings = () => {
   postMessage({
     type: 'resetSettings'
@@ -202,6 +213,7 @@ const handleMessage = (event: MessageEvent) => {
       previewTheme.value = message.previewTheme || 'system'
       commentFormat.value = message.commentFormat || 'auto'
       enableFormattingHotkeys.value = message.enableFormattingHotkeys !== false
+      linterMinSeverity.value = message.linterMinSeverity || 'information'
       break
     case 'settingsReset':
       settings.value = message.settings

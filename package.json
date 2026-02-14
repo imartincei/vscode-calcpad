@@ -523,6 +523,21 @@
           ],
           "description": "Theme to use for CalcPad preview"
         },
+        "calcpad.linter.minimumSeverity": {
+          "type": "string",
+          "default": "information",
+          "enum": [
+            "error",
+            "warning",
+            "information"
+          ],
+          "enumDescriptions": [
+            "Show only errors",
+            "Show errors and warnings",
+            "Show errors, warnings, and information (all diagnostics)"
+          ],
+          "description": "Minimum severity level for linter diagnostics. Diagnostics below this level will be hidden."
+        },
         "calcpad.settings": {
           "type": "object",
           "description": "CalcPad calculation and rendering settings",

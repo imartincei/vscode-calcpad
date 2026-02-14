@@ -228,6 +228,20 @@
         </label>
       </div>
 
+      <h3>Linter</h3>
+      <div class="setting-group">
+        <label for="linterMinSeverity">Minimum Severity:</label>
+        <select
+          id="linterMinSeverity"
+          v-model="linterMinSeverity"
+          @change="updateLinterMinSeverity"
+        >
+          <option value="error">Error</option>
+          <option value="warning">Warning</option>
+          <option value="information">Information (all)</option>
+        </select>
+      </div>
+
       <button @click="resetSettings" class="reset-button">
         Reset Settings
       </button>
@@ -246,6 +260,7 @@ interface Props {
   initialEnableQuickTyping?: boolean
   initialCommentFormat?: string
   initialEnableFormattingHotkeys?: boolean
+  initialLinterMinSeverity?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -279,7 +294,8 @@ const props = withDefaults(defineProps<Props>(), {
   initialPreviewTheme: 'system',
   initialEnableQuickTyping: true,
   initialCommentFormat: 'auto',
-  initialEnableFormattingHotkeys: true
+  initialEnableFormattingHotkeys: true,
+  initialLinterMinSeverity: 'information'
 })
 
 // Emits
@@ -289,6 +305,7 @@ const emit = defineEmits<{
   updateQuickTyping: [enabled: boolean]
   updateCommentFormat: [format: string]
   updateFormattingHotkeys: [enabled: boolean]
+  updateLinterMinSeverity: [severity: string]
   resetSettings: []
 }>()
 
@@ -298,6 +315,7 @@ const previewTheme = ref(props.initialPreviewTheme)
 const enableQuickTyping = ref(props.initialEnableQuickTyping)
 const commentFormat = ref(props.initialCommentFormat)
 const enableFormattingHotkeys = ref(props.initialEnableFormattingHotkeys)
+const linterMinSeverity = ref(props.initialLinterMinSeverity)
 
 // Methods
 const updateSettings = () => {
@@ -318,6 +336,10 @@ const updateCommentFormat = () => {
 
 const updateFormattingHotkeys = () => {
   emit('updateFormattingHotkeys', enableFormattingHotkeys.value)
+}
+
+const updateLinterMinSeverity = () => {
+  emit('updateLinterMinSeverity', linterMinSeverity.value)
 }
 
 const resetSettings = () => {
@@ -360,6 +382,13 @@ watch(
   () => props.initialEnableFormattingHotkeys,
   (newValue) => {
     enableFormattingHotkeys.value = newValue
+  }
+)
+
+watch(
+  () => props.initialLinterMinSeverity,
+  (newValue) => {
+    linterMinSeverity.value = newValue
   }
 )
 </script>

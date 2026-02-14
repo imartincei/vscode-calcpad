@@ -184,13 +184,18 @@ function extractReferencedFilenamesFromGlobalScope(content: string): string[] {
 }
 
 /**
- * Build a client file cache for the referenced files that exist in the workspace.
+ * Build a client file cache for the referenced files.
  * Returns a simple dictionary of filename -> base64 content.
  * Content within #local...#global blocks is stripped before encoding.
  * Recursively includes files referenced by included .cpd files (from their global scope only).
+ *
+ * Resolution order for relative filenames:
+ * 1. Relative to the source file's directory (the file containing the #include)
+ * 2. Absolute paths (with environment variable expansion)
  */
 export async function buildClientFileCache(
     referencedFilenames: string[],
+    sourceFileUri: vscode.Uri,
     debugChannel?: vscode.OutputChannel,
     logPrefix: string = '[FileCache]'
 ): Promise<ClientFileCache | undefined> {
@@ -198,16 +203,21 @@ export async function buildClientFileCache(
         return undefined;
     }
 
+    const sourceDir = path.dirname(sourceFileUri.fsPath);
+
     if (debugChannel) {
         debugChannel.appendLine(logPrefix + ' Looking for referenced files: ' + referencedFilenames.join(', '));
+        debugChannel.appendLine(logPrefix + ' Source file directory: ' + sourceDir);
     }
 
     const cache: ClientFileCache = {};
     const processedFiles = new Set<string>();
-    const pendingFiles = [...referencedFilenames];
+    // Each pending entry tracks the filename and the directory of the file that referenced it
+    const pendingFiles: { filename: string; resolveDir: string }[] =
+        referencedFilenames.map(f => ({ filename: f, resolveDir: sourceDir }));
 
     while (pendingFiles.length > 0) {
-        const filename = pendingFiles.shift()!;
+        const { filename, resolveDir } = pendingFiles.shift()!;
 
         // Skip if already processed (prevents infinite loops from circular includes)
         if (processedFiles.has(filename)) {
@@ -222,9 +232,8 @@ export async function buildClientFileCache(
             // Expand environment variables in the filename
             const expandedFilename = expandEnvironmentVariables(filename);
 
-            // Check if the path is absolute (after expansion)
             if (isAbsolutePath(filename)) {
-                // Try to read directly from the absolute path
+                // Absolute path: read directly
                 try {
                     fileUri = vscode.Uri.file(expandedFilename);
                     const fileContent = await vscode.workspace.fs.readFile(fileUri);
@@ -234,21 +243,27 @@ export async function buildClientFileCache(
                         debugChannel.appendLine(logPrefix + ' Found absolute path: ' + expandedFilename);
                     }
                 } catch {
-                    // File doesn't exist at absolute path
                     fileUri = undefined;
                     if (debugChannel) {
                         debugChannel.appendLine(logPrefix + ' Absolute path not accessible: ' + expandedFilename);
                     }
                 }
             } else {
-                // Search for the file in the workspace (relative filename)
-                const pattern = '**/' + filename;
-                const foundFiles = await vscode.workspace.findFiles(pattern, '**/node_modules/**', 1);
-
-                if (foundFiles.length > 0) {
-                    fileUri = foundFiles[0];
+                // Relative path: resolve relative to the including file's directory
+                const resolvedPath = path.resolve(resolveDir, expandedFilename);
+                try {
+                    fileUri = vscode.Uri.file(resolvedPath);
                     const fileContent = await vscode.workspace.fs.readFile(fileUri);
                     contentString = Buffer.from(fileContent).toString('utf-8');
+
+                    if (debugChannel) {
+                        debugChannel.appendLine(logPrefix + ' Found relative to source: ' + resolvedPath);
+                    }
+                } catch {
+                    fileUri = undefined;
+                    if (debugChannel) {
+                        debugChannel.appendLine(logPrefix + ' Not found relative to source: ' + resolvedPath);
+                    }
                 }
             }
 
@@ -265,13 +280,15 @@ export async function buildClientFileCache(
                 }
 
                 // For .cpd files, recursively find referenced files from global scope
+                // Nested files resolve relative to their own directory
                 if (filename.endsWith('.cpd')) {
+                    const nestedDir = path.dirname(fileUri.fsPath);
                     const nestedReferences = extractReferencedFilenamesFromGlobalScope(contentString);
                     for (const nestedFile of nestedReferences) {
-                        if (!processedFiles.has(nestedFile) && !pendingFiles.includes(nestedFile)) {
-                            pendingFiles.push(nestedFile);
+                        if (!processedFiles.has(nestedFile)) {
+                            pendingFiles.push({ filename: nestedFile, resolveDir: nestedDir });
                             if (debugChannel) {
-                                debugChannel.appendLine(logPrefix + ' Found nested reference in ' + filename + ': ' + nestedFile);
+                                debugChannel.appendLine(logPrefix + ' Found nested reference in ' + filename + ': ' + nestedFile + ' (resolve from ' + nestedDir + ')');
                             }
                         }
                     }
@@ -298,12 +315,14 @@ export async function buildClientFileCache(
 /**
  * Build a client file cache from content by extracting referenced filenames and loading them.
  * Convenience function that combines extractReferencedFilenames and buildClientFileCache.
+ * @param sourceFileUri URI of the .cpd file containing the content (used to resolve relative paths)
  */
 export async function buildClientFileCacheFromContent(
     content: string,
+    sourceFileUri: vscode.Uri,
     debugChannel?: vscode.OutputChannel,
     logPrefix: string = '[FileCache]'
 ): Promise<ClientFileCache | undefined> {
     const referencedFilenames = extractReferencedFilenames(content);
-    return buildClientFileCache(referencedFilenames, debugChannel, logPrefix);
+    return buildClientFileCache(referencedFilenames, sourceFileUri, debugChannel, logPrefix);
 }

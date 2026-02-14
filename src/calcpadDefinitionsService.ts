@@ -52,7 +52,7 @@ export class CalcpadDefinitionsService {
 
         try {
             // Build client file cache for referenced files
-            const clientFileCache = await buildClientFileCacheFromContent(content, this.debugChannel, '[Definitions #' + reqId + ']');
+            const clientFileCache = await buildClientFileCacheFromContent(content, document.uri, this.debugChannel, '[Definitions #' + reqId + ']');
 
             const definitions = await this.fetchDefinitions(content, reqId, clientFileCache);
 

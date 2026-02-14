@@ -339,7 +339,7 @@ function getErrorNavigationScript(): string {
     `;
 }
 
-async function updatePreviewContent(panel: vscode.WebviewPanel, content: string, unwrapped: boolean = false) {
+async function updatePreviewContent(panel: vscode.WebviewPanel, content: string, sourceFileUri: vscode.Uri, unwrapped: boolean = false) {
     const mode = unwrapped ? 'unwrapped' : 'wrapped';
     outputChannel.appendLine(`Starting updatePreviewContent (${mode})...`);
     outputChannel.appendLine(`Content length: ${content.length} characters`);
@@ -413,7 +413,7 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string,
         outputChannel.appendLine(`Settings retrieved: ${JSON.stringify(settings)}`);
 
         // Build client file cache for referenced files
-        const clientFileCache = await buildClientFileCacheFromContent(content, outputChannel, '[Convert]');
+        const clientFileCache = await buildClientFileCacheFromContent(content, sourceFileUri, outputChannel, '[Convert]');
 
         // Select API endpoint based on unwrapped parameter
         const endpoint = unwrapped ? '/api/calcpad/convert-unwrapped' : '/api/calcpad/convert';
@@ -503,7 +503,7 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string,
     }
 }
 
-async function generatePdf(panel: vscode.WebviewPanel, content: string) {
+async function generatePdf(panel: vscode.WebviewPanel, content: string, sourceFileUri: vscode.Uri) {
     const settingsManager = CalcpadSettingsManager.getInstance();
     const settings = settingsManager.getSettings();
     const apiBaseUrl = settings.server.url;
@@ -517,7 +517,7 @@ async function generatePdf(panel: vscode.WebviewPanel, content: string) {
         const settings = await settingsManager.getApiSettings();
 
         // Build client file cache for referenced files
-        const clientFileCache = await buildClientFileCacheFromContent(content, outputChannel, '[PDF]');
+        const clientFileCache = await buildClientFileCacheFromContent(content, sourceFileUri, outputChannel, '[PDF]');
 
         const response = await axios.post(`${apiBaseUrl}/api/calcpad/convert`,
             {
@@ -621,7 +621,7 @@ async function printToPdf() {
                 progress.report({ increment: 10, message: "Loading referenced files..." });
 
                 // Build client file cache for referenced files
-                const clientFileCache = await buildClientFileCacheFromContent(documentContent, outputChannel, '[PDF]');
+                const clientFileCache = await buildClientFileCacheFromContent(documentContent, activeEditor.document.uri, outputChannel, '[PDF]');
 
                 progress.report({ increment: 20, message: "Calling PDF generation API..." });
 
@@ -689,7 +689,7 @@ async function createHtmlPreview(context: vscode.ExtensionContext) {
 
     if (activePreviewPanel) {
         (activePreviewPanel as vscode.WebviewPanel).reveal(vscode.ViewColumn.Beside);
-        await updatePreviewContent(activePreviewPanel as vscode.WebviewPanel, activeEditor.document.getText());
+        await updatePreviewContent(activePreviewPanel as vscode.WebviewPanel, activeEditor.document.getText(), activeEditor.document.uri);
         return;
     }
 
@@ -742,7 +742,7 @@ async function createHtmlPreview(context: vscode.ExtensionContext) {
         }
     );
 
-    await updatePreviewContent(panel, activeEditor.document.getText());
+    await updatePreviewContent(panel, activeEditor.document.getText(), activeEditor.document.uri);
 }
 
 async function createHtmlPreviewUnwrapped(context: vscode.ExtensionContext) {
@@ -805,7 +805,7 @@ async function createHtmlPreviewUnwrapped(context: vscode.ExtensionContext) {
         }
     );
 
-    await updatePreviewContent(panel, activeEditor.document.getText(), true);
+    await updatePreviewContent(panel, activeEditor.document.getText(), activeEditor.document.uri, true);
 }
 
 function schedulePreviewUpdate() {
@@ -827,7 +827,7 @@ function schedulePreviewUpdate() {
         if (activePreviewPanel && activeEditor) {
             // Update the source editor reference when updating preview
             previewSourceEditor = activeEditor;
-            await updatePreviewContent(activePreviewPanel as vscode.WebviewPanel, activeEditor.document.getText());
+            await updatePreviewContent(activePreviewPanel as vscode.WebviewPanel, activeEditor.document.getText(), activeEditor.document.uri);
         }
     }, 500);
 }
@@ -985,7 +985,7 @@ export function activate(context: vscode.ExtensionContext) {
         // Refresh preview if open
         if (activePreviewPanel && activeEditor) {
             const unwrapped = activePreviewType === 'unwrapped';
-            await updatePreviewContent(activePreviewPanel as vscode.WebviewPanel, activeEditor.document.getText(), unwrapped);
+            await updatePreviewContent(activePreviewPanel as vscode.WebviewPanel, activeEditor.document.getText(), activeEditor.document.uri, unwrapped);
             outputChannel.appendLine('[Settings] Preview refreshed');
         }
 
@@ -1036,7 +1036,7 @@ export function activate(context: vscode.ExtensionContext) {
     const exportToPdfCommand = vscode.commands.registerCommand('vscode-calcpad.exportToPdf', () => {
         const activeEditor = vscode.window.activeTextEditor;
         if (activeEditor && activePreviewPanel) {
-            generatePdf(activePreviewPanel as vscode.WebviewPanel, activeEditor.document.getText());
+            generatePdf(activePreviewPanel as vscode.WebviewPanel, activeEditor.document.getText(), activeEditor.document.uri);
         } else if (activeEditor) {
             // Create a temporary panel just for PDF generation
             const tempPanel = vscode.window.createWebviewPanel(
@@ -1045,7 +1045,7 @@ export function activate(context: vscode.ExtensionContext) {
                 vscode.ViewColumn.Active,
                 { enableScripts: false }
             );
-            generatePdf(tempPanel, activeEditor.document.getText());
+            generatePdf(tempPanel, activeEditor.document.getText(), activeEditor.document.uri);
             tempPanel.dispose();
         }
     });

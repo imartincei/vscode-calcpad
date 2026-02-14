@@ -41,7 +41,7 @@ export class CalcpadServerLinter {
 
         try {
             // Build client file cache for referenced files
-            const clientFileCache = await buildClientFileCacheFromContent(content, this.debugChannel, '[Lint #' + reqId + ']');
+            const clientFileCache = await buildClientFileCacheFromContent(content, document.uri, this.debugChannel, '[Lint #' + reqId + ']');
 
             // Call server lint API with client file cache
             const lintResponse = await this.fetchLintDiagnostics(content, reqId, clientFileCache);
@@ -113,31 +113,49 @@ export class CalcpadServerLinter {
     }
 
     /**
-     * Convert server diagnostics to VS Code diagnostics
+     * Get the minimum severity threshold from settings.
+     * Returns the DiagnosticSeverity value that diagnostics must be at or above (lower number = higher severity).
+     */
+    private getMinimumSeverity(): vscode.DiagnosticSeverity {
+        const config = vscode.workspace.getConfiguration('calcpad');
+        const level = config.get<string>('linter.minimumSeverity', 'information');
+        switch (level) {
+            case 'error': return vscode.DiagnosticSeverity.Error;
+            case 'warning': return vscode.DiagnosticSeverity.Warning;
+            default: return vscode.DiagnosticSeverity.Information;
+        }
+    }
+
+    /**
+     * Convert server diagnostics to VS Code diagnostics, filtering by minimum severity
      */
     private convertToDiagnostics(serverDiagnostics: LintDiagnostic[]): vscode.Diagnostic[] {
-        return serverDiagnostics.map(d => {
-            const range = new vscode.Range(
-                d.line,
-                d.column,
-                d.line,
-                d.endColumn
-            );
+        const minSeverity = this.getMinimumSeverity();
 
-            const severity = d.severityId === 0
-                ? vscode.DiagnosticSeverity.Error
-                : vscode.DiagnosticSeverity.Warning;
+        return serverDiagnostics
+            .map(d => {
+                const range = new vscode.Range(
+                    d.line,
+                    d.column,
+                    d.line,
+                    d.endColumn
+                );
 
-            const diagnostic = new vscode.Diagnostic(
-                range,
-                '[' + d.code + '] ' + d.message,
-                severity
-            );
-            diagnostic.code = d.code;
-            diagnostic.source = d.source;
+                const severity = d.severityId === 0
+                    ? vscode.DiagnosticSeverity.Error
+                    : vscode.DiagnosticSeverity.Warning;
 
-            return diagnostic;
-        });
+                const diagnostic = new vscode.Diagnostic(
+                    range,
+                    '[' + d.code + '] ' + d.message,
+                    severity
+                );
+                diagnostic.code = d.code;
+                diagnostic.source = d.source;
+
+                return diagnostic;
+            })
+            .filter(d => d.severity <= minSeverity);
     }
 
     /**

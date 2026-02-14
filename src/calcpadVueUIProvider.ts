@@ -68,13 +68,15 @@ export class CalcpadVueUIProvider implements vscode.WebviewViewProvider {
                     const previewTheme = config.get<string>('previewTheme', 'system');
                     const commentFormat = config.get<string>('commentFormat', 'auto');
                     const enableFormattingHotkeys = config.get<boolean>('enableFormattingHotkeys', true);
+                    const linterMinSeverity = config.get<string>('linter.minimumSeverity', 'information');
 
                     webviewView.webview.postMessage({
                         type: 'settingsResponse',
                         settings: settings,
                         previewTheme: previewTheme,
                         commentFormat: commentFormat,
-                        enableFormattingHotkeys: enableFormattingHotkeys
+                        enableFormattingHotkeys: enableFormattingHotkeys,
+                        linterMinSeverity: linterMinSeverity
                     });
                     break;
 
@@ -104,6 +106,11 @@ export class CalcpadVueUIProvider implements vscode.WebviewViewProvider {
                 case 'updateFormattingHotkeys':
                     const formattingHotkeysConfig = vscode.workspace.getConfiguration('calcpad');
                     await formattingHotkeysConfig.update('enableFormattingHotkeys', data.enabled, vscode.ConfigurationTarget.Global);
+                    break;
+
+                case 'updateLinterMinSeverity':
+                    const linterConfig = vscode.workspace.getConfiguration('calcpad');
+                    await linterConfig.update('linter.minimumSeverity', data.severity, vscode.ConfigurationTarget.Global);
                     break;
 
                 case 'updatePdfSettings':
