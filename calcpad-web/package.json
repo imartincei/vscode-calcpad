@@ -1,0 +1,23 @@
+{
+  "name": "calcpad-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CalcPad web editor — Monaco + Vue sidebar powered by calcpad-frontend",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@neutralinojs/lib": "^6.5.0",
+    "calcpad-frontend": "file:../calcpad-frontend",
+    "monaco-editor": "^0.52.0",
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.0",
+    "typescript": "^5.9.0",
+    "vite": "^5.4.0"
+  }
+}

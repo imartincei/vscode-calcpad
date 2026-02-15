@@ -1,0 +1,241 @@
+{
+  "name": "CalcPad Dark",
+  "type": "dark",
+  "colors": {
+    "editor.background": "#1e1e1e",
+    "editor.foreground": "#d4d4d4",
+    "editorLineNumber.foreground": "#858585",
+    "editorLineNumber.activeForeground": "#c6c6c6",
+    "editor.selectionBackground": "#264f78",
+    "editor.inactiveSelectionBackground": "#3a3d41",
+    "editorWhitespace.foreground": "#404040",
+    "editorIndentGuide.background": "#404040",
+    "editorIndentGuide.activeBackground": "#707070",
+    "editor.findMatchBackground": "#515c6a",
+    "editor.findMatchHighlightBackground": "#ea5c0055",
+    "editor.findRangeHighlightBackground": "#3a3d4166",
+    "editorBracketMatch.background": "#0064001a",
+    "editorBracketMatch.border": "#888888"
+  },
+  "semanticHighlighting": true,
+  "semanticTokenColors": {
+    "const": "#D4D4D4",
+    "operator": "#ECC860",
+    "bracket": "#FF69B4",
+    "lineContinuation": "#ECC860",
+    "variable": "#6B9FFF",
+    "localVariable": "#8BB4FF",
+    "function": { "foreground": "#D4D4D4", "bold": true },
+    "macro": "#D355D3",
+    "macroParameter": "#E07BE0",
+    "units": "#00CED1",
+    "setting": "#4FC1FF",
+    "keyword": "#FF80FF",
+    "controlBlockKeyword": "#FF80FF",
+    "endKeyword": "#FF80FF",
+    "command": "#FF80FF",
+    "include": "#9B6BCC",
+    "filePath": "#9B6BCC",
+    "dataExchangeKeyword": "#FF80FF",
+    "comment": "#57A64A",
+    "htmlComment": "#A0A0A0",
+    "tag": "#CC66FF",
+    "htmlContent": "#57A64A",
+    "javascript": "#ECC860",
+    "css": "#6B9FFF",
+    "svg": "#00CED1",
+    "input": "#FF5555",
+    "format": "#A9A9A9"
+  },
+  "tokenColors": [
+    {
+      "name": "Comments",
+      "scope": [
+        "comment.line.single-quote.calcpad",
+        "comment.block.double-quote.calcpad"
+      ],
+      "settings": {
+        "foreground": "#57A64A",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "HTML Comments",
+      "scope": "comment.block.html.calcpad",
+      "settings": {
+        "foreground": "#A0A0A0",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Keywords",
+      "scope": [
+        "keyword.control.calcpad",
+        "keyword.other.calcpad"
+      ],
+      "settings": {
+        "foreground": "#FF80FF",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Commands",
+      "scope": "support.function.command.calcpad",
+      "settings": {
+        "foreground": "#FF80FF",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Functions",
+      "scope": "support.function.builtin.calcpad",
+      "settings": {
+        "foreground": "#D4D4D4",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "Constants",
+      "scope": [
+        "constant.numeric.calcpad",
+        "constant.numeric.complex.calcpad"
+      ],
+      "settings": {
+        "foreground": "#D4D4D4",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Variables",
+      "scope": "variable.other.calcpad",
+      "settings": {
+        "foreground": "#6B9FFF",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Units",
+      "scope": "support.type.units.calcpad",
+      "settings": {
+        "foreground": "#00CED1",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Operators",
+      "scope": [
+        "keyword.operator.arithmetic.calcpad",
+        "keyword.operator.comparison.calcpad",
+        "keyword.operator.logical.calcpad",
+        "keyword.operator.assignment.calcpad"
+      ],
+      "settings": {
+        "foreground": "#ECC860",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Separators",
+      "scope": "punctuation.separator.calcpad",
+      "settings": {
+        "foreground": "#ECC860",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Brackets",
+      "scope": "punctuation.section.brackets.calcpad",
+      "settings": {
+        "foreground": "#FF69B4",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "HTML Tags",
+      "scope": [
+        "meta.tag.html.calcpad",
+        "entity.name.tag.html.calcpad",
+        "punctuation.definition.tag.begin.html.calcpad",
+        "punctuation.definition.tag.end.html.calcpad"
+      ],
+      "settings": {
+        "foreground": "#CC66FF",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "HTML Attributes",
+      "scope": "entity.other.attribute-name.html.calcpad",
+      "settings": {
+        "foreground": "#CC66FF",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Strings",
+      "scope": [
+        "string.quoted.double.calcpad",
+        "string.quoted.single.calcpad",
+        "string.quoted.double.html.calcpad",
+        "string.quoted.single.html.calcpad"
+      ],
+      "settings": {
+        "foreground": "#57A64A",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Escape Characters",
+      "scope": [
+        "constant.character.escape.calcpad"
+      ],
+      "settings": {
+        "foreground": "#ECC860",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "Macros",
+      "scope": "variable.parameter.macro.calcpad",
+      "settings": {
+        "foreground": "#D355D3",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Input",
+      "scope": [
+        "variable.language.input.calcpad",
+        "punctuation.definition.input.calcpad"
+      ],
+      "settings": {
+        "foreground": "#FF5555",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Include",
+      "scope": "keyword.control.include.calcpad",
+      "settings": {
+        "foreground": "#9B6BCC",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Format",
+      "scope": "meta.format.calcpad",
+      "settings": {
+        "foreground": "#A9A9A9",
+        "fontStyle": ""
+      }
+    },
+    {
+      "name": "Error",
+      "scope": "invalid.illegal.calcpad",
+      "settings": {
+        "foreground": "#FF4455",
+        "fontStyle": ""
+      }
+    }
+  ]
+}

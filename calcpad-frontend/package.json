@@ -1,0 +1,18 @@
+{
+  "name": "calcpad-frontend",
+  "version": "0.1.0",
+  "description": "Shared CalcPad frontend logic for VS Code extension and Electron desktop app",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "vue": "^3.5.0"
+  }
+}

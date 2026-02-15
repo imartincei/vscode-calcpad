@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "jsx": "preserve",
+    "sourceMap": true,
+    "outDir": "dist",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "calcpad-frontend": ["../calcpad-frontend/src/index.ts"],
+      "calcpad-frontend/*": ["../calcpad-frontend/src/*"],
+      "calcpad-monaco": ["../calcpad-monaco/src/index.ts"],
+      "calcpad-monaco/*": ["../calcpad-monaco/src/*"]
+    }
+  },
+  "include": ["src/**/*", "src/**/*.vue", "env.d.ts"],
+  "exclude": ["dist", "node_modules"]
+}

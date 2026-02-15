@@ -1,0 +1,82 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body, #app {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+}
+
+.app-layout {
+    display: flex;
+    height: 100vh;
+    background: var(--vscode-editor-background);
+    color: var(--vscode-foreground);
+    font-family: var(--vscode-font-family);
+}
+
+.editor-pane {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.editor-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    background: var(--vscode-titleBar-activeBackground, #3c3c3c);
+    border-bottom: 1px solid var(--vscode-widget-border);
+    font-size: 12px;
+    min-height: 32px;
+}
+
+.editor-toolbar .server-status {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+}
+
+.editor-toolbar .server-status.connected {
+    color: var(--vscode-gitDecoration-addedResourceForeground, #57A64A);
+}
+
+.editor-toolbar .server-status.disconnected {
+    color: var(--vscode-errorForeground, #FF5555);
+}
+
+.editor-container {
+    flex: 1;
+    min-height: 0;
+}
+
+.sidebar-pane {
+    width: 320px;
+    min-width: 240px;
+    max-width: 480px;
+    border-left: 1px solid var(--vscode-widget-border);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-toggle {
+    display: none;
+}
+
+/* Resizable handle placeholder — can be enhanced with JS later */
+.resize-handle {
+    width: 4px;
+    cursor: col-resize;
+    background: transparent;
+    transition: background 0.2s;
+}
+
+.resize-handle:hover {
+    background: var(--vscode-focusBorder);
+}

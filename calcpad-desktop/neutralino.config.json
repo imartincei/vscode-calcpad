@@ -1,0 +1,58 @@
+{
+  "applicationId": "com.calcpad.desktop",
+  "applicationName": "CalcPad",
+  "version": "0.2.0",
+  "defaultMode": "window",
+  "port": 0,
+  "enableServer": true,
+  "enableNativeAPI": true,
+  "enableExtensions": true,
+  "tokenSecurity": "one-time",
+  "url": "/",
+  "documentRoot": "/resources/",
+  "nativeAllowList": [
+    "app.*",
+    "os.*",
+    "filesystem.*",
+    "storage.*",
+    "window.*",
+    "extensions.*",
+    "events.*"
+  ],
+  "modes": {
+    "window": {
+      "title": "CalcPad",
+      "width": 1400,
+      "height": 900,
+      "minWidth": 800,
+      "minHeight": 600,
+      "center": true,
+      "icon": "/resources/icon.png",
+      "enableInspector": true,
+      "resizable": true,
+      "exitProcessOnClose": true
+    }
+  },
+  "extensions": [
+    {
+      "id": "com.calcpad.server",
+      "commandLinux": "${NL_PATH}/extensions/server/CalcpadServer",
+      "commandWindows": "${NL_PATH}/extensions/server/CalcpadServer.exe",
+      "commandDarwin": "${NL_PATH}/extensions/server/CalcpadServer"
+    }
+  ],
+  "cli": {
+    "binaryName": "calcpad-desktop",
+    "resourcesPath": "/resources/",
+    "extensionsPath": "/extensions/",
+    "clientLibrary": "/resources/js/neutralino.js",
+    "frontendLibrary": {
+      "patchFile": "/resources/index.html",
+      "devUrl": "http://localhost:5173",
+      "projectPath": "../calcpad-web/",
+      "initCommand": "npm install",
+      "devCommand": "npm run dev",
+      "buildCommand": "NEUTRALINO_BUILD=1 npm run build"
+    }
+  }
+}

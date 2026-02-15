@@ -4,22 +4,21 @@
 
 ### Enhancements
 - Finish enhanced PDF generation
-- Add search in output HTML
 - Implement user defined variable, units, function, and macro definitions using html comment before the #def line (e.g. cmt$({"description": "This macro does this.\nparam1 is the thing..."})). Add tooltip for these that uses the description.
 - Test linter for advanced issues
     - Macros get flagged with undefined variable when a parameter is set in a macro
     - Macros with strings get interpreted as a unit
     - ignore some checks in include and read parameters (and add proper checks)
 - Add quick typing for macros (~1 macro 1, ~2 macro 2, etc.). Add macro mapping to vscode config using json object {macroMapping:{"1": "macroName$", ...}}. Have VS code set cursor position to within () and before first param.
-- Add hotkeys for HTML/markdown formatting. Add toggle for HTML vs markdown in the settings.
 - Package extension for further testing within the company. Publish to Open VSX but not Visual Studio Marketplace unless I need a personal Azure account for other reasons
-- Refactor tokens to use all colors for different ones.
 - Remove warning for unicode symbols in variable names (e.g. ℓ and ρ)
 - Fix line links to use source line mapping
 - Add refactoring
-- Fix preview theme to use light mode
 - Add format command that does the same thing as eat space. However, the automatic behavior is not preferred.
 - Add refresh button for server
+- Add PDF conversion to vs code and use the server code as a fallback.
+- Update the extension to have Calcpad.Server.Windows/Linux to be included in the VS code extension for local installs. This will replace Calcpad.Server for windows, as vs-code can run the .csproj directly (it will require dotnet SDK is installed similar to regular Calcpad). A server connection will still be optional as a fallback and for using over the web.
+- Look into using Electron and Monaco with vs code api package for bundled installs with local system access.
 
 ### Bugs
 - Fix include reading around #{0}... syntax - test fix
@@ -53,6 +52,8 @@
 
 
 ## Calcpad.Highlighter
+- I need to go through the entire flow and remove redundancy. Have different modes for the tokenizer that optimizes it. Stage modes and syntax highlighting vs content resolution modes.
+    - Investigate the new #const and ← features
 - Double check builtin function return types are correct. Have Claude run the comprehensive check to see what is returned.
 - Have the linter check when a macro parameter is used as a string and do type checking in this case.
 - Add parsing of metadata lines for macro descriptions and parameter descriptions/type hinting. Metadata lines contain inline or multiline JSON that external programs can pull from cpd files but are ignored by the parser. Metadata lines occur when there is JSON in an HTML comment
@@ -64,11 +65,27 @@
 
 ### Bugs
 
-- Fix tokenizer to detect variables and units in expressions with macros:
-Wt_DAF = 2*37.5kipnote$('Weight of both DAF units')
-P_D = -Wt_DAFnote$('Dead Load')
-- Fix multiple assignments check to only apply when there is not strings between variable definitions. It should be run at the expression level. h=5', 'g=6 is valid.
-- Fix tokenization of macro parameters and unused variable checks in complex cases. The attempted solution is to expand macro definitions in Stage 2 when nested macros are present.
+- Fix tokenizer to tokenize inline macro content
+- Fix tokenization of macro comment parameters
+- Fix tokenization of macro expression parameters that are comments
+- Fix tokenization of comments and strings across line continuations
+- Add bracket highlighting back, see if theme can handle bracket colors
+- Remove whitespace at end of lines before running linter ("#else ") flags erorr
+- [CPD-3207] Variable name conflicts with built-in constant: Variable name 'E' conflicts with built-in constantCalcpad Linter(CPD-3207) should be case sensitive
+- Fix comma splitting variables in 
+[CPD-3301] Undefined variable: 'GC_r' in command block Calcpad Linter(CPD-3301)
+[CPD-3301] Undefined variable: 'NS' in command blockCalcpad Linter(CPD-3301) 
+w_W,NS = get_w(q_h * GC_r,NS * b_eq * h * d_v; l_eq)note$('Applied as +/- triangluar load on N-S beams')
+- HTML parsing should handle <br> and other tags that don't have closers
+- Fix syntax highlighting of md on/md off
+- Linter advanced case doesn't pick up local variable when it is an index of a vector/matrix on the left side (or maybe macro is breaking it?):
+#def absMax$(maxArray$; minArray$)
+	absMaxArray = vector(len(maxArray$))
+	$Repeat{absMaxArray.k = if(abs(maxArray$.k) ≥ abs(minArray$.k); maxArray$.k; minArray$.k) @ k = 1 : len(maxArray$)}
+	R_u$ = absMaxArray
+#end def
+
+- Add "pi" as a valid built-in constant
 
 ## Calcpad.Wpf
 
@@ -77,3 +94,38 @@ P_D = -Wt_DAFnote$('Dead Load')
 ## Calcpad.Core
 
 - Add features in JSUpdates.md, pending approval from Ned
+- Add option to add photo from local files or src as a base 64 string.
+
+- Catch self-referential includes crashing the program:
+```
+Unexpected error occurred in Calcpad: "An error occurred loading a configuration file: The process cannot access the file 'C:\Users\IsaiahMartin\AppData\Local\Proektsoft_EOOD\Calcpad_Url_r4xkc5cc0j1x2jwmcm5wloef2nwcsnxa\7.5.7.0\user.config' because it is being used by another process. (C:\Users\IsaiahMartin\AppData\Local\Proektsoft_EOOD\Calcpad_Url_r4xkc5cc0j1x2jwmcm5wloef2nwcsnxa\7.5.7.0\user.config)"
+
+Source: "System.Configuration.ConfigurationManager"
+
+There is no unsaved data. If the problem persists, please contact proektsoft.bg@gmail.com.
+
+Exception details:
+
+"System.Configuration.ConfigurationErrorsException: An error occurred loading a configuration file: The process cannot access the file 'C:\Users\IsaiahMartin\AppData\Local\Proektsoft_EOOD\Calcpad_Url_r4xkc5cc0j1x2jwmcm5wloef2nwcsnxa\7.5.7.0\user.config' because it is being used by another process. (C:\Users\IsaiahMartin\AppData\Local\Proektsoft_EOOD\Calcpad_Url_r4xkc5cc0j1x2jwmcm5wloef2nwcsnxa\7.5.7.0\user.config)
+ ---> System.IO.IOException: The process cannot access the file 'C:\Users\IsaiahMartin\AppData\Local\Proektsoft_EOOD\Calcpad_Url_r4xkc5cc0j1x2jwmcm5wloef2nwcsnxa\7.5.7.0\user.config' because it is being used by another process.
+   at Microsoft.Win32.SafeHandles.SafeFileHandle.CreateFile(String fullPath, FileMode mode, FileAccess access, FileShare share, FileOptions options)
+   at Microsoft.Win32.SafeHandles.SafeFileHandle.Open(String fullPath, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.Strategies.OSFileStreamStrategy..ctor(String path, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.Strategies.FileStreamHelpers.ChooseStrategyCore(String path, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.FileStream..ctor(String path, FileMode mode, FileAccess access, FileShare share)
+   at System.Configuration.Internal.InternalConfigHost.StaticOpenStreamForRead(String streamName)
+   at System.Configuration.ImplicitMachineConfigHost.OpenStreamForRead(String streamName)
+   at System.Configuration.BaseConfigurationRecord.InitConfigFromFile()
+   --- End of inner exception stack trace ---
+   at System.Configuration.ConfigurationSchemaErrors.ThrowIfErrors(Boolean ignoreLocal)
+   at System.Configuration.Configuration..ctor(String locationSubPath, Type typeConfigHost, Object[] hostInitConfigurationParams)
+   at System.Configuration.Internal.InternalConfigConfigurationFactory.System.Configuration.Internal.IInternalConfigConfigurationFactory.Create(Type typeConfigHost, Object[] hostInitConfigurationParams)
+   at System.Configuration.ClientSettingsStore.WriteSettings(String sectionName, Boolean isRoaming, IDictionary newSettings)
+   at System.Configuration.SettingsBase.SaveCore()
+   at System.Configuration.SettingsBase.Save()
+   at Calcpad.Wpf.MainWindow.TryRestoreState()
+   at Calcpad.Wpf.MainWindow.Window_ContentRendered(Object sender, EventArgs e)
+   at System.Threading.Tasks.Task.<>c.<ThrowAsync>b__124_0(Object state)
+   at System.Windows.Threading.ExceptionWrapper.InternalRealCall(Delegate callback, Object args, Int32 numArgs)
+   at System.Windows.Threading.ExceptionWrapper.TryCatchWhen(Object source, Delegate callback, Object args, Int32 numArgs, Delegate catchHandler)"
+```
