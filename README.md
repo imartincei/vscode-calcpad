@@ -1,3 +1,8 @@
+# IMPORTANT UPDATE:
+I will no longer be updating this repo's source code. I have moved this to the private Calcpad repo to keep everything in sync and make dev easier. If you want to get involved with development, please feel free to reach out if you do not have access to the Calcpad private repo.
+
+I will still release experimental vscode builds here until the features are vetted and added to the public Calcpad repo (for people who are interested in testing it).
+
 # VS Code CalcPad Extension
 
 A VS Code extension for CalcPad files with live preview and comprehensive linting.
