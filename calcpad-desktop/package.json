@@ -1,0 +1,13 @@
+{
+  "name": "calcpad-desktop",
+  "version": "0.2.0",
+  "private": true,
+  "description": "CalcPad Desktop — Neutralino.js-based editor with embedded server",
+  "scripts": {
+    "dev": "neu run",
+    "build": "neu build"
+  },
+  "devDependencies": {
+    "@neutralinojs/neu": "latest"
+  }
+}

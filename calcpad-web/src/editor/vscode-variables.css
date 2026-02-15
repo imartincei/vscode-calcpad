@@ -1,0 +1,75 @@
+/*
+ * CSS variable definitions that map --vscode-* vars for non-VS Code contexts.
+ * Vue components from calcpad-frontend use these variables for theming.
+ * Values are derived from themes/calcpad-dark-theme.json.
+ */
+:root {
+    /* Fonts */
+    --vscode-font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --vscode-font-size: 13px;
+    --vscode-editor-font-family: 'Cascadia Code', 'Fira Code', Consolas, 'Courier New', monospace;
+
+    /* Core colors */
+    --vscode-foreground: #d4d4d4;
+    --vscode-descriptionForeground: #858585;
+    --vscode-errorForeground: #FF5555;
+    --vscode-focusBorder: #007fd4;
+
+    /* Editor */
+    --vscode-editor-background: #1e1e1e;
+    --vscode-editor-foreground: #d4d4d4;
+
+    /* Input controls */
+    --vscode-input-background: #3c3c3c;
+    --vscode-input-foreground: #cccccc;
+    --vscode-input-border: #3c3c3c;
+
+    /* Buttons */
+    --vscode-button-background: #0e639c;
+    --vscode-button-foreground: #ffffff;
+    --vscode-button-hoverBackground: #1177bb;
+    --vscode-button-border: transparent;
+    --vscode-button-secondaryBackground: #3a3d41;
+    --vscode-button-secondaryForeground: #cccccc;
+    --vscode-button-secondaryHoverBackground: #45494e;
+
+    /* Checkbox */
+    --vscode-checkbox-background: #3c3c3c;
+    --vscode-checkbox-border: #3c3c3c;
+
+    /* Lists */
+    --vscode-list-hoverBackground: #2a2d2e;
+    --vscode-list-inactiveSelectionBackground: #37373d;
+
+    /* Sidebar */
+    --vscode-sideBar-background: #252526;
+    --vscode-sideBarSectionHeader-foreground: #bbbbbb;
+
+    /* Tabs */
+    --vscode-tab-activeBackground: #1e1e1e;
+    --vscode-tab-activeForeground: #ffffff;
+    --vscode-tab-activeBorder: #007fd4;
+    --vscode-tab-inactiveForeground: #969696;
+    --vscode-tab-hoverBackground: #2a2d2e;
+
+    /* Title bar */
+    --vscode-titleBar-activeBackground: #3c3c3c;
+
+    /* Widgets */
+    --vscode-widget-border: #474747;
+    --vscode-panel-border: #474747;
+
+    /* Badges */
+    --vscode-badge-background: #4d4d4d;
+    --vscode-badge-foreground: #cccccc;
+
+    /* Text blocks */
+    --vscode-textCodeBlock-background: #2a2d2e;
+
+    /* Git decoration colors (used in variables tab) */
+    --vscode-gitDecoration-addedResourceForeground: #57A64A;
+    --vscode-gitDecoration-modifiedResourceForeground: #E2C08D;
+
+    /* Symbol icons */
+    --vscode-symbolIcon-variableForeground: #6B9FFF;
+}

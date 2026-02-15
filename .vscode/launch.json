@@ -6,10 +6,10 @@
             "type": "extensionHost",
             "request": "launch",
             "args": [
-                "--extensionDevelopmentPath=${workspaceFolder}"
+                "--extensionDevelopmentPath=${workspaceFolder}/vscode-calcpad"
             ],
             "outFiles": [
-                "${workspaceFolder}/out/**/*.js"
+                "${workspaceFolder}/vscode-calcpad/out/**/*.js"
             ],
             "preLaunchTask": "npm: compile"
         }

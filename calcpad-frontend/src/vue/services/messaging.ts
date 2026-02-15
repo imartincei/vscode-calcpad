@@ -1,0 +1,90 @@
+/**
+ * Platform-aware messaging service for Vue components.
+ * Uses import.meta.env.VITE_PLATFORM to select the adapter at build time:
+ * - 'vscode': uses acquireVsCodeApi() (VS Code webview)
+ * - 'electron': uses window.calcpadAPI (Electron preload bridge)
+ * - 'web': uses window.calcpadBridge (in-process message bridge)
+ */
+
+export interface IMessaging {
+    postMessage(message: unknown): void;
+    onMessage(handler: (message: unknown) => void): void;
+}
+
+let instance: IMessaging | null = null;
+
+/**
+ * Serialize Vue reactive objects safely for postMessage.
+ */
+function serializeForPostMessage(obj: unknown): unknown {
+    if (obj === null || obj === undefined) return obj;
+    if (typeof obj === 'string' || typeof obj === 'number' || typeof obj === 'boolean') return obj;
+
+    if (Array.isArray(obj)) {
+        return obj.map(item => serializeForPostMessage(item));
+    }
+
+    if (typeof obj === 'object') {
+        const serialized: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(obj)) {
+            serialized[key] = serializeForPostMessage(value);
+        }
+        return serialized;
+    }
+
+    return obj;
+}
+
+/**
+ * Initialize the messaging service for the current platform.
+ * Must be called before any Vue component uses postMessage().
+ */
+export function initMessaging(): IMessaging {
+    if (instance) return instance;
+
+    if (import.meta.env.VITE_PLATFORM === 'web') {
+        // Web: use in-process bridge (set by host app on window.calcpadBridge)
+        const bridge = (window as any).calcpadBridge;
+        instance = {
+            postMessage: (msg: unknown) => bridge.handleMessage(serializeForPostMessage(msg)),
+            onMessage: (handler: (message: unknown) => void) => {
+                window.addEventListener('message', (e: MessageEvent) => handler(e.data));
+            },
+        };
+    } else if (import.meta.env.VITE_PLATFORM === 'electron') {
+        // Electron: use preload bridge
+        const api = (window as any).calcpadAPI;
+        instance = {
+            postMessage: (msg: unknown) => api.postMessage(serializeForPostMessage(msg)),
+            onMessage: (handler: (message: unknown) => void) => api.onMessage(handler),
+        };
+    } else {
+        // VS Code webview: use acquireVsCodeApi
+        const vscode = (window as any).vscode || (window as any).acquireVsCodeApi();
+        (window as any).vscode = vscode;
+        instance = {
+            postMessage: (msg: unknown) => vscode.postMessage(serializeForPostMessage(msg)),
+            onMessage: (handler: (message: unknown) => void) => {
+                window.addEventListener('message', (e: MessageEvent) => handler(e.data));
+            },
+        };
+    }
+
+    return instance;
+}
+
+/**
+ * Get the messaging service instance.
+ */
+export function getMessaging(): IMessaging {
+    if (!instance) throw new Error('Messaging not initialized. Call initMessaging() first.');
+    return instance;
+}
+
+/**
+ * Post a message to the host (VS Code extension or Electron main process).
+ * Drop-in replacement for the previous services/vscode.ts postMessage().
+ */
+export function postMessage(message: unknown): void {
+    getMessaging().postMessage(message);
+}

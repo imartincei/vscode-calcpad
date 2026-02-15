@@ -1,4 +1,11 @@
 import * as vscode from 'vscode';
+import {
+    CalcpadSettings,
+    getDefaultSettings,
+    buildApiSettings,
+} from 'calcpad-frontend';
+
+export type { CalcpadSettings };
 
 let _outputChannel: vscode.OutputChannel | undefined;
 
@@ -9,34 +16,6 @@ function getOutputChannel(): vscode.OutputChannel {
     return _outputChannel;
 }
 
-export interface CalcpadSettings {
-    math: {
-        decimals: number;
-        degrees: number;
-        isComplex: boolean;
-        substitute: boolean;
-        formatEquations: boolean;
-        zeroSmallMatrixElements: boolean;
-        maxOutputCount: number;
-        formatString: string;
-    };
-    plot: {
-        isAdaptive: boolean;
-        screenScaleFactor: number;
-        imagePath: string;
-        imageUri: string;
-        vectorGraphics: boolean;
-        colorScale: string;
-        smoothScale: boolean;
-        shadows: boolean;
-        lightDirection: string;
-    };
-    server: {
-        url: string;
-    };
-    units: string;
-}
-
 export class CalcpadSettingsManager {
     private static instance: CalcpadSettingsManager;
     private _settings: CalcpadSettings;
@@ -45,7 +24,7 @@ export class CalcpadSettingsManager {
     private _context?: vscode.ExtensionContext;
 
     private constructor(context?: vscode.ExtensionContext) {
-        this._settings = this.getDefaultSettings();
+        this._settings = getDefaultSettings();
         this.loadSettings();
         if (context) {
             this._context = context;
@@ -63,33 +42,7 @@ export class CalcpadSettingsManager {
     }
 
     public getDefaultSettings(): CalcpadSettings {
-        return {
-            math: {
-                decimals: 2,
-                degrees: 0,
-                isComplex: false,
-                substitute: true,
-                formatEquations: true,
-                zeroSmallMatrixElements: true,
-                maxOutputCount: 20,
-                formatString: ""
-            },
-            plot: {
-                isAdaptive: true,
-                screenScaleFactor: 2,
-                imagePath: "",
-                imageUri: "",
-                vectorGraphics: false,
-                colorScale: "Rainbow",
-                smoothScale: false,
-                shadows: true,
-                lightDirection: "NorthWest"
-            },
-            server: {
-                url: "http://localhost:9420"
-            },
-            units: "m"
-        };
+        return getDefaultSettings();
     }
 
     public getSettings(): CalcpadSettings {
@@ -102,9 +55,13 @@ export class CalcpadSettingsManager {
         this._onDidChangeSettings.fire(this._settings);
     }
 
+    public setServerUrl(url: string): void {
+        this._settings.server.url = url;
+        this._onDidChangeSettings.fire(this._settings);
+    }
 
     public resetSettings(): void {
-        this._settings = this.getDefaultSettings();
+        this._settings = getDefaultSettings();
         this.saveSettings();
         this._onDidChangeSettings.fire(this._settings);
     }
@@ -113,7 +70,7 @@ export class CalcpadSettingsManager {
         const config = vscode.workspace.getConfiguration('calcpad');
         const savedSettings = config.get<CalcpadSettings>('settings');
         if (savedSettings) {
-            this._settings = { ...this.getDefaultSettings(), ...savedSettings };
+            this._settings = { ...getDefaultSettings(), ...savedSettings };
         }
     }
 
@@ -131,82 +88,26 @@ export class CalcpadSettingsManager {
             outputChannel.appendLine('Warning: Extension context not available for S3 JWT retrieval');
             return '';
         }
-        
+
         const jwt = await this._context.secrets.get('calcpad.s3.jwt') || '';
-        
+
         const outputChannel = getOutputChannel();
         outputChannel.appendLine(`Getting stored S3 JWT: ${jwt ? `${jwt.substring(0, 20)}...` : 'EMPTY'}`);
         outputChannel.appendLine(`S3 JWT length: ${jwt ? jwt.length : 0}`);
-        
+
         return jwt;
-    }
-
-    private colorScaleToEnum(colorScale: string): number {
-        const colorScaleMap: Record<string, number> = {
-            'Rainbow': 0,
-            'Grayscale': 1,
-            'Hot': 2,
-            'Cool': 3,
-            'Jet': 4,
-            'Parula': 5
-        };
-        return colorScaleMap[colorScale] ?? 0;
-    }
-
-    private lightDirectionToEnum(direction: string): number {
-        const directionMap: Record<string, number> = {
-            'NorthWest': 0,
-            'North': 1,
-            'NorthEast': 2,
-            'West': 3,
-            'East': 4,
-            'SouthWest': 5,
-            'South': 6,
-            'SouthEast': 7
-        };
-        return directionMap[direction] ?? 0;
     }
 
     public async getApiSettings(): Promise<unknown> {
         const storedS3JWT = await this.getStoredS3JWT();
 
-        const apiSettings = {
-            math: {
-                decimals: this._settings.math.decimals,
-                degrees: this._settings.math.degrees,
-                isComplex: this._settings.math.isComplex,
-                substitute: this._settings.math.substitute,
-                formatEquations: this._settings.math.formatEquations,
-                zeroSmallMatrixElements: this._settings.math.zeroSmallMatrixElements,
-                maxOutputCount: this._settings.math.maxOutputCount,
-                formatString: this._settings.math.formatString
-            },
-            plot: {
-                isAdaptive: this._settings.plot.isAdaptive,
-                screenScaleFactor: this._settings.plot.screenScaleFactor,
-                imagePath: this._settings.plot.imagePath,
-                imageUri: this._settings.plot.imageUri,
-                vectorGraphics: this._settings.plot.vectorGraphics,
-                colorScale: this.colorScaleToEnum(this._settings.plot.colorScale),
-                smoothScale: this._settings.plot.smoothScale,
-                shadows: this._settings.plot.shadows,
-                lightDirection: this.lightDirectionToEnum(this._settings.plot.lightDirection)
-            },
-            auth: {
-                url: this._settings.server.url,
-                jwt: storedS3JWT
-            },
-            units: this._settings.units
-        };
+        const apiSettings = buildApiSettings(this._settings, storedS3JWT);
 
-        // Debug logging
         const outputChannel = getOutputChannel();
         outputChannel.appendLine('API settings being sent:');
         outputChannel.appendLine(`  Server URL: ${this._settings.server.url}`);
         outputChannel.appendLine(`  S3 JWT: ${storedS3JWT ? `${storedS3JWT.substring(0, 20)}...` : 'EMPTY'}`);
         outputChannel.appendLine(`  S3 JWT Length: ${storedS3JWT ? storedS3JWT.length : 0}`);
-        outputChannel.appendLine(`  ColorScale: "${this._settings.plot.colorScale}" -> ${apiSettings.plot.colorScale}`);
-        outputChannel.appendLine(`  LightDirection: "${this._settings.plot.lightDirection}" -> ${apiSettings.plot.lightDirection}`);
 
         return apiSettings;
     }

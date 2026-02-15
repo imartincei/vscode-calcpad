@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { CalcpadSettingsManager } from './calcpadSettings';
 import { CalcpadInsertManager } from './calcpadInsertManager';
-import axios from 'axios';
 
 export class CalcpadVueUIProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'calcpadVueUI';
@@ -288,19 +287,30 @@ export class CalcpadVueUIProvider implements vscode.WebviewViewProvider {
             this._outputChannel.appendLine(`[S3] Attempting login to: ${apiUrl}/api/auth/login`);
             this._outputChannel.appendLine(`[S3] Username: ${credentials.username}`);
 
-            const response = await axios.post(`${apiUrl}/api/auth/login`, credentials);
+            const response = await fetch(`${apiUrl}/api/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(credentials)
+            });
 
             this._outputChannel.appendLine(`[S3] Login response status: ${response.status}`);
-            this._outputChannel.appendLine(`[S3] Login response data: ${JSON.stringify(response.data, null, 2)}`);
 
-            const jwt = response.data.token;
+            if (!response.ok) {
+                const errorBody = await response.text();
+                throw new Error(errorBody || `HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+            this._outputChannel.appendLine(`[S3] Login response data: ${JSON.stringify(data, null, 2)}`);
+
+            const jwt = data.token;
             this._outputChannel.appendLine(`[S3] Extracted JWT: ${jwt ? `${jwt.substring(0, 20)}...` : 'EMPTY'}`);
 
             webview.postMessage({
                 type: 's3LoginResponse',
                 success: true,
-                token: response.data.token,
-                user: response.data.user
+                token: data.token,
+                user: data.user
             });
         } catch (error: unknown) {
             this._outputChannel.appendLine(`[S3] Login error: ${error}`);
@@ -308,13 +318,10 @@ export class CalcpadVueUIProvider implements vscode.WebviewViewProvider {
                 this._outputChannel.appendLine(`[S3] Login error message: ${error.message}`);
                 this._outputChannel.appendLine(`[S3] Login error stack: ${error.stack}`);
             }
-            const errorMessage = axios.isAxiosError(error)
-                ? error.response?.data?.message || 'Connection error. Make sure the S3 API is running.'
-                : 'Connection error. Make sure the S3 API is running.';
             webview.postMessage({
                 type: 's3LoginResponse',
                 success: false,
-                error: errorMessage
+                error: 'Connection error. Make sure the S3 API is running.'
             });
         }
     }
@@ -327,16 +334,20 @@ export class CalcpadVueUIProvider implements vscode.WebviewViewProvider {
             this._outputChannel.appendLine(`[S3] Requesting file list from: ${apiUrl}/api/blobstorage/list-with-metadata`);
             this._outputChannel.appendLine(`[S3] Using token: ${token ? `${token.substring(0, 20)}...` : 'EMPTY'}`);
 
-            const response = await axios.get(`${apiUrl}/api/blobstorage/list-with-metadata`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+            const response = await fetch(`${apiUrl}/api/blobstorage/list-with-metadata`, {
+                headers: { 'Authorization': `Bearer ${token}` }
             });
 
             this._outputChannel.appendLine(`[S3] Response status: ${response.status}`);
-            this._outputChannel.appendLine(`[S3] Response data: ${JSON.stringify(response.data, null, 2)}`);
 
-            const files = response.data.files || response.data || [];
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+            this._outputChannel.appendLine(`[S3] Response data: ${JSON.stringify(data, null, 2)}`);
+
+            const files = data.files || data || [];
             this._outputChannel.appendLine(`[S3] Extracted files array: ${JSON.stringify(files, null, 2)}`);
             this._outputChannel.appendLine(`[S3] Number of files found: ${Array.isArray(files) ? files.length : 'Not an array'}`);
 
@@ -367,17 +378,20 @@ export class CalcpadVueUIProvider implements vscode.WebviewViewProvider {
             this._outputChannel.appendLine(`[S3] Downloading file: ${fileName}`);
             this._outputChannel.appendLine(`[S3] Download URL: ${apiUrl}/api/blobstorage/download/${fileName}`);
 
-            const response = await axios.get(`${apiUrl}/api/blobstorage/download/${fileName}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                responseType: 'arraybuffer'
+            const response = await fetch(`${apiUrl}/api/blobstorage/download/${fileName}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
             });
 
             this._outputChannel.appendLine(`[S3] Download response status: ${response.status}`);
-            this._outputChannel.appendLine(`[S3] Download response size: ${response.data.byteLength} bytes`);
 
-            const base64 = Buffer.from(response.data).toString('base64');
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const arrayBuffer = await response.arrayBuffer();
+            this._outputChannel.appendLine(`[S3] Download response size: ${arrayBuffer.byteLength} bytes`);
+
+            const base64 = Buffer.from(arrayBuffer).toString('base64');
 
             webview.postMessage({
                 type: 's3DownloadResponse',
@@ -414,7 +428,7 @@ export class CalcpadVueUIProvider implements vscode.WebviewViewProvider {
             this._outputChannel.appendLine(`[S3] File size: ${buffer.length} bytes`);
 
             // Use native FormData (available in Node.js 18+)
-            const formData = new (globalThis as typeof globalThis & { FormData: typeof FormData }).FormData();
+            const formData = new FormData();
 
             // Create a Blob for the file
             const fileBlob = new Blob([buffer], { type: 'application/octet-stream' });
@@ -424,14 +438,18 @@ export class CalcpadVueUIProvider implements vscode.WebviewViewProvider {
                 formData.append('tags', JSON.stringify(tags));
             }
 
-            const response = await axios.post(`${apiUrl}/api/blobstorage/upload`, formData, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                    // Let axios handle Content-Type with boundary automatically
-                }
+            const response = await fetch(`${apiUrl}/api/blobstorage/upload`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
             });
 
             this._outputChannel.appendLine(`[S3] Upload response status: ${response.status}`);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
             this._outputChannel.appendLine(`[S3] Upload successful for: ${fileName}`);
 
             webview.postMessage({

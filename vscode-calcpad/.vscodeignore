@@ -48,6 +48,9 @@ Dockerfile
 # IDE specific
 .claude/**
 
+# Bundled server binaries (include in VSIX)
+!bin/**
+
 # Package files
 *.vsix
 package-lock.json

@@ -1,8 +1,9 @@
-out/
-node_modules/
-dist/
+**/out/
+**/node_modules/
+**/dist/
 *.vsix
-.vscode-test/
-.nyc_output/
-coverage/
-helper
+**/.vscode-test/
+**/.nyc_output/
+**/coverage/
+**/helper
+**/bin

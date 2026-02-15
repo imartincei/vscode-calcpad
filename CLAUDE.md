@@ -1,2 +1,3 @@
+- The VS Code extension lives in the `vscode-calcpad/` subdirectory
 - Use start-calcpad-server.sh to run the server in Docker
 - Don't use console.log, use VS Code Output

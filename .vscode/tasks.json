@@ -4,6 +4,7 @@
         {
             "type": "npm",
             "script": "compile",
+            "path": "vscode-calcpad",
             "group": "build",
             "presentation": {
                 "panel": "shared",

@@ -564,7 +564,8 @@
               "lightDirection": "NorthWest"
             },
             "server": {
-              "url": "http://localhost:9420"
+              "url": "http://localhost:9420",
+              "mode": "auto"
             },
             "units": "m"
           },
@@ -706,7 +707,22 @@
                 "url": {
                   "type": "string",
                   "default": "http://localhost:9420",
-                  "description": "Base URL for the CalcPad API server"
+                  "description": "Base URL for the CalcPad API server (used in remote mode)"
+                },
+                "mode": {
+                  "type": "string",
+                  "default": "auto",
+                  "enum": [
+                    "auto",
+                    "local",
+                    "remote"
+                  ],
+                  "enumDescriptions": [
+                    "Use bundled server if available, fall back to remote API",
+                    "Only use bundled local server (requires DLL in extension)",
+                    "Only use remote API server"
+                  ],
+                  "description": "How to connect to the CalcPad server"
                 }
               }
             },
@@ -726,6 +742,11 @@
               "description": "Default unit system"
             }
           }
+        },
+        "calcpad.server.dotnetPath": {
+          "type": "string",
+          "default": "dotnet",
+          "description": "Path to the dotnet executable (if not on PATH)"
         },
         "calcpad.pdf.enableHeader": {
           "type": "boolean",
@@ -882,6 +903,8 @@
     "compile": "npm run build:vue && rollup -c",
     "watch": "concurrently \"npm run watch:vue\" \"rollup -c -w\"",
     "package": "npm run build:vue && rollup -c --sourcemap",
+    "package:full": "npm run build:vue && rollup -c --sourcemap && node -e \"require('fs').mkdirSync('dist/bin',{recursive:true})\" && echo 'Place CalcpadServer.dll in dist/bin/ before packaging'",
+    "package:lite": "npm run build:vue && rollup -c --sourcemap",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
     "build:vue": "vite build",
@@ -905,7 +928,7 @@
     "vue-tsc": "^2.2.12"
   },
   "dependencies": {
-    "axios": "^1.11.0",
+    "calcpad-frontend": "file:../calcpad-frontend",
     "terser": "^5.46.0",
     "vue": "^3.5.21"
   }

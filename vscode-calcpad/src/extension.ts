@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import axios from 'axios';
 import * as path from 'path';
+import { CalcpadApiClient, buildClientFileCacheFromContent } from 'calcpad-frontend';
 import { CalcpadServerLinter } from './calcpadServerLinter';
 import { CalcpadSemanticTokensProvider, semanticTokensLegend } from './calcpadSemanticTokensProvider';
 import { CalcpadVueUIProvider } from './calcpadVueUIProvider';
@@ -12,9 +12,10 @@ import { CalcpadInsertManager } from './calcpadInsertManager';
 import { CalcpadDefinitionsService } from './calcpadDefinitionsService';
 import { AutoIndenter } from './autoIndenter';
 import { ImageInserter } from './imageInserter';
-import { buildClientFileCacheFromContent } from './clientFileCacheHelper';
 import { CalcpadDefinitionProvider } from './calcpadDefinitionProvider';
 import { CommentFormatter } from './commentFormatter';
+import { CalcpadServerManager } from './calcpadServerManager';
+import { VSCodeLogger, VSCodeFileSystem } from './adapters';
 
 let activePreviewPanel: vscode.WebviewPanel | unknown = undefined;
 let activePreviewType: 'regular' | 'unwrapped' | undefined = undefined;
@@ -22,6 +23,7 @@ let previewUpdateTimeout: NodeJS.Timeout | unknown = undefined;
 let previewSourceEditor: vscode.TextEditor | undefined = undefined;
 let linter: CalcpadServerLinter;
 let definitionsService: CalcpadDefinitionsService;
+let serverManager: CalcpadServerManager | undefined;
 let outputChannel: vscode.OutputChannel;
 let calcpadOutputHtmlChannel: vscode.OutputChannel;
 let calcpadWebviewHtmlChannel: vscode.OutputChannel;
@@ -413,30 +415,35 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string,
         outputChannel.appendLine(`Settings retrieved: ${JSON.stringify(settings)}`);
 
         // Build client file cache for referenced files
-        const clientFileCache = await buildClientFileCacheFromContent(content, sourceFileUri, outputChannel, '[Convert]');
+        const vsFileSystem = new VSCodeFileSystem();
+        const vsLogger = new VSCodeLogger(outputChannel);
+        const sourceDir = path.dirname(sourceFileUri.fsPath);
+        const clientFileCache = await buildClientFileCacheFromContent(content, sourceDir, vsFileSystem, vsLogger, '[Convert]');
 
         // Select API endpoint based on unwrapped parameter
         const endpoint = unwrapped ? '/api/calcpad/convert-unwrapped' : '/api/calcpad/convert';
         outputChannel.appendLine(`Making API call to ${endpoint}...`);
 
         const theme = getEffectivePreviewTheme();
-        const response = await axios.post(`${apiBaseUrl}${endpoint}`,
-            {
+        const response = await fetch(`${apiBaseUrl}${endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
                 content: content,
                 settings: settings,
                 theme: theme,
                 forceUnwrappedCode: unwrapped,
                 clientFileCache: clientFileCache
-            },
-            {
-                headers: { 'Content-Type': 'application/json' },
-                timeout: 10000
-            }
-        );
+            }),
+            signal: AbortSignal.timeout(10000)
+        });
+        if (!response.ok) {
+            throw new Error(`Server returned ${response.status}`);
+        }
         outputChannel.appendLine('API call successful');
 
         // Use the entire API response as the webview HTML
-        const apiResponse = response.data;
+        const apiResponse = await response.text();
 
         // Log to dedicated HTML output channel (without stealing focus)
         calcpadOutputHtmlChannel.clear();
@@ -474,10 +481,6 @@ async function updatePreviewContent(panel: vscode.WebviewPanel, content: string,
 
     } catch (error) {
         outputChannel.appendLine(`ERROR in updatePreviewContent: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        if (axios.isAxiosError(error) && error.response) {
-            outputChannel.appendLine(`Response status: ${error.response.status}`);
-            outputChannel.appendLine(`Response data: ${JSON.stringify(error.response.data)}`);
-        }
         const settingsManager = CalcpadSettingsManager.getInstance(extensionContext);
         const calcpadSettings = settingsManager.getSettings();
         const errorApiBaseUrl = calcpadSettings.server.url;
@@ -517,20 +520,25 @@ async function generatePdf(panel: vscode.WebviewPanel, content: string, sourceFi
         const settings = await settingsManager.getApiSettings();
 
         // Build client file cache for referenced files
-        const clientFileCache = await buildClientFileCacheFromContent(content, sourceFileUri, outputChannel, '[PDF]');
+        const vsFileSystem = new VSCodeFileSystem();
+        const vsLogger = new VSCodeLogger(outputChannel);
+        const sourceDir = path.dirname(sourceFileUri.fsPath);
+        const clientFileCache = await buildClientFileCacheFromContent(content, sourceDir, vsFileSystem, vsLogger, '[PDF]');
 
-        const response = await axios.post(`${apiBaseUrl}/api/calcpad/convert`,
-            {
+        const response = await fetch(`${apiBaseUrl}/api/calcpad/convert`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
                 content,
                 settings: settings,
                 outputFormat: 'pdf',
                 clientFileCache: clientFileCache
-            },
-            {
-                headers: { 'Content-Type': 'application/json' },
-                responseType: 'arraybuffer' // Important for binary PDF data
-            }
-        );
+            }),
+            signal: AbortSignal.timeout(30000)
+        });
+        if (!response.ok) {
+            throw new Error(`Server returned ${response.status}`);
+        }
 
         // Get the active editor to determine the filename
         const activeEditor = vscode.window.activeTextEditor;
@@ -548,19 +556,20 @@ async function generatePdf(panel: vscode.WebviewPanel, content: string, sourceFi
 
         if (saveUri) {
             // Write the PDF file
-            await vscode.workspace.fs.writeFile(saveUri, new Uint8Array(response.data));
+            const pdfBuffer = await response.arrayBuffer();
+            await vscode.workspace.fs.writeFile(saveUri, new Uint8Array(pdfBuffer));
 
             // Show success message with option to open
             const openChoice = await vscode.window.showInformationMessage(
                 `PDF saved to ${saveUri.fsPath}`,
                 'Open PDF'
             );
-            
+
             if (openChoice === 'Open PDF') {
                 vscode.env.openExternal(saveUri);
             }
         }
-        
+
     } catch (error) {
         vscode.window.showErrorMessage(
             `Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -621,30 +630,35 @@ async function printToPdf() {
                 progress.report({ increment: 10, message: "Loading referenced files..." });
 
                 // Build client file cache for referenced files
-                const clientFileCache = await buildClientFileCacheFromContent(documentContent, activeEditor.document.uri, outputChannel, '[PDF]');
+                const vsFileSystem = new VSCodeFileSystem();
+                const vsLogger = new VSCodeLogger(outputChannel);
+                const sourceDir = path.dirname(activeEditor.document.uri.fsPath);
+                const clientFileCache = await buildClientFileCacheFromContent(documentContent, sourceDir, vsFileSystem, vsLogger, '[PDF]');
 
                 progress.report({ increment: 20, message: "Calling PDF generation API..." });
 
                 // Call the server's PDF generation API with outputFormat at top level
-                const response = await axios.post(`${apiBaseUrl}/api/calcpad/convert`,
-                    {
+                const response = await fetch(`${apiBaseUrl}/api/calcpad/convert`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
                         content: documentContent,
                         settings: settings,
                         outputFormat: 'pdf',
                         pdfSettings: pdfSettings,
                         clientFileCache: clientFileCache
-                    },
-                    {
-                        headers: { 'Content-Type': 'application/json' },
-                        responseType: 'arraybuffer', // Important for binary PDF data
-                        timeout: 60000 // PDF generation can take longer
-                    }
-                );
+                    }),
+                    signal: AbortSignal.timeout(60000)
+                });
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}`);
+                }
 
                 progress.report({ increment: 80, message: "Saving PDF file..." });
 
                 // Write the PDF file
-                await vscode.workspace.fs.writeFile(saveUri, new Uint8Array(response.data));
+                const pdfBuffer = await response.arrayBuffer();
+                await vscode.workspace.fs.writeFile(saveUri, new Uint8Array(pdfBuffer));
 
                 progress.report({ increment: 100, message: "PDF generation complete!" });
             });
@@ -660,10 +674,6 @@ async function printToPdf() {
             }
         } catch (error) {
             outputChannel.appendLine(`ERROR in printToPdf: ${error instanceof Error ? error.message : 'Unknown error'}`);
-            if (axios.isAxiosError(error) && error.response) {
-                outputChannel.appendLine(`Response status: ${error.response.status}`);
-                outputChannel.appendLine(`Response data: ${JSON.stringify(error.response.data)}`);
-            }
             vscode.window.showErrorMessage(
                 `Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`
             );
@@ -832,7 +842,7 @@ function schedulePreviewUpdate() {
     }, 500);
 }
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
     console.log('VS Code CalcPad extension is now active!');
     
     try {
@@ -854,15 +864,61 @@ export function activate(context: vscode.ExtensionContext) {
         outputChannel.appendLine('Initializing settings manager...');
         const settingsManager = CalcpadSettingsManager.getInstance(context);
 
+        // Create shared API client
+        const calcpadSettings = settingsManager.getSettings();
+        const apiClient = new CalcpadApiClient(
+            calcpadSettings.server.url,
+            new VSCodeLogger(serverDebugChannel)
+        );
+
+        // Start bundled server if available
+        const serverMode = calcpadSettings.server.mode || 'auto';
+        outputChannel.appendLine(`Server mode: ${serverMode}`);
+
+        if (serverMode === 'auto' || serverMode === 'local') {
+            const dllExists = CalcpadServerManager.dllExists(context.extensionPath);
+            outputChannel.appendLine(`Bundled DLL exists: ${dllExists}`);
+
+            if (dllExists) {
+                const config = vscode.workspace.getConfiguration('calcpad');
+                const dotnetPath = config.get<string>('server.dotnetPath', 'dotnet');
+
+                serverManager = new CalcpadServerManager(context.extensionPath, serverDebugChannel, dotnetPath);
+                context.subscriptions.push(serverManager);
+
+                try {
+                    await serverManager.start();
+                    const serverUrl = serverManager.getBaseUrl();
+                    settingsManager.setServerUrl(serverUrl);
+                    apiClient.setBaseUrl(serverUrl);
+                    outputChannel.appendLine(`Local server started at ${serverUrl}`);
+                } catch (err) {
+                    const message = err instanceof Error ? err.message : String(err);
+                    outputChannel.appendLine(`Failed to start local server: ${message}`);
+                    serverManager = undefined;
+
+                    if (serverMode === 'local') {
+                        vscode.window.showErrorMessage(`CalcPad: Failed to start local server: ${message}`);
+                    } else {
+                        outputChannel.appendLine('Falling back to remote API');
+                    }
+                }
+            } else if (serverMode === 'local') {
+                vscode.window.showErrorMessage('CalcPad: Server mode is "local" but CalcpadServer.dll was not found in the extension.');
+            } else {
+                outputChannel.appendLine('No bundled DLL found, using remote API');
+            }
+        }
+
         outputChannel.appendLine('Initializing linter...');
-        linter = new CalcpadServerLinter(settingsManager, serverDebugChannel);
+        linter = new CalcpadServerLinter(apiClient, serverDebugChannel);
 
         outputChannel.appendLine('Initializing definitions service...');
-        definitionsService = new CalcpadDefinitionsService(settingsManager, serverDebugChannel);
+        definitionsService = new CalcpadDefinitionsService(apiClient, serverDebugChannel);
 
         // Initialize semantic token provider
         outputChannel.appendLine('Initializing semantic token provider...');
-        const semanticTokensProvider = new CalcpadSemanticTokensProvider(settingsManager, serverDebugChannel);
+        const semanticTokensProvider = new CalcpadSemanticTokensProvider(apiClient, serverDebugChannel);
         const semanticTokensDisposable = vscode.languages.registerDocumentSemanticTokensProvider(
             { language: 'calcpad' },
             semanticTokensProvider,
@@ -895,9 +951,13 @@ export function activate(context: vscode.ExtensionContext) {
         const commentFormatter = new CommentFormatter(outputChannel);
         const commentFormatterDisposables = commentFormatter.registerCommands();
 
+        // Initialize insert manager (snippet service)
+        outputChannel.appendLine('Initializing insert manager...');
+        const insertManager = new CalcpadInsertManager(apiClient, outputChannel);
+
         // Initialize autocomplete provider
         outputChannel.appendLine('Initializing autocomplete provider...');
-        const completionProviderDisposable = CalcpadCompletionProvider.register(definitionsService, outputChannel);
+        const completionProviderDisposable = CalcpadCompletionProvider.register(definitionsService, insertManager, outputChannel);
 
         // Initialize definition provider (Go to Definition)
         outputChannel.appendLine('Initializing definition provider...');
@@ -961,6 +1021,10 @@ export function activate(context: vscode.ExtensionContext) {
     async function refreshAllComponents() {
         outputChannel.appendLine('[Settings] Refreshing all components after settings change');
 
+        // Sync API client URL with current settings
+        const currentSettings = settingsManager.getSettings();
+        apiClient.setBaseUrl(currentSettings.server.url);
+
         // Reload snippets from server
         try {
             await insertManager.reloadSnippets();
@@ -991,10 +1055,6 @@ export function activate(context: vscode.ExtensionContext) {
 
         outputChannel.appendLine('[Settings] All components refreshed');
     }
-
-    const insertManager = CalcpadInsertManager.getInstance();
-    insertManager.setSettingsManager(settingsManager);
-    insertManager.setOutputChannel(outputChannel);
 
     // Register webview provider for CalcPad Vue UI panel (NEW)
     const vueUiProvider = new CalcpadVueUIProvider(context.extensionUri, context, settingsManager, insertManager);
@@ -1146,7 +1206,10 @@ export function activate(context: vscode.ExtensionContext) {
     }
 }
 
-export function deactivate() {
+export async function deactivate() {
+    if (serverManager) {
+        await serverManager.stop();
+    }
     if (linter) {
         linter.dispose();
     }

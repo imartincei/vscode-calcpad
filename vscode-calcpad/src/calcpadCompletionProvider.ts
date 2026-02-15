@@ -7,8 +7,8 @@ export class CalcpadCompletionProvider implements vscode.CompletionItemProvider 
     private definitionsService: CalcpadDefinitionsService;
     private outputChannel: vscode.OutputChannel;
 
-    constructor(definitionsService: CalcpadDefinitionsService, outputChannel: vscode.OutputChannel) {
-        this.insertManager = CalcpadInsertManager.getInstance();
+    constructor(definitionsService: CalcpadDefinitionsService, insertManager: CalcpadInsertManager, outputChannel: vscode.OutputChannel) {
+        this.insertManager = insertManager;
         this.definitionsService = definitionsService;
         this.outputChannel = outputChannel;
     }
@@ -219,8 +219,8 @@ export class CalcpadCompletionProvider implements vscode.CompletionItemProvider 
     /**
      * Register the completion provider
      */
-    public static register(definitionsService: CalcpadDefinitionsService, outputChannel: vscode.OutputChannel): vscode.Disposable {
-        const provider = new CalcpadCompletionProvider(definitionsService, outputChannel);
+    public static register(definitionsService: CalcpadDefinitionsService, insertManager: CalcpadInsertManager, outputChannel: vscode.OutputChannel): vscode.Disposable {
+        const provider = new CalcpadCompletionProvider(definitionsService, insertManager, outputChannel);
         return vscode.languages.registerCompletionItemProvider(
             ['calcpad', 'plaintext'], // Language selector
             provider,
