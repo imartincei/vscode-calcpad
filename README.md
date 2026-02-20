@@ -1,7 +1,7 @@
 # IMPORTANT UPDATE:
-I will no longer be updating this repo's source code. I have moved this to the private Calcpad repo to keep everything in sync and make dev easier. If you want to get involved with development, please feel free to reach out if you do not have access to the Calcpad private repo.
+I will no longer be updating this repo's source code. I have moved this to a branch on my fork of the private Calcpad repo to keep everything in sync and make dev easier. If you want to get involved with development, please feel free to reach out if you do not have access to the Calcpad private repo.
 
-I will still release experimental vscode builds here until the features are vetted and added to the public Calcpad repo (for people who are interested in testing it).
+I will still release builds here.
 
 # VS Code CalcPad Extension
 
@@ -9,15 +9,7 @@ A VS Code extension for CalcPad files with live preview and comprehensive lintin
 
 ## Installation
 
-### 1. Install Calcpad.Server
-
-**Calcpad.Server is required** for this extension to function. Download the latest release from:
-
-[https://github.com/imartincei/vscode-calcpad/releases](https://github.com/imartincei/vscode-calcpad/releases)
-
-Extract the Calcpad.Server zip file to any folder where you want to run the server.
-
-### 2. Install the VS Code Extension
+### 1. Install the VS Code Extension
 
 Download the `.vsix` file from the [releases page](https://github.com/imartincei/vscode-calcpad/releases).
 
@@ -29,19 +21,6 @@ Install the extension in VS Code:
 - Choose the downloaded `.vsix` file
 
 For more details, see the [VS Code extension installation guide](https://code.visualstudio.com/docs/configure/extensions/extension-marketplace).
-
-### 3. Configure the Server Port
-
-The default port for Calcpad.Server on Windows is **9421**. To configure the extension:
-
-1. Click the CalcPad icon in the left sidebar
-2. Open the Settings tab
-3. Set the Server URL to: `http://localhost:9421`
-
-### 4. Start Calcpad.Server
-
-- Run the Calcpad.Server executable (Calcpad.Server.exe) from the extracted folder before using the extension. 
-- You may need to unblock the app by going into Properties -> Check "Unblock" if Windows has security settings that blocks the executable. You may also need to unblock pdf-service.exe.
 
 ## Features
 
@@ -61,24 +40,13 @@ The default port for Calcpad.Server on Windows is **9421**. To configure the ext
 
 ## Usage
 
-1. Ensure Calcpad.Server is running
-2. Open a `.cpd` file
-3. Click the preview button in the editor toolbar or use `Ctrl+Shift+P` -> "CalcPad Preview"
-4. Preview updates automatically as you type
-5. Linting errors appear as you work
-
-## Configuration
-
-Set the Calcpad.Server URL in VS Code settings:
-```json
-{
-  "calcpad.server.url": "http://localhost:9420"
-}
-```
+1. Open a `.cpd` file
+2. Click the preview button in the editor toolbar or use `Ctrl+Shift+P` -> "CalcPad Preview"
+3. Preview updates automatically as you type
+4. Linting errors appear as you work
 
 ## Requirements
 
-- **Calcpad.Server** running at configured URL (required)
 - VS Code 1.74.0 or higher
 
 ## Development
@@ -89,11 +57,4 @@ This extension uses a Vue 3 webview panel for the sidebar UI (Insert, Variables,
 
 - **Extension Host**: TypeScript running in Node.js context (`src/extension.ts`)
 - **Webview Panel**: Vue 3 SPA built with Vite (`src/CalcpadVuePanel/`)
-- **Server Communication**: All CalcPad processing (preview, linting, PDF) is delegated to Calcpad.Server via REST API
-
-### Building
-
-```bash
-npm run package    # Build both Vue app and extension
-npm run build:vue  # Build Vue webview only
-```
+- **Server Communication**: All CalcPad processing (preview, linting, PDF) is delegated to Calcpad.Server via REST API. There is a bundled .dll that spawns a local server automaticallu, but you can also point the extension to a remote server.
