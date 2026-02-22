@@ -53,6 +53,7 @@ For more details, see the [VS Code extension installation guide](https://code.vi
 ## Requirements
 
 - VS Code 1.74.0 or higher
+- .NET 10 Runtime Installed (see https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
 
 ## Development
 
