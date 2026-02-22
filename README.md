@@ -45,6 +45,11 @@ For more details, see the [VS Code extension installation guide](https://code.vi
 3. Preview updates automatically as you type
 4. Linting errors appear as you work
 
+## UI Buttons
+<img width="1919" height="2381" alt="image" src="https://github.com/user-attachments/assets/7e1dbdf8-e7d0-4b48-9ce1-acbcaf7c263d" />
+
+
+
 ## Requirements
 
 - VS Code 1.74.0 or higher
