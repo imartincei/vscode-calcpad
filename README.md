@@ -1,7 +1,5 @@
 # IMPORTANT UPDATE:
-I will no longer be updating this repo's source code. I have moved this to a branch on my fork of the private Calcpad repo to keep everything in sync and make dev easier. If you want to get involved with development, please feel free to reach out if you do not have access to the Calcpad private repo.
-
-I will still release builds here.
+I will no longer be updating this repo's source code. I have moved this the experimental branch of the https://github.com/imartincei/CalcpadCE project.
 
 # VS Code CalcPad Extension
 
